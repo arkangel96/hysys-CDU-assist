@@ -1,0 +1,1810 @@
+{
+  "column_name": "SW Stripper",
+  "notes": [
+    "This is a live COM probe against the open HYSYS case.",
+    "Use available=true members as the basis for the column module.",
+    "Degrees of freedom must stay zero when the active spec set is already complete."
+  ],
+  "case_name": "Case",
+  "column_com_type": "CDispatch",
+  "dir_members": [
+    "AddRef",
+    "Application",
+    "AttachedFeeds",
+    "AttachedLogicalOps",
+    "AttachedProducts",
+    "BtmLiquidProduct",
+    "BtmLiquidProductVar",
+    "BtmVapourFeed",
+    "BtmVapourFeedVar",
+    "CalcLevel",
+    "Classification",
+    "ClassificationName",
+    "ColumnFeeds",
+    "ColumnFlowsheet",
+    "CreateColumnTemplate",
+    "CreateUserVariable",
+    "EnterColumnEnvironment",
+    "EnterParentEnvironment",
+    "FeedConnections",
+    "Flowsheet",
+    "GetIDsOfNames",
+    "GetTypeInfo",
+    "GetTypeInfoCount",
+    "GetUserVariable",
+    "Invoke",
+    "IsIgnored",
+    "IsValid",
+    "LoadColumnTemplate",
+    "Moniker",
+    "OpenStorage",
+    "Parent",
+    "ProductConnections",
+    "QueryInterface",
+    "Release",
+    "SideStripProduct1",
+    "SideStripProduct1Var",
+    "SideStripProduct2",
+    "SideStripProduct2Var",
+    "SideStripProduct3",
+    "SideStripProduct3Var",
+    "SideStripProduct4",
+    "SideStripProduct4Var",
+    "SimulationCase",
+    "TaggedName",
+    "TopLiquidFeed",
+    "TopLiquidFeedVar",
+    "TopLiquidProduct",
+    "TopLiquidProductVar",
+    "TopVapourProduct",
+    "TopVapourProductVar",
+    "TopWaterProduct",
+    "TopWaterProductVar",
+    "TypeName",
+    "UniqueID",
+    "VisibleTypeName",
+    "name"
+  ],
+  "column_probe": {
+    "object": "SW Stripper",
+    "members": {
+      "Name": {
+        "available": true,
+        "python_type": "str",
+        "repr": "SW Stripper"
+      },
+      "TypeName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "distillation"
+      },
+      "OperType": {
+        "available": false,
+        "error": "AttributeError: Item.OperType"
+      },
+      "TaggedName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "SW Stripper @Main"
+      },
+      "NumberOfStages": {
+        "available": false,
+        "error": "AttributeError: Item.NumberOfStages"
+      },
+      "NoOfStages": {
+        "available": false,
+        "error": "AttributeError: Item.NoOfStages"
+      },
+      "NStages": {
+        "available": false,
+        "error": "AttributeError: Item.NStages"
+      },
+      "Stages": {
+        "available": false,
+        "error": "AttributeError: Item.Stages"
+      },
+      "FeedStage": {
+        "available": false,
+        "error": "AttributeError: Item.FeedStage"
+      },
+      "FeedStages": {
+        "available": false,
+        "error": "AttributeError: Item.FeedStages"
+      },
+      "FeedLocation": {
+        "available": false,
+        "error": "AttributeError: Item.FeedLocation"
+      },
+      "Feeds": {
+        "available": false,
+        "error": "AttributeError: Item.Feeds"
+      },
+      "ProductStages": {
+        "available": false,
+        "error": "AttributeError: Item.ProductStages"
+      },
+      "Products": {
+        "available": false,
+        "error": "AttributeError: Item.Products"
+      },
+      "CondenserType": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserType"
+      },
+      "Condenser": {
+        "available": false,
+        "error": "AttributeError: Item.Condenser"
+      },
+      "Reboiler": {
+        "available": false,
+        "error": "AttributeError: Item.Reboiler"
+      },
+      "ReboilerType": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerType"
+      },
+      "PressureProfile": {
+        "available": false,
+        "error": "AttributeError: Item.PressureProfile"
+      },
+      "TemperatureProfile": {
+        "available": false,
+        "error": "AttributeError: Item.TemperatureProfile"
+      },
+      "AttachedFeeds": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 2,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Stripper Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Reb Q",
+            "TypeName": "energystream"
+          }
+        ]
+      },
+      "AttachedProducts": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 3,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Stripper Bottoms",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Off Gas",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Cond Q",
+            "TypeName": "energystream"
+          }
+        ]
+      },
+      "FeedStreams": {
+        "available": false,
+        "error": "AttributeError: Item.FeedStreams"
+      },
+      "ProductStreams": {
+        "available": false,
+        "error": "AttributeError: Item.ProductStreams"
+      },
+      "Inlet": {
+        "available": false,
+        "error": "AttributeError: Item.Inlet"
+      },
+      "Outlet": {
+        "available": false,
+        "error": "AttributeError: Item.Outlet"
+      },
+      "Feed": {
+        "available": false,
+        "error": "AttributeError: Item.Feed"
+      },
+      "OvhdVapour": {
+        "available": false,
+        "error": "AttributeError: Item.OvhdVapour"
+      },
+      "OvhdLiquid": {
+        "available": false,
+        "error": "AttributeError: Item.OvhdLiquid"
+      },
+      "BottomsLiquid": {
+        "available": false,
+        "error": "AttributeError: Item.BottomsLiquid"
+      },
+      "CondenserDuty": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserDuty"
+      },
+      "ReboilerDuty": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerDuty"
+      },
+      "Specifications": {
+        "available": false,
+        "error": "AttributeError: Item.Specifications"
+      },
+      "ColumnSpecifications": {
+        "available": false,
+        "error": "AttributeError: Item.ColumnSpecifications"
+      },
+      "Specs": {
+        "available": false,
+        "error": "AttributeError: Item.Specs"
+      },
+      "ActiveSpecs": {
+        "available": false,
+        "error": "AttributeError: Item.ActiveSpecs"
+      },
+      "DegreesOfFreedom": {
+        "available": false,
+        "error": "AttributeError: Item.DegreesOfFreedom"
+      },
+      "DOF": {
+        "available": false,
+        "error": "AttributeError: Item.DOF"
+      },
+      "DOFAvailable": {
+        "available": false,
+        "error": "AttributeError: Item.DOFAvailable"
+      },
+      "IsConverged": {
+        "available": false,
+        "error": "AttributeError: Item.IsConverged"
+      },
+      "Converged": {
+        "available": false,
+        "error": "AttributeError: Item.Converged"
+      },
+      "Convergence": {
+        "available": false,
+        "error": "AttributeError: Item.Convergence"
+      },
+      "Status": {
+        "available": false,
+        "error": "AttributeError: Item.Status"
+      },
+      "SolveStatus": {
+        "available": false,
+        "error": "AttributeError: Item.SolveStatus"
+      },
+      "Residual": {
+        "available": false,
+        "error": "AttributeError: Item.Residual"
+      },
+      "Residuals": {
+        "available": false,
+        "error": "AttributeError: Item.Residuals"
+      },
+      "Error": {
+        "available": false,
+        "error": "AttributeError: Item.Error"
+      },
+      "MaxError": {
+        "available": false,
+        "error": "AttributeError: Item.MaxError"
+      },
+      "WeightedError": {
+        "available": false,
+        "error": "AttributeError: Item.WeightedError"
+      },
+      "Tolerance": {
+        "available": false,
+        "error": "AttributeError: Item.Tolerance"
+      },
+      "Tolerances": {
+        "available": false,
+        "error": "AttributeError: Item.Tolerances"
+      },
+      "StageTemperature": {
+        "available": false,
+        "error": "AttributeError: Item.StageTemperature"
+      },
+      "StagePressure": {
+        "available": false,
+        "error": "AttributeError: Item.StagePressure"
+      },
+      "StageNetLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageNetLiquidFlow"
+      },
+      "StageNetVapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageNetVapourFlow"
+      },
+      "StageLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageLiquidFlow"
+      },
+      "StageVapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageVapourFlow"
+      },
+      "StageFeedFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageFeedFlow"
+      },
+      "Temperature": {
+        "available": false,
+        "error": "AttributeError: Item.Temperature"
+      },
+      "Pressure": {
+        "available": false,
+        "error": "AttributeError: Item.Pressure"
+      },
+      "LiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.LiquidFlow"
+      },
+      "VapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.VapourFlow"
+      },
+      "ColumnFlowsheet": {
+        "available": true,
+        "python_type": "CDispatch",
+        "name": "COL1",
+        "repr": "COL1"
+      },
+      "Flowsheet": {
+        "available": true,
+        "python_type": "CDispatch",
+        "name": "Main",
+        "repr": "Main"
+      },
+      "SubFlowsheet": {
+        "available": false,
+        "error": "AttributeError: Item.SubFlowsheet"
+      },
+      "Solver": {
+        "available": false,
+        "error": "AttributeError: Item.Solver"
+      },
+      "Estimate": {
+        "available": false,
+        "error": "AttributeError: Item.Estimate"
+      },
+      "Estimates": {
+        "available": false,
+        "error": "AttributeError: Item.Estimates"
+      },
+      "InitialEstimates": {
+        "available": false,
+        "error": "AttributeError: Item.InitialEstimates"
+      },
+      "CanSolve": {
+        "available": false,
+        "error": "AttributeError: Item.CanSolve"
+      },
+      "Solving": {
+        "available": false,
+        "error": "AttributeError: Item.Solving"
+      },
+      "RefluxRatio": {
+        "available": false,
+        "error": "AttributeError: Item.RefluxRatio"
+      },
+      "RefluxRate": {
+        "available": false,
+        "error": "AttributeError: Item.RefluxRate"
+      },
+      "BoilupRatio": {
+        "available": false,
+        "error": "AttributeError: Item.BoilupRatio"
+      },
+      "BoilupRate": {
+        "available": false,
+        "error": "AttributeError: Item.BoilupRate"
+      },
+      "DistillateRate": {
+        "available": false,
+        "error": "AttributeError: Item.DistillateRate"
+      },
+      "BottomsRate": {
+        "available": false,
+        "error": "AttributeError: Item.BottomsRate"
+      },
+      "OverheadRate": {
+        "available": false,
+        "error": "AttributeError: Item.OverheadRate"
+      },
+      "CondenserPressure": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserPressure"
+      },
+      "ReboilerPressure": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerPressure"
+      },
+      "TopPressure": {
+        "available": false,
+        "error": "AttributeError: Item.TopPressure"
+      },
+      "BottomPressure": {
+        "available": false,
+        "error": "AttributeError: Item.BottomPressure"
+      }
+    }
+  },
+  "nested_ColumnFlowsheet": {
+    "object": "SW Stripper.ColumnFlowsheet",
+    "members": {
+      "Operations": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 3,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Main TS",
+            "TypeName": "traysection"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Condenser",
+            "TypeName": "partialcondenser"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Reboiler",
+            "TypeName": "bpreboiler"
+          }
+        ]
+      },
+      "MaterialStreams": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 7,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Reflux",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "To Condenser",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Boilup",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "To Reboiler",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Off Gas",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Stripper Bottoms",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "Stripper Feed",
+            "TypeName": "materialstream"
+          }
+        ]
+      },
+      "EnergyStreams": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 2,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Cond Q",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Reb Q",
+            "TypeName": "energystream"
+          }
+        ]
+      },
+      "Specifications": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 5,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Reflux Ratio",
+            "TypeName": "clmrefluxspec",
+            "IsActive": true,
+            "CurrentValue": 9.99999480301892,
+            "Error": -5.196981080146656e-07
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "NH3 Mass Frac (Reboiler)",
+            "TypeName": "clmcompfracspec",
+            "IsActive": true,
+            "CurrentValue": 9.998776777967176e-06,
+            "Error": -2.1250730012286567e-05
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Ovhd Vap Rate",
+            "TypeName": "clmdrawspec",
+            "IsActive": false,
+            "CurrentValue": 0.11072725970588362,
+            "Error": -32767.0
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Reflux Rate",
+            "TypeName": "clmliquidflowspec",
+            "IsActive": false,
+            "CurrentValue": 1.1072720216113625,
+            "Error": -32767.0
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Btms Prod Rate",
+            "TypeName": "clmdrawspec",
+            "IsActive": false,
+            "CurrentValue": 4.945761324219925,
+            "Error": -32767.0
+          }
+        ]
+      },
+      "Solver": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Solver"
+      },
+      "DegreesOfFreedom": {
+        "available": true,
+        "python_type": "int",
+        "repr": 0
+      },
+      "Name": {
+        "available": true,
+        "python_type": "str",
+        "repr": "COL1"
+      },
+      "TypeName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "columnflowsheet"
+      },
+      "OperType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OperType"
+      },
+      "TaggedName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "SW Stripper (COL1)"
+      },
+      "NumberOfStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NumberOfStages"
+      },
+      "NoOfStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NoOfStages"
+      },
+      "NStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NStages"
+      },
+      "Stages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Stages"
+      },
+      "FeedStage": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedStage"
+      },
+      "FeedStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedStages"
+      },
+      "FeedLocation": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedLocation"
+      },
+      "Feeds": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Feeds"
+      },
+      "ProductStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ProductStages"
+      },
+      "Products": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Products"
+      },
+      "CondenserType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserType"
+      },
+      "Condenser": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Condenser"
+      },
+      "Reboiler": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Reboiler"
+      },
+      "ReboilerType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerType"
+      },
+      "PressureProfile": {
+        "available": false,
+        "error": "AttributeError: <unknown>.PressureProfile"
+      },
+      "TemperatureProfile": {
+        "available": false,
+        "error": "AttributeError: <unknown>.TemperatureProfile"
+      },
+      "AttachedFeeds": {
+        "available": false,
+        "error": "AttributeError: <unknown>.AttachedFeeds"
+      },
+      "AttachedProducts": {
+        "available": false,
+        "error": "AttributeError: <unknown>.AttachedProducts"
+      },
+      "FeedStreams": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 3,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Cond Q",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Stripper Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Reb Q",
+            "TypeName": "energystream"
+          }
+        ]
+      },
+      "ProductStreams": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ProductStreams"
+      },
+      "Inlet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Inlet"
+      },
+      "Outlet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Outlet"
+      },
+      "Feed": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Feed"
+      },
+      "OvhdVapour": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OvhdVapour"
+      },
+      "OvhdLiquid": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OvhdLiquid"
+      },
+      "BottomsLiquid": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomsLiquid"
+      },
+      "CondenserDuty": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserDuty"
+      },
+      "ReboilerDuty": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerDuty"
+      },
+      "ColumnSpecifications": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ColumnSpecifications"
+      },
+      "Specs": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Specs"
+      },
+      "ActiveSpecs": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ActiveSpecs"
+      },
+      "DOF": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DOF"
+      },
+      "DOFAvailable": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DOFAvailable"
+      },
+      "IsConverged": {
+        "available": false,
+        "error": "AttributeError: <unknown>.IsConverged"
+      },
+      "Converged": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Converged"
+      },
+      "Convergence": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Convergence"
+      },
+      "Status": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Status"
+      },
+      "SolveStatus": {
+        "available": false,
+        "error": "AttributeError: <unknown>.SolveStatus"
+      },
+      "Residual": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Residual"
+      },
+      "Residuals": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Residuals"
+      },
+      "Error": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Error"
+      },
+      "MaxError": {
+        "available": false,
+        "error": "AttributeError: <unknown>.MaxError"
+      },
+      "WeightedError": {
+        "available": false,
+        "error": "AttributeError: <unknown>.WeightedError"
+      },
+      "Tolerance": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Tolerance"
+      },
+      "Tolerances": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Tolerances"
+      },
+      "StageTemperature": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageTemperature"
+      },
+      "StagePressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StagePressure"
+      },
+      "StageNetLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageNetLiquidFlow"
+      },
+      "StageNetVapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageNetVapourFlow"
+      },
+      "StageLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageLiquidFlow"
+      },
+      "StageVapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageVapourFlow"
+      },
+      "StageFeedFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageFeedFlow"
+      },
+      "Temperature": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Temperature"
+      },
+      "Pressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Pressure"
+      },
+      "LiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.LiquidFlow"
+      },
+      "VapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.VapourFlow"
+      },
+      "ColumnFlowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ColumnFlowsheet"
+      },
+      "Flowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Flowsheet"
+      },
+      "SubFlowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.SubFlowsheet"
+      },
+      "Estimate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Estimate"
+      },
+      "Estimates": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Estimates"
+      },
+      "InitialEstimates": {
+        "available": false,
+        "error": "AttributeError: <unknown>.InitialEstimates"
+      },
+      "CanSolve": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CanSolve"
+      },
+      "Solving": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Solving"
+      },
+      "RefluxRatio": {
+        "available": true,
+        "python_type": "float",
+        "repr": 9.99999480301892
+      },
+      "RefluxRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.RefluxRate"
+      },
+      "BoilupRatio": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BoilupRatio"
+      },
+      "BoilupRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BoilupRate"
+      },
+      "DistillateRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DistillateRate"
+      },
+      "BottomsRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomsRate"
+      },
+      "OverheadRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OverheadRate"
+      },
+      "CondenserPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserPressure"
+      },
+      "ReboilerPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerPressure"
+      },
+      "TopPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.TopPressure"
+      },
+      "BottomPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomPressure"
+      }
+    }
+  },
+  "sub_op_Main TS": {
+    "object": "ColumnFlowsheet/Main TS",
+    "members": {
+      "Name": {
+        "available": true,
+        "python_type": "str",
+        "repr": "Main TS"
+      },
+      "TypeName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "traysection"
+      },
+      "OperType": {
+        "available": false,
+        "error": "AttributeError: Item.OperType"
+      },
+      "TaggedName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "Main TS @COL1"
+      },
+      "NumberOfStages": {
+        "available": true,
+        "python_type": "int",
+        "repr": 8
+      },
+      "NoOfStages": {
+        "available": false,
+        "error": "AttributeError: Item.NoOfStages"
+      },
+      "NStages": {
+        "available": false,
+        "error": "AttributeError: Item.NStages"
+      },
+      "Stages": {
+        "available": false,
+        "error": "AttributeError: Item.Stages"
+      },
+      "FeedStage": {
+        "available": false,
+        "error": "AttributeError: Item.FeedStage"
+      },
+      "FeedStages": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 1,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "3__Main TS",
+            "TypeName": "bpsepstage"
+          }
+        ]
+      },
+      "FeedLocation": {
+        "available": false,
+        "error": "AttributeError: Item.FeedLocation"
+      },
+      "Feeds": {
+        "available": false,
+        "error": "AttributeError: Item.Feeds"
+      },
+      "ProductStages": {
+        "available": false,
+        "error": "AttributeError: Item.ProductStages"
+      },
+      "Products": {
+        "available": false,
+        "error": "AttributeError: Item.Products"
+      },
+      "CondenserType": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserType"
+      },
+      "Condenser": {
+        "available": false,
+        "error": "AttributeError: Item.Condenser"
+      },
+      "Reboiler": {
+        "available": false,
+        "error": "AttributeError: Item.Reboiler"
+      },
+      "ReboilerType": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerType"
+      },
+      "PressureProfile": {
+        "available": false,
+        "error": "AttributeError: Item.PressureProfile"
+      },
+      "TemperatureProfile": {
+        "available": false,
+        "error": "AttributeError: Item.TemperatureProfile"
+      },
+      "AttachedFeeds": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 3,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Reflux",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Boilup",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Stripper Feed",
+            "TypeName": "materialstream"
+          }
+        ]
+      },
+      "AttachedProducts": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 2,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "To Reboiler",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "To Condenser",
+            "TypeName": "materialstream"
+          }
+        ]
+      },
+      "FeedStreams": {
+        "available": false,
+        "error": "AttributeError: Item.FeedStreams"
+      },
+      "ProductStreams": {
+        "available": false,
+        "error": "AttributeError: Item.ProductStreams"
+      },
+      "Inlet": {
+        "available": false,
+        "error": "AttributeError: Item.Inlet"
+      },
+      "Outlet": {
+        "available": false,
+        "error": "AttributeError: Item.Outlet"
+      },
+      "Feed": {
+        "available": false,
+        "error": "AttributeError: Item.Feed"
+      },
+      "OvhdVapour": {
+        "available": false,
+        "error": "AttributeError: Item.OvhdVapour"
+      },
+      "OvhdLiquid": {
+        "available": false,
+        "error": "AttributeError: Item.OvhdLiquid"
+      },
+      "BottomsLiquid": {
+        "available": false,
+        "error": "AttributeError: Item.BottomsLiquid"
+      },
+      "CondenserDuty": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserDuty"
+      },
+      "ReboilerDuty": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerDuty"
+      },
+      "Specifications": {
+        "available": false,
+        "error": "AttributeError: Item.Specifications"
+      },
+      "ColumnSpecifications": {
+        "available": false,
+        "error": "AttributeError: Item.ColumnSpecifications"
+      },
+      "Specs": {
+        "available": false,
+        "error": "AttributeError: Item.Specs"
+      },
+      "ActiveSpecs": {
+        "available": false,
+        "error": "AttributeError: Item.ActiveSpecs"
+      },
+      "DegreesOfFreedom": {
+        "available": false,
+        "error": "AttributeError: Item.DegreesOfFreedom"
+      },
+      "DOF": {
+        "available": false,
+        "error": "AttributeError: Item.DOF"
+      },
+      "DOFAvailable": {
+        "available": false,
+        "error": "AttributeError: Item.DOFAvailable"
+      },
+      "IsConverged": {
+        "available": false,
+        "error": "AttributeError: Item.IsConverged"
+      },
+      "Converged": {
+        "available": false,
+        "error": "AttributeError: Item.Converged"
+      },
+      "Convergence": {
+        "available": false,
+        "error": "AttributeError: Item.Convergence"
+      },
+      "Status": {
+        "available": false,
+        "error": "AttributeError: Item.Status"
+      },
+      "SolveStatus": {
+        "available": false,
+        "error": "AttributeError: Item.SolveStatus"
+      },
+      "Residual": {
+        "available": false,
+        "error": "AttributeError: Item.Residual"
+      },
+      "Residuals": {
+        "available": false,
+        "error": "AttributeError: Item.Residuals"
+      },
+      "Error": {
+        "available": false,
+        "error": "AttributeError: Item.Error"
+      },
+      "MaxError": {
+        "available": false,
+        "error": "AttributeError: Item.MaxError"
+      },
+      "WeightedError": {
+        "available": false,
+        "error": "AttributeError: Item.WeightedError"
+      },
+      "Tolerance": {
+        "available": false,
+        "error": "AttributeError: Item.Tolerance"
+      },
+      "Tolerances": {
+        "available": false,
+        "error": "AttributeError: Item.Tolerances"
+      },
+      "StageTemperature": {
+        "available": false,
+        "error": "AttributeError: Item.StageTemperature"
+      },
+      "StagePressure": {
+        "available": false,
+        "error": "AttributeError: Item.StagePressure"
+      },
+      "StageNetLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageNetLiquidFlow"
+      },
+      "StageNetVapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageNetVapourFlow"
+      },
+      "StageLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageLiquidFlow"
+      },
+      "StageVapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageVapourFlow"
+      },
+      "StageFeedFlow": {
+        "available": false,
+        "error": "AttributeError: Item.StageFeedFlow"
+      },
+      "Temperature": {
+        "available": true,
+        "python_type": "CDispatch"
+      },
+      "Pressure": {
+        "available": true,
+        "python_type": "CDispatch"
+      },
+      "LiquidFlow": {
+        "available": false,
+        "error": "AttributeError: Item.LiquidFlow"
+      },
+      "VapourFlow": {
+        "available": false,
+        "error": "AttributeError: Item.VapourFlow"
+      },
+      "ColumnFlowsheet": {
+        "available": false,
+        "error": "AttributeError: Item.ColumnFlowsheet"
+      },
+      "Flowsheet": {
+        "available": true,
+        "python_type": "CDispatch",
+        "name": "COL1",
+        "repr": "COL1"
+      },
+      "SubFlowsheet": {
+        "available": false,
+        "error": "AttributeError: Item.SubFlowsheet"
+      },
+      "Solver": {
+        "available": false,
+        "error": "AttributeError: Item.Solver"
+      },
+      "Estimate": {
+        "available": false,
+        "error": "AttributeError: Item.Estimate"
+      },
+      "Estimates": {
+        "available": false,
+        "error": "AttributeError: Item.Estimates"
+      },
+      "InitialEstimates": {
+        "available": false,
+        "error": "AttributeError: Item.InitialEstimates"
+      },
+      "CanSolve": {
+        "available": false,
+        "error": "AttributeError: Item.CanSolve"
+      },
+      "Solving": {
+        "available": false,
+        "error": "AttributeError: Item.Solving"
+      },
+      "RefluxRatio": {
+        "available": false,
+        "error": "AttributeError: Item.RefluxRatio"
+      },
+      "RefluxRate": {
+        "available": false,
+        "error": "AttributeError: Item.RefluxRate"
+      },
+      "BoilupRatio": {
+        "available": false,
+        "error": "AttributeError: Item.BoilupRatio"
+      },
+      "BoilupRate": {
+        "available": false,
+        "error": "AttributeError: Item.BoilupRate"
+      },
+      "DistillateRate": {
+        "available": false,
+        "error": "AttributeError: Item.DistillateRate"
+      },
+      "BottomsRate": {
+        "available": false,
+        "error": "AttributeError: Item.BottomsRate"
+      },
+      "OverheadRate": {
+        "available": false,
+        "error": "AttributeError: Item.OverheadRate"
+      },
+      "CondenserPressure": {
+        "available": false,
+        "error": "AttributeError: Item.CondenserPressure"
+      },
+      "ReboilerPressure": {
+        "available": false,
+        "error": "AttributeError: Item.ReboilerPressure"
+      },
+      "TopPressure": {
+        "available": false,
+        "error": "AttributeError: Item.TopPressure"
+      },
+      "BottomPressure": {
+        "available": false,
+        "error": "AttributeError: Item.BottomPressure"
+      },
+      "Type": {
+        "available": false,
+        "error": "AttributeError: Item.Type"
+      },
+      "Active": {
+        "available": false,
+        "error": "AttributeError: Item.Active"
+      },
+      "IsActive": {
+        "available": false,
+        "error": "AttributeError: Item.IsActive"
+      },
+      "Specified": {
+        "available": false,
+        "error": "AttributeError: Item.Specified"
+      },
+      "IsSpecified": {
+        "available": false,
+        "error": "AttributeError: Item.IsSpecified"
+      },
+      "IsEstimate": {
+        "available": false,
+        "error": "AttributeError: Item.IsEstimate"
+      },
+      "CurrentValue": {
+        "available": false,
+        "error": "AttributeError: Item.CurrentValue"
+      },
+      "SpecifiedValue": {
+        "available": false,
+        "error": "AttributeError: Item.SpecifiedValue"
+      },
+      "Value": {
+        "available": false,
+        "error": "AttributeError: Item.Value"
+      },
+      "Target": {
+        "available": false,
+        "error": "AttributeError: Item.Target"
+      },
+      "Goal": {
+        "available": false,
+        "error": "AttributeError: Item.Goal"
+      },
+      "LowerBound": {
+        "available": false,
+        "error": "AttributeError: Item.LowerBound"
+      },
+      "UpperBound": {
+        "available": false,
+        "error": "AttributeError: Item.UpperBound"
+      },
+      "Unit": {
+        "available": false,
+        "error": "AttributeError: Item.Unit"
+      },
+      "Units": {
+        "available": false,
+        "error": "AttributeError: Item.Units"
+      }
+    }
+  },
+  "ColumnFlowsheet_operation_names": [
+    "Main TS",
+    "Condenser",
+    "Reboiler"
+  ],
+  "nested_Flowsheet": {
+    "object": "SW Stripper.Flowsheet",
+    "members": {
+      "Operations": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 2,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Feed Bottoms",
+            "TypeName": "heatexop",
+            "Error": 4.242198422614947e-05,
+            "Tolerance": 0.0001
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "SW Stripper",
+            "TypeName": "distillation"
+          }
+        ]
+      },
+      "MaterialStreams": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 5,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "SourH2O Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Stripper Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Stripper Bottoms",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Effluent",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Off Gas",
+            "TypeName": "materialstream"
+          }
+        ]
+      },
+      "EnergyStreams": {
+        "available": true,
+        "python_type": "CDispatch",
+        "count": 2,
+        "items_preview": [
+          {
+            "index": 0,
+            "type": "CDispatch",
+            "Name": "Cond Q",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "Reb Q",
+            "TypeName": "energystream"
+          }
+        ]
+      },
+      "Specifications": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Specifications"
+      },
+      "Solver": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Solver"
+      },
+      "DegreesOfFreedom": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DegreesOfFreedom"
+      },
+      "Name": {
+        "available": true,
+        "python_type": "str",
+        "repr": "Main"
+      },
+      "TypeName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "flowsht"
+      },
+      "OperType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OperType"
+      },
+      "TaggedName": {
+        "available": true,
+        "python_type": "str",
+        "repr": "Case (Main)"
+      },
+      "NumberOfStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NumberOfStages"
+      },
+      "NoOfStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NoOfStages"
+      },
+      "NStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.NStages"
+      },
+      "Stages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Stages"
+      },
+      "FeedStage": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedStage"
+      },
+      "FeedStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedStages"
+      },
+      "FeedLocation": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedLocation"
+      },
+      "Feeds": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Feeds"
+      },
+      "ProductStages": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ProductStages"
+      },
+      "Products": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Products"
+      },
+      "CondenserType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserType"
+      },
+      "Condenser": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Condenser"
+      },
+      "Reboiler": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Reboiler"
+      },
+      "ReboilerType": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerType"
+      },
+      "PressureProfile": {
+        "available": false,
+        "error": "AttributeError: <unknown>.PressureProfile"
+      },
+      "TemperatureProfile": {
+        "available": false,
+        "error": "AttributeError: <unknown>.TemperatureProfile"
+      },
+      "AttachedFeeds": {
+        "available": false,
+        "error": "AttributeError: <unknown>.AttachedFeeds"
+      },
+      "AttachedProducts": {
+        "available": false,
+        "error": "AttributeError: <unknown>.AttachedProducts"
+      },
+      "FeedStreams": {
+        "available": false,
+        "error": "AttributeError: <unknown>.FeedStreams"
+      },
+      "ProductStreams": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ProductStreams"
+      },
+      "Inlet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Inlet"
+      },
+      "Outlet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Outlet"
+      },
+      "Feed": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Feed"
+      },
+      "OvhdVapour": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OvhdVapour"
+      },
+      "OvhdLiquid": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OvhdLiquid"
+      },
+      "BottomsLiquid": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomsLiquid"
+      },
+      "CondenserDuty": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserDuty"
+      },
+      "ReboilerDuty": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerDuty"
+      },
+      "ColumnSpecifications": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ColumnSpecifications"
+      },
+      "Specs": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Specs"
+      },
+      "ActiveSpecs": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ActiveSpecs"
+      },
+      "DOF": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DOF"
+      },
+      "DOFAvailable": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DOFAvailable"
+      },
+      "IsConverged": {
+        "available": false,
+        "error": "AttributeError: <unknown>.IsConverged"
+      },
+      "Converged": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Converged"
+      },
+      "Convergence": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Convergence"
+      },
+      "Status": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Status"
+      },
+      "SolveStatus": {
+        "available": false,
+        "error": "AttributeError: <unknown>.SolveStatus"
+      },
+      "Residual": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Residual"
+      },
+      "Residuals": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Residuals"
+      },
+      "Error": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Error"
+      },
+      "MaxError": {
+        "available": false,
+        "error": "AttributeError: <unknown>.MaxError"
+      },
+      "WeightedError": {
+        "available": false,
+        "error": "AttributeError: <unknown>.WeightedError"
+      },
+      "Tolerance": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Tolerance"
+      },
+      "Tolerances": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Tolerances"
+      },
+      "StageTemperature": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageTemperature"
+      },
+      "StagePressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StagePressure"
+      },
+      "StageNetLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageNetLiquidFlow"
+      },
+      "StageNetVapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageNetVapourFlow"
+      },
+      "StageLiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageLiquidFlow"
+      },
+      "StageVapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageVapourFlow"
+      },
+      "StageFeedFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.StageFeedFlow"
+      },
+      "Temperature": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Temperature"
+      },
+      "Pressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Pressure"
+      },
+      "LiquidFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.LiquidFlow"
+      },
+      "VapourFlow": {
+        "available": false,
+        "error": "AttributeError: <unknown>.VapourFlow"
+      },
+      "ColumnFlowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ColumnFlowsheet"
+      },
+      "Flowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Flowsheet"
+      },
+      "SubFlowsheet": {
+        "available": false,
+        "error": "AttributeError: <unknown>.SubFlowsheet"
+      },
+      "Estimate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Estimate"
+      },
+      "Estimates": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Estimates"
+      },
+      "InitialEstimates": {
+        "available": false,
+        "error": "AttributeError: <unknown>.InitialEstimates"
+      },
+      "CanSolve": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CanSolve"
+      },
+      "Solving": {
+        "available": false,
+        "error": "AttributeError: <unknown>.Solving"
+      },
+      "RefluxRatio": {
+        "available": false,
+        "error": "AttributeError: <unknown>.RefluxRatio"
+      },
+      "RefluxRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.RefluxRate"
+      },
+      "BoilupRatio": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BoilupRatio"
+      },
+      "BoilupRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BoilupRate"
+      },
+      "DistillateRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.DistillateRate"
+      },
+      "BottomsRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomsRate"
+      },
+      "OverheadRate": {
+        "available": false,
+        "error": "AttributeError: <unknown>.OverheadRate"
+      },
+      "CondenserPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.CondenserPressure"
+      },
+      "ReboilerPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.ReboilerPressure"
+      },
+      "TopPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.TopPressure"
+      },
+      "BottomPressure": {
+        "available": false,
+        "error": "AttributeError: <unknown>.BottomPressure"
+      }
+    }
+  },
+  "Flowsheet_operation_names": [
+    "Feed Bottoms",
+    "SW Stripper"
+  ]
+}

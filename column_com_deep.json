@@ -1,0 +1,467 @@
+{
+  "column": "SW Stripper",
+  "degrees_of_freedom": 0,
+  "reflux_ratio_property": 9.99999480301892,
+  "connections": {
+    "TopVapourProduct": "Off Gas",
+    "BtmLiquidProduct": "Stripper Bottoms",
+    "TopLiquidProduct": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
+    "TopWaterProduct": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
+    "BtmVapourFeed": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
+    "TopLiquidFeed": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>"
+  },
+  "attached_feeds": [
+    "Stripper Feed",
+    "Reb Q"
+  ],
+  "attached_products": [
+    "Stripper Bottoms",
+    "Off Gas",
+    "Cond Q"
+  ],
+  "specifications": [
+    {
+      "Name": "Reflux Ratio",
+      "TypeName": "clmrefluxspec",
+      "IsActive": true,
+      "CurrentValue": 9.99999480301892,
+      "GoalValue": 10.0,
+      "Error": -5.196981080146656e-07,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 10.0
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "NH3 Mass Frac (Reboiler)",
+      "TypeName": "clmcompfracspec",
+      "IsActive": true,
+      "CurrentValue": 9.99898105963873e-06,
+      "GoalValue": 1e-05,
+      "Error": -1.7701630578717547e-05,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 1e-05
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Ovhd Vap Rate",
+      "TypeName": "clmdrawspec",
+      "IsActive": false,
+      "CurrentValue": 0.11072725805460684,
+      "Error": -32767.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": false
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": false
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Reflux Rate",
+      "TypeName": "clmliquidflowspec",
+      "IsActive": false,
+      "CurrentValue": 1.107272016797492,
+      "Error": -32767.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": false
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": false
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Btms Prod Rate",
+      "TypeName": "clmdrawspec",
+      "IsActive": false,
+      "CurrentValue": 4.945761325871201,
+      "Error": -32767.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": false
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": false
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    }
+  ],
+  "column_operations": {
+    "Main TS": {
+      "Name": "Main TS",
+      "NumberOfStages": 8,
+      "FeedStages": [
+        {
+          "index": 0,
+          "Name": "3__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 3,
+          "StageHeatFlow": -32767.0
+        }
+      ],
+      "profiles": {
+        "Temperature": [
+          117.44914004330593,
+          119.18981315691423,
+          119.89911587070065,
+          121.28215013028051,
+          122.13400576489022,
+          122.82125892623134,
+          123.43914970868144,
+          124.02425676189921
+        ],
+        "Pressure": [
+          197.8795857905,
+          201.8194481258,
+          205.7593104611,
+          209.6991727964,
+          213.6390351317,
+          217.57889746700002,
+          221.51875980230002,
+          225.4586221376
+        ]
+      },
+      "dir_sample": [
+        "AddDrawStream",
+        "AddFeedStream",
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomStagePressure",
+        "BottomStagePressureValue",
+        "BottomStageTemperature",
+        "BottomStageTemperatureValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "ColumnDiameter",
+        "ColumnDiameterValue",
+        "CreateFluid",
+        "CreateUserVariable",
+        "DeleteAllDrawStreams",
+        "DeleteAllFeedStreams",
+        "DeleteDrawStream",
+        "DeleteFeedStream",
+        "EnthalpyLagFactor",
+        "EnthalpyLagFactorValue",
+        "FeedStages",
+        "Flowsheet",
+        "FluidPackage",
+        "GetIDsOfNames",
+        "GetTypeInfo",
+        "GetTypeInfoCount",
+        "GetUserVariable",
+        "Invoke",
+        "IsIgnored",
+        "IsValid",
+        "LiquidDrawStages",
+        "LiquidDrawStreams",
+        "LiquidDrawValves",
+        "LiquidFeedStream",
+        "LiquidFeedStreamVar",
+        "LiquidProductStream",
+        "LiquidProductStreamVar",
+        "MinimumLiquid",
+        "MinimumLiquidValue",
+        "Moniker",
+        "NumberOfStages",
+        "NumberOfTrays",
+        "OpenStorage",
+        "OverallEfficiency",
+        "OverallEfficiencyValue",
+        "Parent",
+        "Pressure",
+        "PressureValue",
+        "QueryInterface",
+        "Release",
+        "SeparationStages",
+        "SimulationCase",
+        "SpecifyDrawLocation",
+        "SpecifyFeedLocation",
+        "TaggedName",
+        "Temperature",
+        "TemperatureValue",
+        "TopStagePressure",
+        "TopStagePressureValue",
+        "TopStageTemperature",
+        "TopStageTemperatureValue",
+        "TopVapourValve",
+        "TraySectionFeeds",
+        "TraySectionType",
+        "TypeName",
+        "UniqueID",
+        "VapourDrawStages",
+        "VapourDrawStreams",
+        "VapourDrawValves",
+        "VapourFeedStream",
+        "VapourFeedStreamVar",
+        "VapourProductStream",
+        "VapourProductStreamVar",
+        "VapourVolume",
+        "VapourVolumeValue",
+        "VisibleTypeName"
+      ]
+    },
+    "Condenser": {
+      "Name": "Condenser",
+      "TypeName": "partialcondenser",
+      "VesselPressure": 197.8795857905,
+      "EnergyStream": "Cond Q",
+      "dir_sample": [
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomHeaterHeightAsPercentOfVolume",
+        "BottomHeaterHeightAsPercentOfVolumeValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "CondenserType",
+        "CreateFluid",
+        "CreateUserVariable",
+        "CurveEnthalpy",
+        "CurveEnthalpyValue",
+        "CurveHeatFlow",
+        "CurveHeatFlowValue",
+        "CurveHeatOfVaporization",
+        "CurveHeatOfVaporizationValue",
+        "CurveHeavyLiqCriticalPressure",
+        "CurveHeavyLiqCriticalPressureValue",
+        "CurveHeavyLiqCriticalTemperature",
+        "CurveHeavyLiqCriticalTemperatureValue",
+        "CurveHeavyLiqCriticalZFactor",
+        "CurveHeavyLiqCriticalZFactorValue",
+        "CurveHeavyLiqDensity",
+        "CurveHeavyLiqDensityValue",
+        "CurveHeavyLiqMW",
+        "CurveHeavyLiqMWValue",
+        "CurveHeavyLiqMassFlow",
+        "CurveHeavyLiqMassFlowValue",
+        "CurveHeavyLiqMassSpecHeat",
+        "CurveHeavyLiqMassSpecHeatValue",
+        "CurveHeavyLiqPseudoCriticalPressure",
+        "CurveHeavyLiqPseudoCriticalPressureValue",
+        "CurveHeavyLiqPseudoCriticalTemperature",
+        "CurveHeavyLiqPseudoCriticalTemperatureValue",
+        "CurveHeavyLiqPseudoCriticalZFactor",
+        "CurveHeavyLiqPseudoCriticalZFactorValue",
+        "CurveHeavyLiqPseudoOmega",
+        "CurveHeavyLiqPseudoOmegaValue",
+        "CurveHeavyLiqSpecificGravity",
+        "CurveHeavyLiqSpecificGravityValue",
+        "CurveHeavyLiqSurfaceTension",
+        "CurveHeavyLiqSurfaceTensionValue",
+        "CurveHeavyLiqThermalConductivity",
+        "CurveHeavyLiqThermalConductivityValue",
+        "CurveHeavyLiqViscosity",
+        "CurveHeavyLiqViscosityValue",
+        "CurveLightLiqCriticalPressure",
+        "CurveLightLiqCriticalPressureValue",
+        "CurveLightLiqCriticalTemperature",
+        "CurveLightLiqCriticalTemperatureValue",
+        "CurveLightLiqCriticalZFactor",
+        "CurveLightLiqCriticalZFactorValue",
+        "CurveLightLiqDensity",
+        "CurveLightLiqDensityValue",
+        "CurveLightLiqMW",
+        "CurveLightLiqMWValue",
+        "CurveLightLiqMassFlow"
+      ]
+    },
+    "Reboiler": {
+      "Name": "Reboiler",
+      "TypeName": "bpreboiler",
+      "VesselPressure": 225.4586221376,
+      "EnergyStream": "Reb Q",
+      "dir_sample": [
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomHeaterHeightAsPercentOfVolume",
+        "BottomHeaterHeightAsPercentOfVolumeValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "CreateFluid",
+        "CreateUserVariable",
+        "CurveEnthalpy",
+        "CurveEnthalpyValue",
+        "CurveHeatFlow",
+        "CurveHeatFlowValue",
+        "CurveHeatOfVaporization",
+        "CurveHeatOfVaporizationValue",
+        "CurveHeavyLiqCriticalPressure",
+        "CurveHeavyLiqCriticalPressureValue",
+        "CurveHeavyLiqCriticalTemperature",
+        "CurveHeavyLiqCriticalTemperatureValue",
+        "CurveHeavyLiqCriticalZFactor",
+        "CurveHeavyLiqCriticalZFactorValue",
+        "CurveHeavyLiqDensity",
+        "CurveHeavyLiqDensityValue",
+        "CurveHeavyLiqMW",
+        "CurveHeavyLiqMWValue",
+        "CurveHeavyLiqMassFlow",
+        "CurveHeavyLiqMassFlowValue",
+        "CurveHeavyLiqMassSpecHeat",
+        "CurveHeavyLiqMassSpecHeatValue",
+        "CurveHeavyLiqPseudoCriticalPressure",
+        "CurveHeavyLiqPseudoCriticalPressureValue",
+        "CurveHeavyLiqPseudoCriticalTemperature",
+        "CurveHeavyLiqPseudoCriticalTemperatureValue",
+        "CurveHeavyLiqPseudoCriticalZFactor",
+        "CurveHeavyLiqPseudoCriticalZFactorValue",
+        "CurveHeavyLiqPseudoOmega",
+        "CurveHeavyLiqPseudoOmegaValue",
+        "CurveHeavyLiqSpecificGravity",
+        "CurveHeavyLiqSpecificGravityValue",
+        "CurveHeavyLiqSurfaceTension",
+        "CurveHeavyLiqSurfaceTensionValue",
+        "CurveHeavyLiqThermalConductivity",
+        "CurveHeavyLiqThermalConductivityValue",
+        "CurveHeavyLiqViscosity",
+        "CurveHeavyLiqViscosityValue",
+        "CurveLightLiqCriticalPressure",
+        "CurveLightLiqCriticalPressureValue",
+        "CurveLightLiqCriticalTemperature",
+        "CurveLightLiqCriticalTemperatureValue",
+        "CurveLightLiqCriticalZFactor",
+        "CurveLightLiqCriticalZFactorValue",
+        "CurveLightLiqDensity",
+        "CurveLightLiqDensityValue",
+        "CurveLightLiqMW",
+        "CurveLightLiqMWValue",
+        "CurveLightLiqMassFlow",
+        "CurveLightLiqMassFlowValue"
+      ]
+    }
+  },
+  "duties": {
+    "Cond Q": {
+      "HeatFlowValue": 44579.392605218556
+    },
+    "Reb Q": {
+      "HeatFlowValue": 60170.367989699385
+    }
+  },
+  "products": {
+    "Off Gas": {
+      "T": 105.3523441664891,
+      "P": 197.8795857905,
+      "F": 0.11072725805460684,
+      "MassF": 2.2698157168837194,
+      "ComponentMassFractionValue": [
+        0.28175718419914997,
+        0.20089678851592616,
+        0.5173460272849237
+      ],
+      "ComponentMolarFractionValue": [
+        0.1694971653131618,
+        0.24182120564443263,
+        0.5886816290424055
+      ]
+    },
+    "Stripper Bottoms": {
+      "T": 124.03085482853146,
+      "P": 225.4586221376,
+      "F": 4.945761325871201,
+      "MassF": 89.09835752303802,
+      "ComponentMassFractionValue": [
+        4.526193348722371e-07,
+        9.452229851449506e-06,
+        0.9999900951508136
+      ],
+      "ComponentMolarFractionValue": [
+        2.392880627596368e-07,
+        9.998990421728397e-06,
+        0.9999897617215155
+      ]
+    }
+  }
+}

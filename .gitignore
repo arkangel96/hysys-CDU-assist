@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.xlsx
+studio_err.txt
+studio_out.txt
+.DS_Store
+Thumbs.db
+*.log
