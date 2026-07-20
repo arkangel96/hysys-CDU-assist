@@ -31,6 +31,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from trial_map import manual_map_event
+from trial_map_window import TrialMapWindow
 from column_api import ColumnController
 from column_engine import ConvergenceAssistant, diagnose, score_state
 from column_models import ConvergenceLimits
@@ -168,6 +170,7 @@ class HysysStudio(QMainWindow):
         self.controller = HysysController()
         self.column_api = ColumnController(self.controller)
         self.assistant = ConvergenceAssistant(self.column_api, ConvergenceLimits())
+        self.trial_map_window: TrialMapWindow | None = None
         self.streams = {}
         self.stream_data = []
         self.operations = []
@@ -322,12 +325,19 @@ class HysysStudio(QMainWindow):
             "QPushButton#assistBtn { background: #238636; border: 1px solid #2ea043; }"
             "QPushButton#assistBtn:hover { background: #2ea043; }"
         )
+        self.trial_map_button = QPushButton("Open Trial Map")
+        self.trial_map_button.setObjectName("mapBtn")
+        self.trial_map_button.setStyleSheet(
+            "QPushButton#mapBtn { background: #1f6feb; border: 1px solid #388bfd; }"
+            "QPushButton#mapBtn:hover { background: #388bfd; }"
+        )
         for button in (
             self.inspect_column_button,
             self.diagnose_column_button,
             self.dry_run_button,
             self.one_trial_button,
             self.assist_button,
+            self.trial_map_button,
         ):
             col_actions.addWidget(button)
         col_actions.addStretch()
@@ -444,6 +454,7 @@ class HysysStudio(QMainWindow):
         self.dry_run_button.clicked.connect(lambda: self.run_column_trial(dry_run=True))
         self.one_trial_button.clicked.connect(lambda: self.run_column_trial(dry_run=False))
         self.assist_button.clicked.connect(self.run_assist_loop)
+        self.trial_map_button.clicked.connect(self.open_trial_map)
 
     def _toggle_timer(self, enabled: bool) -> None:
         self.timer.start() if enabled else self.timer.stop()
@@ -628,6 +639,27 @@ class HysysStudio(QMainWindow):
         except Exception as exc:
             self._show_error(exc)
 
+    def open_trial_map(self) -> None:
+        try:
+            name = self.column_combo.currentText().strip() or "SW Stripper"
+            # Recreate if older dialog instance somehow remains
+            if self.trial_map_window is None or not isinstance(self.trial_map_window, TrialMapWindow):
+                self.trial_map_window = TrialMapWindow(self.assistant)
+            self.trial_map_window.refresh(name)
+            self.trial_map_window.show()
+            self.trial_map_window.showMaximized()
+            self.trial_map_window.raise_()
+            self.trial_map_window.activateWindow()
+            self._column_assist_log(f"Opened Trial Map for {name}")
+        except Exception as exc:
+            self._show_error(exc)
+
+    def log_feed_change_on_map(self, description: str) -> None:
+        """Optional: record an external feed/case change onto the trial map history."""
+        self.assistant.history.append(manual_map_event(description))
+        if self.trial_map_window is not None and self.trial_map_window.isVisible():
+            self.trial_map_window.refresh(self.column_combo.currentText().strip())
+
     def run_column_trial(self, dry_run: bool = True) -> None:
         try:
             name = self._selected_column()
@@ -646,6 +678,8 @@ class HysysStudio(QMainWindow):
             if result.after_state is not None:
                 self._show_column_state(result.after_state, diagnose(result.after_state))
             self._column_assist_log(result.message)
+            if self.trial_map_window is not None and self.trial_map_window.isVisible():
+                self.trial_map_window.refresh(name)
         except Exception as exc:
             self._show_error(exc)
 
@@ -668,6 +702,8 @@ class HysysStudio(QMainWindow):
                 self._show_column_state(results[-1].after_state, diagnose(results[-1].after_state))
             for result in results:
                 self._column_assist_log(result.message)
+            if self.trial_map_window is not None and self.trial_map_window.isVisible():
+                self.trial_map_window.refresh(name)
         except Exception as exc:
             self._show_error(exc)
 

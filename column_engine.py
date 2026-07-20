@@ -148,44 +148,89 @@ def propose_action(state: ColumnState, limits: ConvergenceLimits, diagnosis: Dia
             return TrialAction(
                 kind="manual_dof",
                 description="DOF must be fixed manually (activate/deactivate specs to reach 0).",
-                payload={"dof": state.degrees_of_freedom},
+                payload={"dof": state.degrees_of_freedom, "strategy_id": "fix_dof"},
             )
 
-    # Prefer nudging Reflux Ratio if it is an active spec
+    # Prefer nudging Reflux Ratio if it is an active spec and not already satisfied.
     reflux = next((s for s in state.active_specs() if "reflux ratio" in s.name.lower()), None)
     if reflux is not None and reflux.goal_value is not None:
+        if reflux.score_error() <= limits.max_active_spec_error:
+            reflux = None
+    if reflux is not None and reflux.goal_value is not None:
         base = float(reflux.goal_value)
-        # Alternate direction using current error sign if available
-        direction = -1.0 if (reflux.error or 0.0) > 0 else 1.0
-        new_goal = base * (1.0 + direction * limits.reflux_nudge_fraction)
+        current = reflux.current_value
+        # Move GoalValue toward calculated Current when trustworthy (PE rule: close the gap).
+        if current is not None and abs(current) < 1e4:
+            if current > base:
+                direction = 1.0
+            elif current < base:
+                direction = -1.0
+            else:
+                direction = -1.0 if (reflux.error or 0.0) > 0 else 1.0
+        else:
+            direction = -1.0 if (reflux.error or 0.0) > 0 else 1.0
+        frac = limits.reflux_nudge_fraction
+        if current is not None and abs(current) < 1e4 and abs(base) > 1e-12:
+            gap_ratio = abs(current - base) / abs(base)
+            if gap_ratio > 0.5:
+                frac = min(0.25, frac * 4.0)
+        new_goal = base * (1.0 + direction * frac)
         new_goal = min(max(new_goal, limits.min_reflux_ratio), limits.max_reflux_ratio)
         if abs(new_goal - base) < 1e-12:
-            return None
-        return TrialAction(
-            kind="set_goal",
-            description=f"Nudge '{reflux.name}' GoalValue {base:.4g} → {new_goal:.4g}",
-            payload={"spec_name": reflux.name, "goal": new_goal, "previous": base},
-        )
+            reflux = None
+        else:
+            strategy_id = "reflux_nudge_down" if new_goal < base else "reflux_nudge_up"
+            return TrialAction(
+                kind="set_goal",
+                description=f"Nudge '{reflux.name}' GoalValue {base:.4g} → {new_goal:.4g}",
+                payload={
+                    "spec_name": reflux.name,
+                    "goal": new_goal,
+                    "previous": base,
+                    "strategy_id": strategy_id,
+                },
+            )
 
-    # Otherwise nudge first active spec with a numeric goal
-    for spec in state.active_specs():
-        if spec.goal_value is None:
+    # Nudge the worst remaining active spec with a numeric goal (e.g. NH3 purity).
+    remaining = [s for s in state.active_specs() if s.goal_value is not None]
+    remaining.sort(key=lambda s: s.score_error(), reverse=True)
+    for spec in remaining:
+        if "reflux ratio" in spec.name.lower():
             continue
         base = float(spec.goal_value)
-        if abs(base) < 1e-30:
+        current = spec.current_value
+        name_l = spec.name.lower()
+        is_comp = "nh3" in name_l or "ammonia" in name_l or "frac" in name_l
+        if is_comp and current is not None and abs(current) < 1e4:
+            gap = float(current) - base
+            step = abs(base) * limits.reflux_nudge_fraction
+            if abs(gap) > 1e-30:
+                step = min(abs(gap), max(step, abs(gap) * limits.reflux_nudge_fraction))
+            new_goal = base + (step if gap > 0 else -step)
+            if new_goal <= 0:
+                new_goal = base * (1.0 + limits.reflux_nudge_fraction)
+        elif abs(base) < 1e-30:
             new_goal = base + 1e-6
         else:
             new_goal = base * (1.0 - limits.reflux_nudge_fraction)
+        sid = "nh3_goal_nudge" if is_comp else "reflux_nudge_down"
+        if abs(new_goal - base) < 1e-30:
+            continue
         return TrialAction(
             kind="set_goal",
             description=f"Nudge '{spec.name}' GoalValue {base:.4g} → {new_goal:.4g}",
-            payload={"spec_name": spec.name, "goal": new_goal, "previous": base},
+            payload={
+                "spec_name": spec.name,
+                "goal": new_goal,
+                "previous": base,
+                "strategy_id": sid,
+            },
         )
 
     return TrialAction(
         kind="solve_only",
         description="No safe knob found; request a column run and re-evaluate.",
-        payload={},
+        payload={"strategy_id": "refresh_estimates"},
     )
 
 
