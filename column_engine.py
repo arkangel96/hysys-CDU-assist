@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from column_api import ColumnController, is_sentinel
 from cdu_case_config import CduCaseConfig, load_case_config
-from cdu_t100_knowledge import format_subsystem_board
+from cdu_t100_knowledge import format_side_ops_board, format_subsystem_board
 from cdu_expert_engine import build_expert_context, format_expert_board, propose_from_expert
 from cdu_quality_engine import (
     build_product_quality_state,
@@ -443,6 +443,7 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
     lines.append(format_connections_block(state))
     if diagnosis.case_objective:
         lines.append(f"  L0 OBJECTIVE: {diagnosis.case_objective}")
+    lines.append(format_side_ops_board())
     if diagnosis.interactive_only:
         lines.append("  MODE: interactive_only (PE approves each trial)")
     if diagnosis.product_quality is not None:

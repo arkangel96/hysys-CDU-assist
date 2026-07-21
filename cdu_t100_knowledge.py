@@ -4,10 +4,166 @@ Source: docs/expert/T100_HYSYS_UI_Click_Map.md + config/cdu_t100_case.json
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from cdu_case_config import CduCaseConfig, load_case_config
 from column_models import ColumnSpecState, ColumnState, ConvergenceLimits
+
+ROOT = Path(__file__).resolve().parent
+SIDE_OPS_PATH = ROOT / "config" / "cdu_t100_side_ops.json"
+
+
+@dataclass(frozen=True, slots=True)
+class SideStripperKnowledge:
+    name: str
+    stages: int
+    liq_draw_stage: str
+    vap_return_stage: str
+    product_stream: str
+    prod_flow_spec: str
+    subsystem: str
+    reb_duty_spec: str = ""
+    steam_feed: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class PumpAroundKnowledge:
+    name: str
+    draw_stage: str
+    return_stage: str
+    rate_spec: str
+    duty_spec: str
+    subsystem: str
+    pa_index: int
+    duty_btuh: float | None = None
+    draw_temp_f: float | None = None
+    serves: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class SideDrawKnowledge:
+    stream: str
+    draw_stage: str
+    stream_type: str
+    subsystem: str
+    rate_spec: str = ""
+
+
+@dataclass(slots=True)
+class SideOpsKnowledge:
+    side_strippers: tuple[SideStripperKnowledge, ...] = ()
+    pump_arounds: tuple[PumpAroundKnowledge, ...] = ()
+    side_draws: tuple[SideDrawKnowledge, ...] = ()
+
+
+def _load_side_ops_json() -> SideOpsKnowledge:
+    if not SIDE_OPS_PATH.is_file():
+        return default_side_ops_knowledge()
+    data = json.loads(SIDE_OPS_PATH.read_text(encoding="utf-8"))
+    strippers = tuple(
+        SideStripperKnowledge(
+            name=str(s["name"]),
+            stages=int(s.get("stages", 3)),
+            liq_draw_stage=str(s["liq_draw_stage"]),
+            vap_return_stage=str(s["vap_return_stage"]),
+            product_stream=str(s.get("product_stream", "")),
+            prod_flow_spec=str(s.get("prod_flow_spec", "")),
+            subsystem=str(s.get("subsystem", "")),
+            reb_duty_spec=str(s.get("reb_duty_spec", "")),
+            steam_feed=str(s.get("steam_feed", "")),
+        )
+        for s in data.get("side_strippers", [])
+    )
+    pas = tuple(
+        PumpAroundKnowledge(
+            name=str(p["name"]),
+            draw_stage=str(p["draw_stage"]),
+            return_stage=str(p["return_stage"]),
+            rate_spec=str(p["rate_spec"]),
+            duty_spec=str(p["duty_spec"]),
+            subsystem=str(p.get("subsystem", "")),
+            pa_index=int(p["name"].replace("PA_", "")),
+            duty_btuh=p.get("duty_btuh"),
+            draw_temp_f=p.get("draw_temp_f"),
+            serves=tuple(p.get("serves", [])),
+        )
+        for p in data.get("pump_arounds", [])
+    )
+    draws = tuple(
+        SideDrawKnowledge(
+            stream=str(d["stream"]),
+            draw_stage=str(d["draw_stage"]),
+            stream_type=str(d.get("type", "L")),
+            subsystem=str(d.get("subsystem", "")),
+            rate_spec=str(d.get("rate_spec", "")),
+        )
+        for d in data.get("side_draws", [])
+    )
+    return SideOpsKnowledge(strippers, pas, draws)
+
+
+def default_side_ops_knowledge() -> SideOpsKnowledge:
+    """PE-confirmed T-100 Side Ops (fallback if JSON missing)."""
+    return SideOpsKnowledge(
+        side_strippers=(
+            SideStripperKnowledge(
+                "Kero_SS", 3, "9_Main TS", "8_Main TS", "Kerosene",
+                "Kero_SS Prod Flow", "kerosene_section", "Kero Reb Duty",
+            ),
+            SideStripperKnowledge(
+                "Diesel_SS", 3, "17_Main TS", "16_Main TS", "Diesel",
+                "Diesel_SS Prod Flow", "diesel_section", steam_feed="Diesel Steam",
+            ),
+            SideStripperKnowledge(
+                "AGO_SS", 3, "22_Main TS", "21_Main TS", "AGO",
+                "AGO_SS Prod Flow", "ago_section", steam_feed="AGO Steam",
+            ),
+        ),
+        pump_arounds=(
+            PumpAroundKnowledge(
+                "PA_1", "2_Main TS", "1_Main TS", "PA_1_Rate(Pa)", "PA_1_Duty(Pa)",
+                "overhead", 1, draw_temp_f=262.5,
+            ),
+            PumpAroundKnowledge(
+                "PA_2", "17_Main TS", "16_Main TS", "PA_2_Rate(Pa)", "PA_2_Duty(Pa)",
+                "diesel_section", 2, draw_temp_f=450.0,
+            ),
+            PumpAroundKnowledge(
+                "PA_3", "22_Main TS", "21_Main TS", "PA_3_Rate(Pa)", "PA_3_Duty(Pa)",
+                "ago_section", 3, draw_temp_f=512.5,
+            ),
+        ),
+        side_draws=(
+            SideDrawKnowledge("Off Gas", "Condenser", "V", "overhead"),
+            SideDrawKnowledge("Naphtha", "Condenser", "L", "overhead", "Naphtha Prod Rate"),
+            SideDrawKnowledge("Waste Water", "Condenser", "W", "overhead"),
+            SideDrawKnowledge("Residue", "29_Main TS", "L", "bottom_section"),
+            SideDrawKnowledge("Kerosene", "Kero_SS_Reb", "L", "kerosene_section"),
+            SideDrawKnowledge("Diesel", "3_Diesel_SS", "L", "diesel_section"),
+        ),
+    )
+
+
+_SIDE_OPS_CACHE: SideOpsKnowledge | None = None
+
+
+def load_side_ops_knowledge() -> SideOpsKnowledge:
+    global _SIDE_OPS_CACHE
+    if _SIDE_OPS_CACHE is None:
+        _SIDE_OPS_CACHE = _load_side_ops_json()
+    return _SIDE_OPS_CACHE
+
+
+# Subsystem → PA index (Side Ops tray alignment)
+SUBSYSTEM_PA_INDEX: dict[str, int] = {
+    "overhead": 1,
+    "kerosene_section": 1,
+    "diesel_section": 2,
+    "ago_section": 3,
+    "bottom_section": 3,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +202,7 @@ _SYMPTOM_SUBSYSTEM: dict[str, str] = {
     "diesel_too_heavy": "diesel_section",
     "diesel_too_light": "diesel_section",
     "kerosene_off_spec": "kerosene_section",
+    "ago_off_spec": "ago_section",
     "naphtha_too_heavy": "overhead",
     "residue_too_light": "bottom_section",
     "yield_off": "bottom_section",
@@ -178,8 +335,62 @@ def validate_t100_specs_summary(state: ColumnState, case: CduCaseConfig | None =
     return issues
 
 
+def stripper_for_subsystem(subsystem: str) -> SideStripperKnowledge | None:
+    for ss in load_side_ops_knowledge().side_strippers:
+        if ss.subsystem == subsystem:
+            return ss
+    return None
+
+
+def pa_for_subsystem(subsystem: str) -> PumpAroundKnowledge | None:
+    idx = SUBSYSTEM_PA_INDEX.get(subsystem)
+    if idx is None:
+        return None
+    for pa in load_side_ops_knowledge().pump_arounds:
+        if pa.pa_index == idx:
+            return pa
+    return None
+
+
+def side_ops_mechanism_hint(symptom_key: str, strategy_id: str) -> str:
+    """L3 mechanism text from Side Ops tray map."""
+    sub = _SYMPTOM_SUBSYSTEM.get(symptom_key, "")
+    ops = load_side_ops_knowledge()
+    ss = stripper_for_subsystem(sub)
+    pa = pa_for_subsystem(sub)
+    parts: list[str] = []
+    if strategy_id == "side_draw_rate_nudge" and ss:
+        parts.append(
+            f"Side stripper {ss.name} draw @ {ss.liq_draw_stage} → product {ss.product_stream}"
+        )
+    elif strategy_id == "side_strip_steam_nudge" and ss:
+        steam = ss.steam_feed or ss.reb_duty_spec or "strip energy"
+        parts.append(f"Side stripper {ss.name} energy via {steam}")
+    elif strategy_id == "pa_duty_nudge" and pa:
+        parts.append(
+            f"PA_{pa.pa_index} heat removal @ {pa.draw_stage}→{pa.return_stage} "
+            f"(aligned with {sub})"
+        )
+    elif strategy_id == "reflux_or_oh_nudge":
+        parts.append("Overhead / naphtha section @ Condenser")
+    return " | ".join(parts) if parts else ""
+
+
+def _sort_pa_specs_for_subsystem(
+    specs: list[ColumnSpecState], draw_subsystem: str
+) -> list[ColumnSpecState]:
+    preferred = SUBSYSTEM_PA_INDEX.get(draw_subsystem, 0)
+
+    def key(spec: ColumnSpecState) -> tuple[int, int]:
+        kn = knowledge_for_spec(spec.name)
+        if not kn or not kn.pa_index:
+            return (99, 99)
+        return (0 if kn.pa_index == preferred else 1, kn.pa_index)
+
+    return sorted(specs, key=key)
+
+
 def infer_symptom_key(state: ColumnState, subsystem: str) -> str:
-    """Guess routing key from subsystem when quality reads unavailable."""
     for key, sub in _SYMPTOM_SUBSYSTEM.items():
         if sub == subsystem:
             return key
@@ -257,20 +468,8 @@ def build_subsystem_routed_seeds(
             subsystem=sub_filter,
             product_hint=ph,
         )
-        if strategy_id == "pa_duty_nudge" and draw_subsystem in {
-            "diesel_section",
-            "kerosene_section",
-            "ago_section",
-        }:
-            # Prefer PA_2/PA_3 for middle cuts; PA_1 for overhead-heavy issues
-            specs.sort(
-                key=lambda s: (
-                    0
-                    if knowledge_for_spec(s.name)
-                    and knowledge_for_spec(s.name).pa_index in (2, 3)
-                    else 1
-                )
-            )
+        if strategy_id == "pa_duty_nudge" and draw_subsystem:
+            specs = _sort_pa_specs_for_subsystem(specs, draw_subsystem)
         for spec in specs[:1]:
             kn = knowledge_for_spec(spec.name)
             direction = _direction_from_spec(spec)
@@ -281,15 +480,19 @@ def build_subsystem_routed_seeds(
             if target_miss:
                 conf += 0.03
             mv = (kn.subsystem if kn else subsystem).replace("_", " ").title()
+            mech_hint = side_ops_mechanism_hint(symptom_key, strategy_id)
+            mechanism = (
+                f"L2 subsystem={subsystem} → preferred MV #{rank + 1} "
+                f"({strategy_id}) on '{spec.name}'"
+            )
+            if mech_hint:
+                mechanism += f" — {mech_hint}"
             seeds.append(
                 RoutedHypothesisSeed(
                     rule_id=f"RT-{symptom_key}-{strategy_id}-{spec.name[:12]}",
                     subsystem=kn.subsystem if kn else subsystem,
                     symptom=symptom_key,
-                    mechanism=(
-                        f"L2 subsystem={subsystem} → preferred MV #{rank + 1} "
-                        f"({strategy_id}) on '{spec.name}'"
-                    ),
+                    mechanism=mechanism,
                     strategy_id=strategy_id,
                     spec_name=spec.name,
                     direction=direction,
@@ -299,7 +502,8 @@ def build_subsystem_routed_seeds(
                         f"dominant_subsystem={subsystem}",
                         f"spec_err={spec.error}",
                         f"routing={symptom_key}",
-                    ],
+                    ]
+                    + ([mech_hint] if mech_hint else []),
                 )
             )
             break
@@ -345,4 +549,32 @@ def format_subsystem_board(state: ColumnState, case: CduCaseConfig | None = None
             kn = knowledge_for_spec(spec.name)
             sub_name = kn.subsystem if kn else "?"
             lines.append(f"    {spec.name} err={spec.error} → {sub_name}")
+    return "\n".join(lines)
+
+
+def format_side_ops_board() -> str:
+    """Side Ops tray map for PE board (from PE screenshots)."""
+    ops = load_side_ops_knowledge()
+    lines = [
+        "T-100 SIDE OPS (L3 equipment map)",
+        "  Side Strippers:",
+    ]
+    for ss in ops.side_strippers:
+        energy = ss.reb_duty_spec or ss.steam_feed or "—"
+        lines.append(
+            f"    {ss.name}: draw {ss.liq_draw_stage} → return {ss.vap_return_stage} "
+            f"| product {ss.product_stream} | spec {ss.prod_flow_spec} | energy {energy}"
+        )
+    lines.append("  Pump Arounds:")
+    for pa in ops.pump_arounds:
+        temp = f"{pa.draw_temp_f} F" if pa.draw_temp_f else "—"
+        lines.append(
+            f"    {pa.name}: {pa.draw_stage}→{pa.return_stage} "
+            f"| duty spec {pa.duty_spec} | draw T {temp}"
+        )
+    lines.append("  Side Draws (products):")
+    for sd in ops.side_draws:
+        spec = sd.rate_spec or "—"
+        lines.append(f"    {sd.stream} @ {sd.draw_stage} ({sd.stream_type}) spec={spec}")
+    lines.append("  Side Rectifiers: none | Vap Bypasses: none")
     return "\n".join(lines)

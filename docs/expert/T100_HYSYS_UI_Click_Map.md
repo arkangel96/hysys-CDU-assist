@@ -24,7 +24,7 @@
 |-----|--------|--------------|
 | **Design** | Connections, Monitor, Specs, Specs Summary | READ Connections + Specs via COM |
 | Parameters | Column solver / stage data | Not automated |
-| Side Ops | Side strippers, pump-arounds detail | Partial via COM collections |
+| **Side Ops** | Side strippers, pump-arounds, side draws | **READ** tray map → `config/cdu_t100_side_ops.json` + PE board |
 | Internals | Trays, packing | READ only (future hydraulics) |
 | Rating | Flooding / tray rating | Not coded |
 | Worksheet | Stream / duty tables | Partial stream reads |
@@ -338,13 +338,87 @@ Implemented in `column_api.set_spec_goal()`, `set_spec_active()`, `set_spec_esti
 
 ---
 
+---
+
+## Side Ops tab (confirmed from PE screenshots)
+
+**Path:** **Side Ops** (top tab) → left sidebar categories
+
+### Sidebar categories
+
+| Sidebar item | T-100 status | Assist |
+|--------------|--------------|--------|
+| **Side Strippers** | Kero_SS, Diesel_SS, AGO_SS (3 stages each) | Tray map + prod-flow spec routing |
+| **Side Rectifiers** | Empty | — |
+| **Pump Arounds** | PA_1, PA_2, PA_3 | PA duty routing by tray alignment |
+| **Vap Bypasses** | Empty | — |
+| **Side Draws** | 6 product streams | Links streams → draw stage |
+
+**Flow Basis:** Molar (default on all Side Ops pages)
+
+**Buttons:** `View` · `Add...` · `Delete` · `Side Ops Input Expert...`
+
+### Side Strippers Summary
+
+| Name | # Stages | Liq Draw Stage | Vap Return Stage | Product spec (Design) |
+|------|----------|----------------|------------------|----------------------|
+| Kero_SS | 3 | 9_Main TS | 8_Main TS | Kero_SS Prod Flow |
+| Diesel_SS | 3 | 17_Main TS | 16_Main TS | Diesel_SS Prod Flow |
+| AGO_SS | 3 | 22_Main TS | 21_Main TS | AGO_SS Prod Flow |
+
+**Engineering:** Liquid drawn one tray below vapor return (e.g. Kero: draw 9 → return 8). Side-strip energy: Kero via **Kero Reb Duty**; Diesel/AGO via **Diesel Steam** / **AGO Steam** feeds.
+
+### Pump Arounds Summary
+
+| Name | Draw Stage | Return Stage | Flow (lbmole/hr) | Duty (Btu/hr) | Draw T (F) |
+|------|------------|--------------|------------------|---------------|------------|
+| PA_1 | 2_Main TS | 1_Main TS | 4431 | -5.500e+007 | 262.5 |
+| PA_2 | 17_Main TS | 16_Main TS | 1859 | -3.500e+007 | 450.0 |
+| PA_3 | 22_Main TS | 21_Main TS | 1677 | -3.500e+007 | 512.5 |
+
+**Tray alignment with side strippers:**
+
+- PA_2 draw/return trays **match Diesel_SS** (17→16) — diesel-section heat removal  
+- PA_3 draw/return trays **match AGO_SS** (22→21) — AGO-section heat removal  
+- PA_1 serves upper column / naphtha section (2→1)
+
+**Assist routing:** When both PA Rate and Duty are Active, prefer **Duty** spec for trials. Route diesel issues → **PA_2_Duty** after **Diesel_SS Prod Flow**; AGO → **PA_3_Duty**.
+
+### Side Draws Summary
+
+| Draw Stream | Draw Stage | Type | Rate spec (if any) |
+|-------------|------------|------|-------------------|
+| Off Gas | Condenser | V | — |
+| Naphtha | Condenser | L | Naphtha Prod Rate |
+| Waste Water | Condenser | W | — |
+| Residue | 29_Main TS | L | — |
+| Kerosene | Kero_SS_Reb | L | — |
+| Diesel | 3_Diesel_SS | L | — |
+
+**Note:** Side-draw stage names differ from Side Stripper tray labels — product leaves at reboiler / stripper bottom (e.g. Diesel @ `3_Diesel_SS`, not `17_Main TS`).
+
+### Side Rectifiers / Vap Bypasses
+
+Both tables **empty** on T-100 — no equipment configured.
+
+### How Assist uses Side Ops
+
+| Layer | Source |
+|-------|--------|
+| L3 mechanism hints | `side_ops_mechanism_hint()` — tray pairs on hypotheses |
+| L2 PA preference | `SUBSYSTEM_PA_INDEX` — diesel→PA_2, AGO→PA_3 |
+| PE board | `format_side_ops_board()` |
+| Config | [`../../config/cdu_t100_side_ops.json`](../../config/cdu_t100_side_ops.json) |
+
+---
+
 ## Tabs still needed from PE (please post next)
 
 - [x] **Design → Monitor** — iteration, spec table, profile  
 - [x] **Design → Specs** — detail panel, checkboxes, GoalValue  
 - [x] **Add Spec dialog** — full type list  
 - [x] **Design → Specs Summary** — Active vs Current grid  
-- [ ] **Side Ops** — PA draw/return trays, side stripper detail  
+- [x] **Side Ops** — PA draw/return trays, side stripper detail, side draws  
 - [ ] **Worksheet** — diesel/kero D86 or TBP on streams  
 - [ ] Upstream: **Crude Heater**, **PreFlash**  
 
@@ -354,4 +428,5 @@ Implemented in `column_api.set_spec_goal()`, `set_spec_active()`, `set_spec_esti
 
 - COM spec names: [`../cdu_com_discovery.md`](../cdu_com_discovery.md)  
 - Case config: [`../../config/cdu_t100_case.json`](../../config/cdu_t100_case.json)  
+- Side Ops config: [`../../config/cdu_t100_side_ops.json`](../../config/cdu_t100_side_ops.json)  
 - Object abstraction: [`31_HYSYS_Object_Map.md`](31_HYSYS_Object_Map.md)
