@@ -1,4 +1,7 @@
-# HYSYS Automation Studio — Architecture
+# Architecture — Simple Column Assist
+
+External COM assist for **simple distillation / stripping** in Aspen HYSYS.
+CDU/VDU are out of scope (separate future tools). See `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.
 
 ## High level
 

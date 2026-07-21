@@ -11,7 +11,7 @@ from hysys_api import HysysController, HysysError
 
 def main() -> int:
     print("=" * 60)
-    print("HYSYS Studio — live smoke test")
+    print("Simple Column Assist — live smoke test")
     print("=" * 60)
 
     controller = HysysController()

@@ -1,8 +1,5 @@
 """
-Separate PE Intelligence window for HYSYS Automation Studio.
-
-Shows Layer-2 board, FINAL_TARGET status, Add Spec recommendations,
-and a short "what's coded" checklist — without depending on chat.
+Separate PE Intelligence window for Simple Column Assist.
 """
 from __future__ import annotations
 
@@ -31,12 +28,15 @@ from ui_style import style_table_headers
 
 
 CODED_CHECKLIST = """
-WHAT IS CODED IN STUDIO (Layer 2)
+SIMPLE COLUMN ASSIST — what's coded (Layer 2)
 ---------------------------------
+Scope: simple distillation / stripping only (NOT CDU/VDU).
+See docs/SCOPE_SIMPLE_COLUMN_ASSIST.md
+
 [x] Read Specs table (Active, Goal, Current, Error)
 [x] Set Active / GoalValue / 1-for-1 Active swap
 [x] States A–F classification
-[x] FINAL_TARGET lock (NH3) — no auto-relax
+[x] FINAL_TARGET lock (NH3) — plant default 50 ppmw
 [x] Stream product NH3 + worksheet kgmole/h
 [x] PE board + response classes (KEPT/REVERSED)
 [x] Estimates refresh (COM)
@@ -53,9 +53,11 @@ NOT CODED YET (by design)
 [ ] Parameters / Solver pages (await screenshots)
 [ ] Full 2x2 multivariable solver
 [ ] Hydraulic flooding validation
+[ ] CDU / VDU tools (separate products)
 
 DOCS (repo)
 -----------
+docs/SCOPE_SIMPLE_COLUMN_ASSIST.md
 docs/expert_decision_workflow.md
 docs/column_convergence_playbook.md
 docs/intelligence_improvement_notes.md
@@ -68,7 +70,7 @@ class IntelligenceWindow(QMainWindow):
         super().__init__(parent)
         self.assistant = assistant
         self.column_name = "SW Stripper"
-        self.setWindowTitle("PE Intelligence — HYSYS Automation Studio")
+        self.setWindowTitle("PE Intelligence — Simple Column Assist")
         self.resize(1100, 720)
 
         root = QWidget()
@@ -88,8 +90,9 @@ class IntelligenceWindow(QMainWindow):
         layout.addLayout(top)
 
         hint = QLabel(
-            "Separate from Assist Loop: read-only intelligence view. "
-            "Add Spec actions are recommendations — Studio does not auto-create specs yet."
+            "Simple Column Assist only (not CDU/VDU). "
+            "Add Spec actions are recommendations — does not auto-create specs yet. "
+            "See docs/SCOPE_SIMPLE_COLUMN_ASSIST.md"
         )
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #8b949e;")

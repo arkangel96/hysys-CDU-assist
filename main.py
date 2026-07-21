@@ -2,13 +2,13 @@ import sys
 
 from PyQt5.QtWidgets import QApplication
 
-from gui import HysysStudio
+from gui import SimpleColumnAssist
 
 
 def main() -> int:
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    window = HysysStudio()
+    window = SimpleColumnAssist()
     window.show()
     return app.exec_()
 

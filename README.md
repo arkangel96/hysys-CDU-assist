@@ -1,9 +1,18 @@
-# HYSYS Automation Studio
+# Simple Column Assist
 
-A clean-room reconstruction of a Python desktop dashboard observed in the
-provided screenshots. It connects to Aspen HYSYS through Windows COM, inspects
-the active case, edits supported stream inputs, solves the case, plots stream
-data and exports results to Excel.
+External desktop assist for **simple distillation and stripping columns** in
+Aspen HYSYS (Windows COM). Not an AspenTech product.
+
+> **Scope:** simple 2-product columns (e.g. sour-water stripper).  
+> **Not for:** CDU or VDU — those will be separate tools.  
+> Full boundary notes: [`docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`](docs/SCOPE_SIMPLE_COLUMN_ASSIST.md)
+
+## What it does
+
+- Connect to a running HYSYS case
+- Inspect streams, edit supported specs, solve, chart, export Excel
+- **Column Assistant:** Inspect / Diagnose / Specs Summary Active·Estimate /
+  Connections READ / PE board / Trial Map / Assist trials
 
 ## Requirements
 
@@ -25,14 +34,10 @@ Open a HYSYS case first, then run:
 python main.py
 ```
 
-Click **Connect**. If attachment to the running instance is unavailable, the
-program attempts to start HYSYS. Use **Open Case** to select a `.hsc` file.
+Click **Connect**. Use **Open Case** to select a `.hsc` file if needed.
 
 ## Notes
 
-- AspenTech has changed some automation members between releases. The adapter
-  tries common collection and solver variants and reports a useful error when
-  the installed version differs.
+- AspenTech COM members vary by release; the adapter tries common variants.
 - The application never saves the HYSYS case automatically.
-- See `ARCHITECTURE.md` for the high-level and subsystem design.
-
+- See `ARCHITECTURE.md` and `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.

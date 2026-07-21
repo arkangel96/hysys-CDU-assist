@@ -221,7 +221,9 @@ class StatusChip(QFrame):
         )
 
 
-class HysysStudio(QMainWindow):
+class SimpleColumnAssist(QMainWindow):
+    """Desktop assist for simple distillation / stripping columns in HYSYS."""
+
     def __init__(self) -> None:
         super().__init__()
         self.controller = HysysController()
@@ -239,7 +241,7 @@ class HysysStudio(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self) -> None:
-        self.setWindowTitle("Aspen HYSYS Studio")
+        self.setWindowTitle("Simple Column Assist — for Aspen HYSYS")
         self.setMinimumSize(1280, 820)
         self.setStyleSheet(DARK_THEME)
         central = QWidget()
@@ -250,11 +252,17 @@ class HysysStudio(QMainWindow):
 
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 4)
-        logo = QLabel("HYSYS STUDIO")
+        logo = QLabel("SIMPLE COLUMN ASSIST")
         logo.setStyleSheet("font-size: 22px; font-weight: 700; color: #58a6ff;")
+        subtitle = QLabel("Simple distillation & stripping  ·  not CDU/VDU")
+        subtitle.setStyleSheet("color: #8b949e; font-size: 12px;")
         self.status = QLabel("● DISCONNECTED")
         self.status.setStyleSheet("color: #f85149; font-weight: 600;")
-        top.addWidget(logo)
+        brand = QVBoxLayout()
+        brand.setSpacing(0)
+        brand.addWidget(logo)
+        brand.addWidget(subtitle)
+        top.addLayout(brand)
         top.addStretch()
         top.addWidget(self.status)
         root.addLayout(top)
@@ -1091,5 +1099,9 @@ class HysysStudio(QMainWindow):
 
     def _show_error(self, error: Exception) -> None:
         self.log(f"ERROR: {error}")
-        QMessageBox.critical(self, "HYSYS Studio", str(error))
+        QMessageBox.critical(self, "Simple Column Assist", str(error))
+
+
+# Backward-compatible alias
+HysysStudio = SimpleColumnAssist
 

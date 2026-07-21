@@ -1,12 +1,13 @@
-# Intelligence Improvement Notes — HYSYS Column Assist
+# Intelligence Improvement Notes — Simple Column Assist
 
 **Document type:** Expert review notes + living backlog  
 **Status:** **Integrated** into master workflow (2026-07-21)  
+**Scope:** Simple distillation / stripping only — see [`SCOPE_SIMPLE_COLUMN_ASSIST.md`](SCOPE_SIMPLE_COLUMN_ASSIST.md)  
 **Canonical home of rules:** [`expert_decision_workflow.md`](expert_decision_workflow.md) **§28**  
 **Operational slice:** [`column_convergence_playbook.md`](column_convergence_playbook.md) **§18** + principles P11–P14  
 
 **Date:** 2026-07-21  
-**Author perspective:** Senior process / HYSYS simulation engineer review of Automation Studio Assist
+**Author perspective:** Senior process / HYSYS simulation engineer review of Simple Column Assist
 
 ---
 
