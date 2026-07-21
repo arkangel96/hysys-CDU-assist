@@ -72,12 +72,13 @@ def default_sw_stripper_targets() -> list[FinalTarget]:
     return [
         FinalTarget(
             id="NH3_BOTTOMS",
-            description="Bottoms NH3 mass fraction (FINAL_TARGET)",
+            description="Bottoms NH3 mass fraction (FINAL_TARGET) — typical SWS ~30-100 ppmw",
             spec_name_contains="nh3",
             component_name_contains=("ammonia", "nh3"),
             stream="bottoms",
             relationship="less_or_equal",
-            target_value=1e-7,
+            # 50 ppmw = 5e-5 mass frac (plant-typical; NOT 0.1 ppm / 1e-7 stress value)
+            target_value=5e-5,
             tolerance=0.0,
             locked=True,
             hard=True,
@@ -90,10 +91,19 @@ class ColumnSpecState:
     name: str
     type_name: str = ""
     is_active: bool = False
+    use_as_estimate: bool | None = None
+    use_as_current: bool | None = None
     goal_value: float | None = None
     current_value: float | None = None
     error: float | None = None
+    weighted_tolerance: float | None = None
+    # Worksheet-style display (e.g. kgmole/h for rate specs)
+    goal_display: float | None = None
+    current_display: float | None = None
+    display_unit: str = ""
     role: SpecRole = SpecRole.CALCULATED
+    # Specs Summary: Current column often tracks with Active for fixed primary specs
+    summary_current: bool | None = None
 
     def score_error(self) -> float:
         if self.error is None:
@@ -125,6 +135,8 @@ class ColumnState:
     type_name: str = "distillation"
     number_of_stages: int | None = None
     feed_stage: int | None = None
+    feed_stage_label: str = ""
+    stage_numbering: str = ""
     degrees_of_freedom: int | None = None
     reflux_ratio: float | None = None
     top_vapour_product: str | None = None
@@ -132,6 +144,17 @@ class ColumnState:
     feed_streams: list[str] = field(default_factory=list)
     product_streams: list[str] = field(default_factory=list)
     energy_streams: list[str] = field(default_factory=list)
+    # Design → Connections (READ)
+    condenser_type: str = ""
+    condenser_pressure_bar: float | None = None
+    reboiler_pressure_bar: float | None = None
+    condenser_dp_bar: float | None = None
+    reboiler_dp_bar: float | None = None
+    # Design → Monitor solver summary (READ)
+    monitor_iteration: int | None = None
+    monitor_step: float | None = None
+    monitor_equilibrium_error: float | None = None
+    monitor_heat_spec_error: float | None = None
     specs: list[ColumnSpecState] = field(default_factory=list)
     profile: StageProfile = field(default_factory=StageProfile)
     condenser_duty: float | None = None
@@ -169,6 +192,7 @@ class Diagnosis:
     potential: str = ""  # going_somewhere | marginal | nowhere | success
     final_target_status: dict[str, Any] = field(default_factory=dict)
     add_spec_recommendations: list[str] = field(default_factory=list)
+    specs_summary_clicks: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)

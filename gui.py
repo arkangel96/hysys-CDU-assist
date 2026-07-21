@@ -36,7 +36,7 @@ from trial_map import manual_map_event
 from trial_map_window import TrialMapWindow
 from intelligence_window import IntelligenceWindow
 from column_api import ColumnController
-from column_engine import ConvergenceAssistant, diagnose, format_pe_board, score_state
+from column_engine import ConvergenceAssistant, diagnose, format_connections_block, format_pe_board, score_state
 from column_models import ConvergenceLimits
 from exporter import export_workbook
 from hysys_api import HysysController, HysysError
@@ -444,39 +444,83 @@ class HysysStudio(QMainWindow):
         diagnosis_layout.addWidget(self.column_summary, 1)
         self.column_pages.addTab(diagnosis_page, "Diagnosis")
 
-        # Page 2: Specs (full page — no longer crushed)
+        # Page: Connections (HYSYS Design → Connections READ)
+        connections_page = QWidget()
+        connections_layout = QVBoxLayout(connections_page)
+        connections_layout.setContentsMargins(8, 8, 8, 8)
+        conn_hint = QLabel(
+            "Read-only mirror of HYSYS Design → Connections. "
+            "Stages / feed / condenser type / pressures — not auto-edited yet."
+        )
+        conn_hint.setWordWrap(True)
+        conn_hint.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+        connections_layout.addWidget(conn_hint)
+        self.connections_text = QTextEdit()
+        self.connections_text.setReadOnly(True)
+        self.connections_text.setPlainText("Inspect a column to load Connections.")
+        self.connections_text.setStyleSheet(
+            "font-family: Consolas, 'Courier New', monospace; font-size: 12px;"
+        )
+        connections_layout.addWidget(self.connections_text, 1)
+        self.column_pages.addTab(connections_page, "Connections")
+
+        # Page: Specs Summary (HYSYS Design → Specs Summary — Active / Estimate)
         specs_page = QWidget()
         specs_layout = QVBoxLayout(specs_page)
         specs_layout.setContentsMargins(8, 8, 8, 8)
         specs_layout.setSpacing(6)
         specs_hint = QLabel(
-            "Same idea as HYSYS Design → Specs / Monitor. "
-            "Active = solver constraint. Estimate = guess only. Residual near 0 = met."
+            "HYSYS Design → Specs Summary. Toggle Active / Estimate like HYSYS, then Apply. "
+            "Active = solver DOF. Estimate = IsUsedAsEstimate. NH₃ FINAL_TARGET should stay Active OFF."
         )
         specs_hint.setWordWrap(True)
         specs_hint.setStyleSheet("color: #8b949e; border: none; background: transparent;")
         specs_layout.addWidget(specs_hint)
 
+        self.specs_clicks_label = QLabel("Diagnose to see recommended Specs Summary clicks.")
+        self.specs_clicks_label.setWordWrap(True)
+        self.specs_clicks_label.setStyleSheet(
+            "color: #58a6ff; border: none; background: transparent;"
+        )
+        specs_layout.addWidget(self.specs_clicks_label)
+
+        specs_btns = QHBoxLayout()
+        self.apply_specs_button = QPushButton("Apply Active/Estimate → HYSYS")
+        self.apply_specs_button.setObjectName("primaryAction")
+        self.apply_recommended_specs_button = QPushButton("Apply Recommended Clicks")
+        self.sync_spec_current_button = QPushButton("Sync Selected: Current → Goal")
+        self.refresh_specs_button = QPushButton("Re-Inspect Specs")
+        for b in (
+            self.apply_specs_button,
+            self.apply_recommended_specs_button,
+            self.sync_spec_current_button,
+            self.refresh_specs_button,
+        ):
+            specs_btns.addWidget(b)
+        specs_btns.addStretch()
+        specs_layout.addLayout(specs_btns)
+
         self.specs_empty_hint = QLabel(
             "No specs loaded yet — click Inspect."
         )
         self.specs_empty_hint.setAlignment(Qt.AlignCenter)
-        self.specs_empty_hint.setMinimumHeight(120)
+        self.specs_empty_hint.setMinimumHeight(80)
         self.specs_empty_hint.setStyleSheet(
             "color: #f0883e; padding: 24px; background: #12171e; "
             "border: 1px dashed #30363d; border-radius: 4px;"
         )
         specs_layout.addWidget(self.specs_empty_hint)
 
-        self.column_specs_table = QTableWidget(0, 5)
+        self.column_specs_table = QTableWidget(0, 6)
         style_table_headers(
             self.column_specs_table,
             (
-                "Specification name",
-                "What it is",
-                "Goal (target)",
-                "Current (result)",
-                "Residual (error)",
+                "Specification",
+                "Specified",
+                "Active",
+                "Estimate",
+                "Current",
+                "Residual",
             ),
         )
         self.column_specs_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -486,13 +530,13 @@ class HysysStudio(QMainWindow):
         self.column_specs_table.verticalHeader().setVisible(False)
         header = self.column_specs_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        for col in range(1, 6):
+            header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
         self.column_specs_table.setVisible(False)
         specs_layout.addWidget(self.column_specs_table, 1)
-        self.column_pages.addTab(specs_page, "Specs")
+        self.column_pages.addTab(specs_page, "Specs Summary")
+        self._last_specs_clicks: list[str] = []
+        self._last_column_state = None
 
         # Page 3: Temperature profile
         profile_page = QWidget()
@@ -542,6 +586,10 @@ class HysysStudio(QMainWindow):
         self.assist_button.clicked.connect(self.run_assist_loop)
         self.trial_map_button.clicked.connect(self.open_trial_map)
         self.intelligence_button.clicked.connect(self.open_intelligence)
+        self.apply_specs_button.clicked.connect(self.apply_specs_summary_to_hysys)
+        self.apply_recommended_specs_button.clicked.connect(self.apply_recommended_specs_clicks)
+        self.sync_spec_current_button.clicked.connect(self.sync_selected_spec_current_to_goal)
+        self.refresh_specs_button.clicked.connect(self.inspect_column)
 
     def _toggle_timer(self, enabled: bool) -> None:
         self.timer.start() if enabled else self.timer.stop()
@@ -682,6 +730,21 @@ class HysysStudio(QMainWindow):
                 "border: 1px solid #30363d; border-radius: 6px;"
             )
 
+        self.connections_text.setPlainText(format_connections_block(state))
+        self._last_column_state = state
+
+        if diagnosis is not None:
+            clicks = getattr(diagnosis, "specs_summary_clicks", []) or []
+            self._last_specs_clicks = list(clicks)
+            if clicks:
+                self.specs_clicks_label.setText(
+                    "Recommended Specs Summary clicks:\n• " + "\n• ".join(clicks)
+                )
+            else:
+                self.specs_clicks_label.setText("No Specs Summary click changes recommended.")
+        elif not getattr(self, "_last_specs_clicks", None):
+            self.specs_clicks_label.setText("Diagnose to see recommended Specs Summary clicks.")
+
         if not state.specs:
             self.specs_empty_hint.setText(
                 "Inspect ran, but HYSYS returned no Specs for this column."
@@ -694,32 +757,50 @@ class HysysStudio(QMainWindow):
             self.column_specs_table.setVisible(True)
             self.column_specs_table.setRowCount(len(state.specs))
             for row, spec in enumerate(state.specs):
-                if spec.is_active:
-                    what = "Active spec (used to solve)"
-                else:
-                    what = "Estimate only (not a constraint)"
+                unit = getattr(spec, "display_unit", "") or ""
+                goal_v = getattr(spec, "goal_display", None)
+                if goal_v is None:
+                    goal_v = spec.goal_value
+                cur_v = getattr(spec, "current_display", None)
+                if cur_v is None:
+                    cur_v = spec.current_value
+
+                def _fmt(val: float | None) -> str:
+                    if val is None:
+                        return "—"
+                    text = f"{val:.6g}"
+                    return f"{text} {unit}".strip() if unit else text
 
                 if spec.error is None:
                     residual = "—"
                 elif abs(spec.error) >= 1e4:
-                    residual = "n/a (inactive)"
+                    residual = "n/a"
                 else:
                     residual = f"{spec.error:.4g}"
 
-                values = (
-                    spec.name,
-                    what,
-                    "—" if spec.goal_value is None else f"{spec.goal_value:.6g}",
-                    "—" if spec.current_value is None else f"{spec.current_value:.6g}",
-                    residual,
+                name_item = QTableWidgetItem(spec.name)
+                goal_item = QTableWidgetItem(_fmt(goal_v))
+                active_item = QTableWidgetItem("")
+                active_item.setFlags(
+                    Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
                 )
-                for column, value in enumerate(values):
-                    item = QTableWidgetItem(value)
-                    if column == 1 and spec.is_active:
-                        item.setForeground(QColor("#3fb950"))
-                    elif column == 1:
-                        item.setForeground(QColor("#8b949e"))
-                    self.column_specs_table.setItem(row, column, item)
+                active_item.setCheckState(Qt.Checked if spec.is_active else Qt.Unchecked)
+                est_item = QTableWidgetItem("")
+                est_item.setFlags(
+                    Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+                )
+                est_on = spec.use_as_estimate is not False
+                est_item.setCheckState(Qt.Checked if est_on else Qt.Unchecked)
+                cur_item = QTableWidgetItem(_fmt(cur_v))
+                err_item = QTableWidgetItem(residual)
+                if spec.is_active:
+                    name_item.setForeground(QColor("#3fb950"))
+                self.column_specs_table.setItem(row, 0, name_item)
+                self.column_specs_table.setItem(row, 1, goal_item)
+                self.column_specs_table.setItem(row, 2, active_item)
+                self.column_specs_table.setItem(row, 3, est_item)
+                self.column_specs_table.setItem(row, 4, cur_item)
+                self.column_specs_table.setItem(row, 5, err_item)
                 self.column_specs_table.setRowHeight(row, 28)
 
         self.column_temp_plot.clear()
@@ -732,12 +813,111 @@ class HysysStudio(QMainWindow):
                 symbol="o",
             )
 
+    def _specs_summary_rows_from_table(self) -> list[dict]:
+        rows = []
+        for row in range(self.column_specs_table.rowCount()):
+            name_item = self.column_specs_table.item(row, 0)
+            active_item = self.column_specs_table.item(row, 2)
+            est_item = self.column_specs_table.item(row, 3)
+            if name_item is None or active_item is None:
+                continue
+            rows.append(
+                {
+                    "name": name_item.text(),
+                    "is_active": active_item.checkState() == Qt.Checked,
+                    "is_estimate": (
+                        est_item.checkState() == Qt.Checked if est_item is not None else True
+                    ),
+                }
+            )
+        return rows
+
+    def apply_specs_summary_to_hysys(self) -> None:
+        try:
+            name = self._selected_column()
+            rows = self._specs_summary_rows_from_table()
+            if not rows:
+                raise HysysError("No specs in table — Inspect first.")
+            notes = self.column_api.apply_specs_summary(name, rows)
+            self.column_api.run_column(name)
+            state = self.assistant.inspect(name)
+            self._show_column_state(state)
+            self._column_assist_log("Applied Specs Summary → HYSYS:\n  " + "\n  ".join(notes))
+            self.column_pages.setCurrentIndex(2)
+        except Exception as exc:
+            self._show_error(exc)
+
+    def apply_recommended_specs_clicks(self) -> None:
+        try:
+            from column_spec_catalog import recommend_specs_summary_clicks
+
+            name = self._selected_column()
+            state = self.assistant.inspect(name)
+            _, diagnosis = self.assistant.diagnose_column(name)
+            clicks = recommend_specs_summary_clicks(
+                spec_rows=[
+                    {
+                        "name": s.name,
+                        "is_active": s.is_active,
+                        "is_estimate": s.use_as_estimate,
+                    }
+                    for s in state.specs
+                ],
+                engineering_state=diagnosis.engineering_state.value,
+                bottoms_flow_kgmole_h=state.bottoms_molar_flow_kgmole_h,
+                min_bottoms_flow_kgmole_h=self.assistant.limits.min_bottoms_flow_kgmole_h,
+            )
+            if not clicks:
+                self._column_assist_log("No recommended Specs Summary clicks.")
+                return
+            notes: list[str] = []
+            for click in clicks:
+                if click.sync_goal_from_current:
+                    val = self.column_api.sync_spec_goal_from_current(name, click.spec_name)
+                    notes.append(f"{click.spec_name}: Goal←Current ({val:.6g})")
+                row: dict = {"name": click.spec_name}
+                if click.set_active is not None:
+                    row["is_active"] = click.set_active
+                if click.set_estimate is not None:
+                    row["is_estimate"] = click.set_estimate
+                if len(row) > 1:
+                    notes.extend(self.column_api.apply_specs_summary(name, [row]))
+            self.column_api.run_column(name)
+            state2, diagnosis2 = self.assistant.diagnose_column(name)
+            self._show_column_state(state2, diagnosis2)
+            self._column_assist_log(
+                "Applied recommended Specs Summary clicks:\n  "
+                + "\n  ".join(notes)
+                + "\n"
+                + format_pe_board(state2, diagnosis2)
+            )
+            self.column_pages.setCurrentIndex(2)
+        except Exception as exc:
+            self._show_error(exc)
+
+    def sync_selected_spec_current_to_goal(self) -> None:
+        try:
+            name = self._selected_column()
+            row = self.column_specs_table.currentRow()
+            if row < 0:
+                raise HysysError("Select a specification row first.")
+            item = self.column_specs_table.item(row, 0)
+            if item is None:
+                raise HysysError("Invalid selection.")
+            spec_name = item.text()
+            val = self.column_api.sync_spec_goal_from_current(name, spec_name)
+            state = self.assistant.inspect(name)
+            self._show_column_state(state)
+            self._column_assist_log(f"Synced {spec_name}: Goal ← Current ({val:.6g})")
+        except Exception as exc:
+            self._show_error(exc)
+
     def inspect_column(self) -> None:
         try:
             state = self.assistant.inspect(self._selected_column())
             self._show_column_state(state)
             self._column_assist_log(f"Inspected {state.name}: DOF={state.degrees_of_freedom}")
-            self.column_pages.setCurrentIndex(1)  # Specs page
+            self.column_pages.setCurrentIndex(2)  # Specs Summary
         except Exception as exc:
             self._show_error(exc)
 
@@ -746,7 +926,7 @@ class HysysStudio(QMainWindow):
             state, diagnosis = self.assistant.diagnose_column(self._selected_column())
             self._show_column_state(state, diagnosis)
             self._column_assist_log(format_pe_board(state, diagnosis))
-            self.column_pages.setCurrentIndex(0)  # Diagnosis page
+            self.column_pages.setCurrentIndex(2)  # Specs Summary (show clicks)
         except Exception as exc:
             self._show_error(exc)
 

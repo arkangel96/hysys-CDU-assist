@@ -23,7 +23,7 @@ from column_models import (
     TrialResult,
     default_sw_stripper_targets,
 )
-from column_spec_catalog import recommend_add_spec
+from column_spec_catalog import recommend_add_spec, recommend_specs_summary_clicks
 
 
 def score_state(state: ColumnState) -> float:
@@ -241,6 +241,11 @@ def diagnose(
         severity = "warn"
         pe_read = "Green residuals with unrealistic bottoms/duties — not plant-acceptable."
         potential = "nowhere"
+        if "full reflux" in (state.condenser_type or "").lower():
+            details.append(
+                "Connections: Full Reflux condenser — Ovhd is vapor product; "
+                "Active Ovhd rate can drive near-zero bottoms if set too high."
+            )
     elif eng == EngineeringState.C_OFF_SPEC:
         strategy = "nudge_operating_mv"
         summary = (
@@ -278,6 +283,35 @@ def diagnose(
         f"{r.action}: {r.hysys_type_name or '(none)'} — {r.reason}" for r in add_recs
     ]
 
+    click_recs = recommend_specs_summary_clicks(
+        spec_rows=[
+            {
+                "name": s.name,
+                "is_active": s.is_active,
+                "is_estimate": s.use_as_estimate,
+            }
+            for s in state.specs
+        ],
+        engineering_state=eng.value,
+        bottoms_flow_kgmole_h=state.bottoms_molar_flow_kgmole_h,
+        min_bottoms_flow_kgmole_h=limits.min_bottoms_flow_kgmole_h,
+        nh3_is_final_target=True,
+    )
+    click_lines = []
+    for c in click_recs:
+        bits = [c.spec_name]
+        if c.set_active is True:
+            bits.append("Active=ON")
+        elif c.set_active is False:
+            bits.append("Active=OFF")
+        if c.set_estimate is True:
+            bits.append("Estimate=ON")
+        elif c.set_estimate is False:
+            bits.append("Estimate=OFF")
+        if c.sync_goal_from_current:
+            bits.append("Sync Current→Goal")
+        click_lines.append(f"{' | '.join(bits)} — {c.reason}")
+
     return Diagnosis(
         codes=codes,
         summary=summary,
@@ -289,7 +323,34 @@ def diagnose(
         potential=potential,
         final_target_status=target_status,
         add_spec_recommendations=add_lines,
+        specs_summary_clicks=click_lines,
     )
+
+
+def format_connections_block(state: ColumnState) -> str:
+    """HYSYS Design → Connections snapshot for PE board / UI."""
+    feeds = ", ".join(state.feed_streams) if state.feed_streams else "—"
+    feed_loc = state.feed_stage_label or (
+        str(state.feed_stage) if state.feed_stage is not None else "—"
+    )
+    lines = [
+        "CONNECTIONS (Design → Connections) [READ]",
+        f"  Stages={state.number_of_stages} numbering={state.stage_numbering or '—'}",
+        f"  Feed={feeds} @ {feed_loc}",
+        f"  Condenser={state.condenser_type or '—'}  "
+        f"P_cond={state.condenser_pressure_bar} bar  dP={state.condenser_dp_bar}",
+        f"  Reboiler P_reb={state.reboiler_pressure_bar} bar  dP={state.reboiler_dp_bar}",
+        f"  Ovhd product={state.top_vapour_product or '—'}  "
+        f"Btms product={state.bottoms_liquid_product or '—'}",
+        f"  Energy={', '.join(state.energy_streams) or '—'}",
+    ]
+    if state.monitor_equilibrium_error is not None or state.monitor_heat_spec_error is not None:
+        lines.append(
+            f"  Monitor(COM): iter={state.monitor_iteration} "
+            f"EquilibriumError={state.monitor_equilibrium_error} "
+            f"HeatSpecError={state.monitor_heat_spec_error}"
+        )
+    return "\n".join(lines)
 
 
 def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
@@ -303,9 +364,13 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         f"  Offgas={state.overhead_molar_flow_kgmole_h} kgmole/h | "
         f"Btms={state.bottoms_molar_flow_kgmole_h} kgmole/h | BtmsT={state.bottoms_temperature}",
     ]
+    lines.append(format_connections_block(state))
     for sp in state.active_specs():
+        goal = sp.goal_display if sp.goal_display is not None else sp.goal_value
+        cur = sp.current_display if sp.current_display is not None else sp.current_value
+        unit = f" {sp.display_unit}" if sp.display_unit else ""
         lines.append(
-            f"  ACTIVE {sp.name}: goal={sp.goal_value} current={sp.current_value} err={sp.error}"
+            f"  ACTIVE {sp.name}: goal={goal}{unit} current={cur}{unit} err={sp.error}"
         )
     for tid, info in diagnosis.final_target_status.items():
         lines.append(
@@ -316,7 +381,13 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         lines.append("  ADD SPEC intelligence:")
         for rec in diagnosis.add_spec_recommendations:
             lines.append(f"    - {rec}")
+    if diagnosis.specs_summary_clicks:
+        lines.append("  SPECS SUMMARY clicks (Design → Specs Summary):")
+        for rec in diagnosis.specs_summary_clicks:
+            lines.append(f"    → {rec}")
     lines.append(f"  Summary: {diagnosis.summary}")
+    for detail in diagnosis.details[:6]:
+        lines.append(f"  • {detail}")
     return "\n".join(lines)
 
 

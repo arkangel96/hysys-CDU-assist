@@ -211,6 +211,8 @@ Otherwise: report **State B / C / D / F** with evidence — not a fake win.
 | Units mismatch (Ovhd 4.64 vs 16707) | Display/compare in worksheet units |
 | Tiny bottoms flow after “success” | Operability gate required |
 | Assist didn’t choose Active swap alone | Decision engine still behind COM capability |
+| Connections Full Reflux + Ovhd Active | READ connections into PE board (coded 2026-07-21) |
+| Monitor Ovhd kgmole/h vs COM SI | Specs table shows worksheet-style rate units |
 
 ---
 

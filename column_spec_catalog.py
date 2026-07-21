@@ -521,3 +521,133 @@ def stripper_priority_add_types() -> list[ColumnSpecTypeDef]:
     )
     by_id = {s.short_id: s for s in HYSYS_ADD_SPEC_TYPES}
     return [by_id[i] for i in order if i in by_id]
+
+
+@dataclass(slots=True)
+class SpecsSummaryClick:
+    """One HYSYS Specs Summary checkbox / value action for the PE."""
+
+    spec_name: str
+    set_active: bool | None = None
+    set_estimate: bool | None = None
+    sync_goal_from_current: bool = False
+    reason: str = ""
+
+
+def recommend_specs_summary_clicks(
+    *,
+    spec_rows: list[dict],
+    engineering_state: str,
+    bottoms_flow_kgmole_h: float | None,
+    min_bottoms_flow_kgmole_h: float = 1.0,
+    nh3_is_final_target: bool = True,
+) -> list[SpecsSummaryClick]:
+    """
+    Map State → Specs Summary clicks (Active / Estimate / Sync Current→Goal).
+
+    State D (tiny bottoms + Ovhd Active): plant recovery path —
+      uncheck Active on Ovhd, check Active on Btms (after syncing Btms goal),
+      keep NH3 Active OFF (FINAL_TARGET monitor only).
+    """
+    clicks: list[SpecsSummaryClick] = []
+    by_l = {str(r["name"]).lower(): r for r in spec_rows}
+
+    def find(*tokens: str) -> dict | None:
+        for name, row in by_l.items():
+            if all(t in name for t in tokens):
+                return row
+        for name, row in by_l.items():
+            if any(t in name for t in tokens):
+                return row
+        return None
+
+    ovhd = find("ovhd") or find("vap rate")
+    btms = find("btms") or find("bottoms")
+    nh3 = find("nh3") or find("ammonia")
+    rr = find("reflux ratio")
+
+    tiny_btms = (
+        bottoms_flow_kgmole_h is not None
+        and bottoms_flow_kgmole_h < min_bottoms_flow_kgmole_h
+    )
+    state_d = "D_" in engineering_state or engineering_state.endswith("constraint")
+    state_b = "B_" in engineering_state or "numerical" in engineering_state.lower()
+
+    if (state_d or tiny_btms) and ovhd and ovhd.get("is_active"):
+        clicks.append(
+            SpecsSummaryClick(
+                spec_name=str(ovhd["name"]),
+                set_active=False,
+                reason="Uncheck Active on Ovhd Vap Rate — frees DOF; huge Ovhd drives dry bottoms.",
+            )
+        )
+        if btms:
+            # Do NOT sync Goal from tiny Current — that locks the bad heel.
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(btms["name"]),
+                    sync_goal_from_current=False,
+                    set_active=True,
+                    set_estimate=True,
+                    reason=(
+                        "Set Btms Goal to a plant rate (≥ min bottoms), then check Active — "
+                        "do not sync from tiny Current."
+                    ),
+                )
+            )
+        if rr and not rr.get("is_active"):
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(rr["name"]),
+                    set_active=True,
+                    set_estimate=True,
+                    reason="Keep / ensure Reflux Ratio Active as energy-side DOF.",
+                )
+            )
+
+    if nh3 and nh3_is_final_target and nh3.get("is_active"):
+        clicks.append(
+            SpecsSummaryClick(
+                spec_name=str(nh3["name"]),
+                set_active=False,
+                set_estimate=True,
+                reason="Uncheck Active on NH3 — FINAL_TARGET stays monitor/estimate, not DOF driver.",
+            )
+        )
+    elif nh3 and nh3_is_final_target and not nh3.get("is_active"):
+        clicks.append(
+            SpecsSummaryClick(
+                spec_name=str(nh3["name"]),
+                set_active=False,
+                set_estimate=True,
+                reason="Leave NH3 Active OFF; Estimate ON — product check only.",
+            )
+        )
+
+    if state_b:
+        for row in spec_rows:
+            if row.get("is_active"):
+                continue
+            name = str(row["name"])
+            if any(t in name.lower() for t in ("ovhd", "btms", "reflux rate", "liquid")):
+                clicks.append(
+                    SpecsSummaryClick(
+                        spec_name=name,
+                        sync_goal_from_current=True,
+                        set_estimate=True,
+                        reason=f"State B: sync Current→Goal on '{name}' then Update Inactive / Estimate.",
+                    )
+                )
+                break
+
+    # Deduplicate by spec_name keeping first rich instruction
+    seen: set[str] = set()
+    unique: list[SpecsSummaryClick] = []
+    for click in clicks:
+        key = f"{click.spec_name}|{click.set_active}|{click.sync_goal_from_current}"
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(click)
+    return unique
+

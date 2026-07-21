@@ -277,7 +277,7 @@ normalization_scale: 0.005
 
 This separation is essential because a final process requirement may temporarily be inactive inside HYSYS during baseline convergence — and because **product quality targets must not be auto-relaxed** to force numerical “success.”
 
-**SW Stripper example:** bottoms NH₃ mass fraction `1e-7` is an **external FINAL_TARGET**, not a free manipulated variable.
+**SW Stripper example:** bottoms NH₃ mass fraction `5e-5` (50 ppmw) is a typical plant **FINAL_TARGET**. The old stress value `1e-7` (0.1 ppm) is unrealistically tight for SWS and is not used as the default.
 
 ---
 

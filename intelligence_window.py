@@ -42,12 +42,15 @@ WHAT IS CODED IN STUDIO (Layer 2)
 [x] Estimates refresh (COM)
 [x] Add Spec catalog (32 types) + when-to-add recommendations
 [x] Trial Map path / strategy board
+[x] Connections READ (condenser type, P, feeds) + Specs kgmole/h display
+[x] Specs Summary Active/Estimate APPLY + recommended clicks
 
 NOT CODED YET (by design)
 -------------------------
 [ ] Auto HYSYS "Add Spec" via Specs.Add (recommend only for now)
 [ ] Change column pressure automatically
 [ ] Change number of stages / feed stage automatically
+[ ] Parameters / Solver pages (await screenshots)
 [ ] Full 2x2 multivariable solver
 [ ] Hydraulic flooding validation
 
