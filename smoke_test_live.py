@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import sys
 
-from column_engine import ConvergenceAssistant, format_pe_board
-from column_models import ConvergenceLimits
 from column_api import ColumnController
+from column_engine import ConvergenceAssistant, evaluate_final_targets, format_pe_board
+from column_models import ConvergenceLimits, default_cdu_targets
 from hysys_api import HysysController, HysysError
 
 
 def main() -> int:
     print("=" * 60)
-    print("Simple Column Assist — live smoke test")
+    print("CDU Assist — live smoke test")
     print("=" * 60)
 
     controller = HysysController()
@@ -34,7 +34,7 @@ def main() -> int:
         if not columns:
             print("    FAIL: no columns in case")
             return 1
-        name = "SW Stripper" if "SW Stripper" in columns else columns[0]
+        name = sys.argv[1] if len(sys.argv) > 1 else columns[0]
         print(f"    Using: {name}")
 
         print("\n[3] Inspect")
@@ -60,10 +60,13 @@ def main() -> int:
         print(format_pe_board(state, diagnosis))
 
         print("\n[5] FINAL_TARGET snapshot")
-        from column_models import default_sw_stripper_targets
-        from column_engine import evaluate_final_targets
-
-        for status in evaluate_final_targets(state, default_sw_stripper_targets()):
+        targets = default_cdu_targets()
+        if not targets:
+            print(
+                "    (no default CDU FINAL_TARGETs yet — "
+                "configure per case after Phase 1)"
+            )
+        for status in evaluate_final_targets(state, targets):
             print(f"    {status}")
 
         print("\n" + "=" * 60)

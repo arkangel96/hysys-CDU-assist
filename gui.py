@@ -221,8 +221,8 @@ class StatusChip(QFrame):
         )
 
 
-class SimpleColumnAssist(QMainWindow):
-    """Desktop assist for simple distillation / stripping columns in HYSYS."""
+class CduAssist(QMainWindow):
+    """Desktop assist for atmospheric crude distillation units in HYSYS."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -241,7 +241,7 @@ class SimpleColumnAssist(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self) -> None:
-        self.setWindowTitle("Simple Column Assist — for Aspen HYSYS")
+        self.setWindowTitle("CDU Assist — for Aspen HYSYS")
         self.setMinimumSize(1280, 820)
         self.setStyleSheet(DARK_THEME)
         central = QWidget()
@@ -252,9 +252,9 @@ class SimpleColumnAssist(QMainWindow):
 
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 4)
-        logo = QLabel("SIMPLE COLUMN ASSIST")
+        logo = QLabel("CDU ASSIST")
         logo.setStyleSheet("font-size: 22px; font-weight: 700; color: #58a6ff;")
-        subtitle = QLabel("Simple distillation & stripping  ·  not CDU/VDU")
+        subtitle = QLabel("Atmospheric crude tower  ·  draws · PAs · cuts  ·  not VDU")
         subtitle.setStyleSheet("color: #8b949e; font-size: 12px;")
         self.status = QLabel("● DISCONNECTED")
         self.status.setStyleSheet("color: #f85149; font-weight: 600;")
@@ -714,7 +714,10 @@ class SimpleColumnAssist(QMainWindow):
             if diagnosis.details:
                 detail += "\n• " + "\n• ".join(diagnosis.details[:8])
             if getattr(state, "bottoms_nh3_mass_frac", None) is not None:
-                detail += f"\n• Bottoms NH3 (stream)={state.bottoms_nh3_mass_frac:.4g}"
+                detail += (
+                    f"\n• Bottoms stream quality sample={state.bottoms_nh3_mass_frac:.4g}"
+                    " (legacy COM field; CDU cuts TBD Phase 1)"
+                )
             if getattr(state, "overhead_molar_flow_kgmole_h", None) is not None:
                 detail += f"\n• Ovhd={state.overhead_molar_flow_kgmole_h:.4g} kgmole/h"
             if getattr(state, "bottoms_molar_flow_kgmole_h", None) is not None:
@@ -731,7 +734,7 @@ class SimpleColumnAssist(QMainWindow):
             self.column_summary.setText(
                 f"{state.name} ({state.flowsheet_tag})  ·  score {score_state(state):.4g}\n"
                 "Active specs drive the solve. Inactive rows are estimates only.\n"
-                "FINAL_TARGET (NH3) is locked — Assist will not auto-relax product GoalValue."
+                "FINAL_TARGET (cuts / ASTM / TBP) is locked — Assist will not auto-relax product GoalValue."
             )
             self.column_summary.setStyleSheet(
                 "color: #8b949e; padding: 10px; background: #161b22; "
@@ -940,7 +943,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def open_trial_map(self) -> None:
         try:
-            name = self.column_combo.currentText().strip() or "SW Stripper"
+            name = self.column_combo.currentText().strip() or ""
             # Recreate if older dialog instance somehow remains
             if self.trial_map_window is None or not isinstance(self.trial_map_window, TrialMapWindow):
                 self.trial_map_window = TrialMapWindow(self.assistant)
@@ -955,7 +958,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def open_intelligence(self) -> None:
         try:
-            name = self.column_combo.currentText().strip() or "SW Stripper"
+            name = self.column_combo.currentText().strip() or ""
             if self.intelligence_window is None:
                 self.intelligence_window = IntelligenceWindow(self.assistant)
             self.intelligence_window.refresh(name)
@@ -1099,9 +1102,10 @@ class SimpleColumnAssist(QMainWindow):
 
     def _show_error(self, error: Exception) -> None:
         self.log(f"ERROR: {error}")
-        QMessageBox.critical(self, "Simple Column Assist", str(error))
+        QMessageBox.critical(self, "CDU Assist", str(error))
 
 
 # Backward-compatible alias
-HysysStudio = SimpleColumnAssist
+HysysStudio = CduAssist
+SimpleColumnAssist = CduAssist  # backward-compatible alias
 

@@ -1,12 +1,15 @@
-# HYSYS Add Spec catalog (SW Stripper capture)
+# HYSYS Add Spec catalog (CDU Assist)
 
-**Source:** Aspen HYSYS dialog *Add Specs – SW Stripper (COL1)* / Column Specification Types  
+**Source:** Aspen HYSYS *Add Specs* / Column Specification Types dialog  
 **Code:** `column_spec_catalog.py`  
+**Product:** CDU Assist — see [`SCOPE_CDU_ASSIST.md`](SCOPE_CDU_ASSIST.md)  
 **Policy:** Catalog + **when to add** intelligence is coded. **COM auto-Add is not executed** until validated — Assist **recommends**; you add in HYSYS if needed.
+
+Petroleum cut / gap / PA types are preferred for CDU. Component-fraction purity examples remain in the catalog only as transferable notes from earlier Tower Assist work.
 
 ---
 
-## Full Add Spec list (from your screenshot)
+## Full Add Spec list (from HYSYS dialog)
 
 1. Column Cold Properties Spec  
 2. Column Component Flow  
@@ -41,28 +44,27 @@
 31. End Point Based Column Gap Spec  
 32. Stream Specification  
 
----
-
-## When to add (PE intelligence — stripper)
-
-| Situation | Prefer | Action |
-|-----------|--------|--------|
-| Normal SW Stripper | Reflux Ratio + Component Fraction (NH₃) | Use **existing** — don’t Add |
-| State B (dead solve) | Draw Rate / Liquid Flow already on column | **Activate** existing Ovhd/Reflux Rate — don’t Add |
-| Weak RR response, NH₃ missed | Reboil Ratio or Duty | **Recommend Add** (user) then 1-for-1 Active |
-| No composition spec at all | Component Fraction | **Recommend Add** |
-| Petroleum cut/gap/PA/VP | — | **Not for this stripper** |
+Exact ordering and availability vary by HYSYS release and column configuration.
 
 ---
 
-## Code API
+## CDU priority (Assist recommendations)
+
+Prefer existing draw / PA / reflux / petroleum cut specs before adding new ones.
 
 ```python
-from column_spec_catalog import (
-    HYSYS_ADD_SPEC_TYPES,
-    recommend_add_spec,
-    stripper_priority_add_types,
-)
+from column_spec_catalog import cdu_priority_add_types
+
+for spec in cdu_priority_add_types()[:8]:
+    print(spec.hysys_name, spec.policy.value)
 ```
 
-Diagnose PE board now includes **ADD SPEC intelligence** lines.
+| Situation | Typical Active pair | Notes |
+|-----------|---------------------|-------|
+| Healthy CDU baseline | Draw rates + PA / reflux as case requires | DOF = 0 first |
+| State B recovery | Temporary baseline Actives | Audit; restore FINAL_TARGET monitor-only |
+| Cut quality FINAL_TARGET | Monitor / Estimate | Do not auto-relax |
+
+---
+
+*Retargeted for CDU Assist — living catalog*

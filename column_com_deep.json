@@ -1,93 +1,444 @@
 {
-  "column": "SW Stripper",
+  "column": "T-100",
   "degrees_of_freedom": 0,
-  "reflux_ratio_property": 9.99999480301892,
+  "reflux_ratio_property": 0.7064594355174192,
   "connections": {
     "TopVapourProduct": "Off Gas",
-    "BtmLiquidProduct": "Stripper Bottoms",
-    "TopLiquidProduct": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
+    "BtmLiquidProduct": "Residue",
+    "TopLiquidProduct": "Naphtha",
     "TopWaterProduct": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
-    "BtmVapourFeed": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>",
+    "BtmVapourFeed": "Main Steam",
     "TopLiquidFeed": "<unavailable: com_error: (-2147352567, 'Exception occurred.', (0, None, None, None, 0, -2147467259), None)>"
   },
   "attached_feeds": [
-    "Stripper Feed",
-    "Reb Q"
+    "Main Steam",
+    "Atm Feed",
+    "Diesel Steam",
+    "AGO Steam",
+    "Q-Trim",
+    "Kero_SS_Energy"
   ],
   "attached_products": [
-    "Stripper Bottoms",
+    "Residue",
     "Off Gas",
-    "Cond Q"
+    "Naphtha",
+    "Waste Water",
+    "Kerosene",
+    "Diesel",
+    "AGO",
+    "Atmos Cond"
   ],
   "specifications": [
     {
+      "Name": "Kero_SS Prod Flow",
+      "TypeName": "clmdrawspec",
+      "IsActive": true,
+      "CurrentValue": 0.017113190387717372,
+      "GoalValue": 0.017113245077568267,
+      "Error": -3.1957615663540565e-06,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.017113245077568267
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Diesel_SS Prod Flow",
+      "TypeName": "clmdrawspec",
+      "IsActive": true,
+      "CurrentValue": 0.03542238092560715,
+      "GoalValue": 0.03542257717668701,
+      "Error": -5.540282370769215e-06,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.03542257717668701
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "AGO_SS Prod Flow",
+      "TypeName": "clmdrawspec",
+      "IsActive": true,
+      "CurrentValue": 0.00828055123361961,
+      "GoalValue": 0.008280602456887871,
+      "Error": -6.185934963957427e-06,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.008280602456887871
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_1_Rate(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": 0.09200545836613884,
+      "GoalValue": 0.0920066939654208,
+      "Error": -1.3429449844420865e-05,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.0920066939654208
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_1_Duty(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": -16118.912606198282,
+      "GoalValue": -16118.912606198282,
+      "Error": -0.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": -16118.912606198282
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_2_Rate(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": 0.05520374541712697,
+      "GoalValue": 0.05520401637925248,
+      "Error": -4.90837702181583e-06,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.05520401637925248
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_2_Duty(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": -10257.489840307999,
+      "GoalValue": -10257.489840307999,
+      "Error": -0.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": -10257.489840307999
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_3_Rate(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": 0.055203501515374134,
+      "GoalValue": 0.05520401637925248,
+      "Error": -9.326565567382029e-06,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.05520401637925248
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "PA_3_Duty(Pa)",
+      "TypeName": "clmpumpspec",
+      "IsActive": true,
+      "CurrentValue": -10257.489840307999,
+      "GoalValue": -10257.489840307999,
+      "Error": -0.0,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": -10257.489840307999
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Naphtha Prod Rate",
+      "TypeName": "clmdrawspec",
+      "IsActive": true,
+      "CurrentValue": 0.04232305300815401,
+      "GoalValue": 0.04232307922409357,
+      "Error": -6.194242016107834e-07,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.04232307922409357
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Liquid Flow",
+      "TypeName": "clmliquidflowspec",
+      "IsActive": true,
+      "CurrentValue": 0.006440463404755947,
+      "GoalValue": 0.006440468577579456,
+      "Error": -8.031750247107622e-07,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.006440468577579456
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Kero Reb Duty",
+      "TypeName": "clmdutyspec",
+      "IsActive": true,
+      "CurrentValue": 2197.9004066274138,
+      "GoalValue": 2198.0335372088566,
+      "Error": -1.0513358624878636e-05,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 2198.0335372088566
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
+      "Name": "Vap Prod Flow",
+      "TypeName": "clmvapourflowspec",
+      "IsActive": true,
+      "CurrentValue": 1.1339595408252795e-08,
+      "GoalValue": 0.0,
+      "Error": 2.5792706503610714e-07,
+      "write_probe": {
+        "IsActive": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": true
+        },
+        "SpecifiedValue": {
+          "readable": false
+        },
+        "GoalValue": {
+          "readable": true,
+          "writable_direct": true,
+          "sample": 0.0
+        },
+        "CurrentValue": {
+          "readable": true,
+          "writable": false,
+          "error": "Property 'Item.CurrentValue' can not be set."
+        },
+        "Value": {
+          "readable": false
+        }
+      }
+    },
+    {
       "Name": "Reflux Ratio",
       "TypeName": "clmrefluxspec",
-      "IsActive": true,
-      "CurrentValue": 9.99999480301892,
-      "GoalValue": 10.0,
-      "Error": -5.196981080146656e-07,
-      "write_probe": {
-        "IsActive": {
-          "readable": true,
-          "writable_direct": true,
-          "sample": true
-        },
-        "SpecifiedValue": {
-          "readable": false
-        },
-        "GoalValue": {
-          "readable": true,
-          "writable_direct": true,
-          "sample": 10.0
-        },
-        "CurrentValue": {
-          "readable": true,
-          "writable": false,
-          "error": "Property 'Item.CurrentValue' can not be set."
-        },
-        "Value": {
-          "readable": false
-        }
-      }
-    },
-    {
-      "Name": "NH3 Mass Frac (Reboiler)",
-      "TypeName": "clmcompfracspec",
-      "IsActive": true,
-      "CurrentValue": 9.99898105963873e-06,
-      "GoalValue": 1e-05,
-      "Error": -1.7701630578717547e-05,
-      "write_probe": {
-        "IsActive": {
-          "readable": true,
-          "writable_direct": true,
-          "sample": true
-        },
-        "SpecifiedValue": {
-          "readable": false
-        },
-        "GoalValue": {
-          "readable": true,
-          "writable_direct": true,
-          "sample": 1e-05
-        },
-        "CurrentValue": {
-          "readable": true,
-          "writable": false,
-          "error": "Property 'Item.CurrentValue' can not be set."
-        },
-        "Value": {
-          "readable": false
-        }
-      }
-    },
-    {
-      "Name": "Ovhd Vap Rate",
-      "TypeName": "clmdrawspec",
       "IsActive": false,
-      "CurrentValue": 0.11072725805460684,
-      "Error": -32767.0,
+      "CurrentValue": 0.706453855322693,
+      "GoalValue": 1.0,
+      "Error": -0.293546144677307,
       "write_probe": {
         "IsActive": {
           "readable": true,
@@ -98,63 +449,9 @@
           "readable": false
         },
         "GoalValue": {
-          "readable": false
-        },
-        "CurrentValue": {
-          "readable": true,
-          "writable": false,
-          "error": "Property 'Item.CurrentValue' can not be set."
-        },
-        "Value": {
-          "readable": false
-        }
-      }
-    },
-    {
-      "Name": "Reflux Rate",
-      "TypeName": "clmliquidflowspec",
-      "IsActive": false,
-      "CurrentValue": 1.107272016797492,
-      "Error": -32767.0,
-      "write_probe": {
-        "IsActive": {
           "readable": true,
           "writable_direct": true,
-          "sample": false
-        },
-        "SpecifiedValue": {
-          "readable": false
-        },
-        "GoalValue": {
-          "readable": false
-        },
-        "CurrentValue": {
-          "readable": true,
-          "writable": false,
-          "error": "Property 'Item.CurrentValue' can not be set."
-        },
-        "Value": {
-          "readable": false
-        }
-      }
-    },
-    {
-      "Name": "Btms Prod Rate",
-      "TypeName": "clmdrawspec",
-      "IsActive": false,
-      "CurrentValue": 4.945761325871201,
-      "Error": -32767.0,
-      "write_probe": {
-        "IsActive": {
-          "readable": true,
-          "writable_direct": true,
-          "sample": false
-        },
-        "SpecifiedValue": {
-          "readable": false
-        },
-        "GoalValue": {
-          "readable": false
+          "sample": 1.0
         },
         "CurrentValue": {
           "readable": true,
@@ -170,36 +467,134 @@
   "column_operations": {
     "Main TS": {
       "Name": "Main TS",
-      "NumberOfStages": 8,
+      "NumberOfStages": 29,
       "FeedStages": [
         {
           "index": 0,
-          "Name": "3__Main TS",
+          "Name": "28__Main TS",
           "FeedStreams": "CDispatch",
-          "IFaceStageNumber": 3,
+          "IFaceStageNumber": 28,
+          "StageHeatFlow": 20792.363229183993,
+          "StageHeatFlowValue": 20792.363229183993
+        },
+        {
+          "index": 1,
+          "Name": "28__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 28,
+          "StageHeatFlow": 20792.363229183993,
+          "StageHeatFlowValue": 20792.363229183993
+        },
+        {
+          "index": 2,
+          "Name": "1__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 1,
+          "StageHeatFlow": -16118.912606198282,
+          "StageHeatFlowValue": -16118.912606198282
+        },
+        {
+          "index": 3,
+          "Name": "8__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 8,
           "StageHeatFlow": -32767.0
+        },
+        {
+          "index": 4,
+          "Name": "16__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 16,
+          "StageHeatFlow": -10257.489840307999,
+          "StageHeatFlowValue": -10257.489840307999
+        },
+        {
+          "index": 5,
+          "Name": "21__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 21,
+          "StageHeatFlow": -10257.489840307999,
+          "StageHeatFlowValue": -10257.489840307999
+        },
+        {
+          "index": 6,
+          "Name": "16__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 16,
+          "StageHeatFlow": -10257.489840307999,
+          "StageHeatFlowValue": -10257.489840307999
+        },
+        {
+          "index": 7,
+          "Name": "21__Main TS",
+          "FeedStreams": "CDispatch",
+          "IFaceStageNumber": 21,
+          "StageHeatFlow": -10257.489840307999,
+          "StageHeatFlowValue": -10257.489840307999
         }
       ],
       "profiles": {
         "Temperature": [
-          117.44914004330593,
-          119.18981315691423,
-          119.89911587070065,
-          121.28215013028051,
-          122.13400576489022,
-          122.82125892623134,
-          123.43914970868144,
-          124.02425676189921
+          135.13667266890565,
+          157.63123452188853,
+          172.21452174413093,
+          179.69282792042168,
+          184.8963990269612,
+          189.45874851606754,
+          194.32263315529946,
+          200.32561337990109,
+          207.6570236349769,
+          217.14582881575257,
+          224.82835023965174,
+          230.54171068265515,
+          235.00394191439108,
+          239.08450613428522,
+          243.82847980835015,
+          251.24670678964787,
+          266.71001534469906,
+          289.4803928219586,
+          300.50112818865864,
+          305.76253201398436,
+          309.0718503768396,
+          324.1840821933224,
+          336.37737336208977,
+          342.1005578167458,
+          345.77916113430956,
+          348.7264109415337,
+          352.31095571378467,
+          359.65040425836344,
+          354.59154418050207
         ],
         "Pressure": [
-          197.8795857905,
-          201.8194481258,
-          205.7593104611,
-          209.6991727964,
-          213.6390351317,
-          217.57889746700002,
-          221.51875980230002,
-          225.4586221376
+          197.8795857904531,
+          198.86455137427814,
+          199.84951695810318,
+          200.83448254192822,
+          201.81944812575327,
+          202.8044137095783,
+          203.78937929340336,
+          204.7743448772284,
+          205.75931046105345,
+          206.7442760448785,
+          207.72924162870353,
+          208.71420721252858,
+          209.69917279635362,
+          210.68413838017867,
+          211.6691039640037,
+          212.65406954782875,
+          213.6390351316538,
+          214.62400071547884,
+          215.6089662993039,
+          216.59393188312893,
+          217.57889746695398,
+          218.56386305077902,
+          219.54882863460406,
+          220.5337942184291,
+          221.51875980225415,
+          222.5037253860792,
+          223.48869096990424,
+          224.47365655372928,
+          225.4586221375546
         ]
       },
       "dir_sample": [
@@ -287,9 +682,9 @@
     },
     "Condenser": {
       "Name": "Condenser",
-      "TypeName": "partialcondenser",
-      "VesselPressure": 197.8795857905,
-      "EnergyStream": "Cond Q",
+      "TypeName": "condenser3op",
+      "VesselPressure": 135.82675400947477,
+      "EnergyStream": "Atmos Cond",
       "dir_sample": [
         "AddRef",
         "Application",
@@ -353,11 +748,89 @@
         "CurveLightLiqMassFlow"
       ]
     },
-    "Reboiler": {
-      "Name": "Reboiler",
+    "Kero_SS": {
+      "Name": "Kero_SS",
+      "TypeName": "traysection",
+      "Pressure": "(205.75931046105345, 205.75931046105345, 205.75931046105345)",
+      "PressureValue": [
+        205.75931046105345,
+        205.75931046105345,
+        205.75931046105345
+      ],
+      "Temperature": "(220.41679824430082, 225.8404245172581, 229.995438358822)",
+      "TemperatureValue": [
+        220.41679824430082,
+        225.8404245172581,
+        229.995438358822
+      ],
+      "dir_sample": [
+        "AddDrawStream",
+        "AddFeedStream",
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomStagePressure",
+        "BottomStagePressureValue",
+        "BottomStageTemperature",
+        "BottomStageTemperatureValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "ColumnDiameter",
+        "ColumnDiameterValue",
+        "CreateFluid",
+        "CreateUserVariable",
+        "DeleteAllDrawStreams",
+        "DeleteAllFeedStreams",
+        "DeleteDrawStream",
+        "DeleteFeedStream",
+        "EnthalpyLagFactor",
+        "EnthalpyLagFactorValue",
+        "FeedStages",
+        "Flowsheet",
+        "FluidPackage",
+        "GetIDsOfNames",
+        "GetTypeInfo",
+        "GetTypeInfoCount",
+        "GetUserVariable",
+        "Invoke",
+        "IsIgnored",
+        "IsValid",
+        "LiquidDrawStages",
+        "LiquidDrawStreams",
+        "LiquidDrawValves",
+        "LiquidFeedStream",
+        "LiquidFeedStreamVar",
+        "LiquidProductStream",
+        "LiquidProductStreamVar",
+        "MinimumLiquid",
+        "MinimumLiquidValue",
+        "Moniker",
+        "NumberOfStages",
+        "NumberOfTrays",
+        "OpenStorage",
+        "OverallEfficiency",
+        "OverallEfficiencyValue",
+        "Parent",
+        "Pressure",
+        "PressureValue",
+        "QueryInterface",
+        "Release",
+        "SeparationStages",
+        "SimulationCase",
+        "SpecifyDrawLocation",
+        "SpecifyFeedLocation",
+        "TaggedName",
+        "Temperature"
+      ]
+    },
+    "Kero_SS_Reb": {
+      "Name": "Kero_SS_Reb",
       "TypeName": "bpreboiler",
-      "VesselPressure": 225.4586221376,
-      "EnergyStream": "Reb Q",
+      "VesselPressure": 205.75931046105345,
+      "EnergyStream": "Kero_SS_Energy",
       "dir_sample": [
         "AddRef",
         "Application",
@@ -420,47 +893,870 @@
         "CurveLightLiqMassFlow",
         "CurveLightLiqMassFlowValue"
       ]
+    },
+    "Diesel_SS": {
+      "Name": "Diesel_SS",
+      "TypeName": "traysection",
+      "Pressure": "(213.6390351316538, 213.6390351316538, 213.6390351316538)",
+      "PressureValue": [
+        213.6390351316538,
+        213.6390351316538,
+        213.6390351316538
+      ],
+      "Temperature": "(262.57612053971013, 259.18398908712004, 252.25961300205665)",
+      "TemperatureValue": [
+        262.57612053971013,
+        259.18398908712004,
+        252.25961300205665
+      ],
+      "dir_sample": [
+        "AddDrawStream",
+        "AddFeedStream",
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomStagePressure",
+        "BottomStagePressureValue",
+        "BottomStageTemperature",
+        "BottomStageTemperatureValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "ColumnDiameter",
+        "ColumnDiameterValue",
+        "CreateFluid",
+        "CreateUserVariable",
+        "DeleteAllDrawStreams",
+        "DeleteAllFeedStreams",
+        "DeleteDrawStream",
+        "DeleteFeedStream",
+        "EnthalpyLagFactor",
+        "EnthalpyLagFactorValue",
+        "FeedStages",
+        "Flowsheet",
+        "FluidPackage",
+        "GetIDsOfNames",
+        "GetTypeInfo",
+        "GetTypeInfoCount",
+        "GetUserVariable",
+        "Invoke",
+        "IsIgnored",
+        "IsValid",
+        "LiquidDrawStages",
+        "LiquidDrawStreams",
+        "LiquidDrawValves",
+        "LiquidFeedStream",
+        "LiquidFeedStreamVar",
+        "LiquidProductStream",
+        "LiquidProductStreamVar",
+        "MinimumLiquid",
+        "MinimumLiquidValue",
+        "Moniker",
+        "NumberOfStages",
+        "NumberOfTrays",
+        "OpenStorage",
+        "OverallEfficiency",
+        "OverallEfficiencyValue",
+        "Parent",
+        "Pressure",
+        "PressureValue",
+        "QueryInterface",
+        "Release",
+        "SeparationStages",
+        "SimulationCase",
+        "SpecifyDrawLocation",
+        "SpecifyFeedLocation",
+        "TaggedName",
+        "Temperature"
+      ]
+    },
+    "AGO_SS": {
+      "Name": "AGO_SS",
+      "TypeName": "traysection",
+      "Pressure": "(218.56386305077902, 218.56386305077902, 218.56386305077902)",
+      "PressureValue": [
+        218.56386305077902,
+        218.56386305077902,
+        218.56386305077902
+      ],
+      "Temperature": "(317.09108000767617, 311.14404390936534, 299.4635645157483)",
+      "TemperatureValue": [
+        317.09108000767617,
+        311.14404390936534,
+        299.4635645157483
+      ],
+      "dir_sample": [
+        "AddDrawStream",
+        "AddFeedStream",
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "BottomStagePressure",
+        "BottomStagePressureValue",
+        "BottomStageTemperature",
+        "BottomStageTemperatureValue",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "ColumnDiameter",
+        "ColumnDiameterValue",
+        "CreateFluid",
+        "CreateUserVariable",
+        "DeleteAllDrawStreams",
+        "DeleteAllFeedStreams",
+        "DeleteDrawStream",
+        "DeleteFeedStream",
+        "EnthalpyLagFactor",
+        "EnthalpyLagFactorValue",
+        "FeedStages",
+        "Flowsheet",
+        "FluidPackage",
+        "GetIDsOfNames",
+        "GetTypeInfo",
+        "GetTypeInfoCount",
+        "GetUserVariable",
+        "Invoke",
+        "IsIgnored",
+        "IsValid",
+        "LiquidDrawStages",
+        "LiquidDrawStreams",
+        "LiquidDrawValves",
+        "LiquidFeedStream",
+        "LiquidFeedStreamVar",
+        "LiquidProductStream",
+        "LiquidProductStreamVar",
+        "MinimumLiquid",
+        "MinimumLiquidValue",
+        "Moniker",
+        "NumberOfStages",
+        "NumberOfTrays",
+        "OpenStorage",
+        "OverallEfficiency",
+        "OverallEfficiencyValue",
+        "Parent",
+        "Pressure",
+        "PressureValue",
+        "QueryInterface",
+        "Release",
+        "SeparationStages",
+        "SimulationCase",
+        "SpecifyDrawLocation",
+        "SpecifyFeedLocation",
+        "TaggedName",
+        "Temperature"
+      ]
+    },
+    "PA_1_Cooler": {
+      "Name": "PA_1_Cooler",
+      "TypeName": "coolerop",
+      "Duty": 16118.912606198282,
+      "DutyValue": 16118.912606198282,
+      "EnergyStream": "PA_1_Q",
+      "dir_sample": [
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "CreateFluid",
+        "CreateUserVariable",
+        "CurveEnthalpy",
+        "CurveEnthalpyValue",
+        "CurveHeatFlow",
+        "CurveHeatFlowValue",
+        "CurveHeatOfVaporization",
+        "CurveHeatOfVaporizationValue",
+        "CurveHeavyLiqCriticalPressure",
+        "CurveHeavyLiqCriticalPressureValue",
+        "CurveHeavyLiqCriticalTemperature",
+        "CurveHeavyLiqCriticalTemperatureValue",
+        "CurveHeavyLiqCriticalZFactor",
+        "CurveHeavyLiqCriticalZFactorValue",
+        "CurveHeavyLiqDensity",
+        "CurveHeavyLiqDensityValue",
+        "CurveHeavyLiqMW",
+        "CurveHeavyLiqMWValue",
+        "CurveHeavyLiqMassFlow",
+        "CurveHeavyLiqMassFlowValue",
+        "CurveHeavyLiqMassSpecHeat",
+        "CurveHeavyLiqMassSpecHeatValue",
+        "CurveHeavyLiqPseudoCriticalPressure",
+        "CurveHeavyLiqPseudoCriticalPressureValue",
+        "CurveHeavyLiqPseudoCriticalTemperature",
+        "CurveHeavyLiqPseudoCriticalTemperatureValue",
+        "CurveHeavyLiqPseudoCriticalZFactor",
+        "CurveHeavyLiqPseudoCriticalZFactorValue",
+        "CurveHeavyLiqPseudoOmega",
+        "CurveHeavyLiqPseudoOmegaValue",
+        "CurveHeavyLiqSpecificGravity",
+        "CurveHeavyLiqSpecificGravityValue",
+        "CurveHeavyLiqSurfaceTension",
+        "CurveHeavyLiqSurfaceTensionValue",
+        "CurveHeavyLiqThermalConductivity",
+        "CurveHeavyLiqThermalConductivityValue",
+        "CurveHeavyLiqViscosity",
+        "CurveHeavyLiqViscosityValue",
+        "CurveLightLiqCriticalPressure",
+        "CurveLightLiqCriticalPressureValue",
+        "CurveLightLiqCriticalTemperature",
+        "CurveLightLiqCriticalTemperatureValue",
+        "CurveLightLiqCriticalZFactor",
+        "CurveLightLiqCriticalZFactorValue",
+        "CurveLightLiqDensity",
+        "CurveLightLiqDensityValue",
+        "CurveLightLiqMW",
+        "CurveLightLiqMWValue",
+        "CurveLightLiqMassFlow",
+        "CurveLightLiqMassFlowValue",
+        "CurveLightLiqMassSpecHeat",
+        "CurveLightLiqMassSpecHeatValue"
+      ]
+    },
+    "PA_2_Cooler": {
+      "Name": "PA_2_Cooler",
+      "TypeName": "coolerop",
+      "Duty": 10257.489840308,
+      "DutyValue": 10257.489840308,
+      "EnergyStream": "PA_2_Q",
+      "dir_sample": [
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "CreateFluid",
+        "CreateUserVariable",
+        "CurveEnthalpy",
+        "CurveEnthalpyValue",
+        "CurveHeatFlow",
+        "CurveHeatFlowValue",
+        "CurveHeatOfVaporization",
+        "CurveHeatOfVaporizationValue",
+        "CurveHeavyLiqCriticalPressure",
+        "CurveHeavyLiqCriticalPressureValue",
+        "CurveHeavyLiqCriticalTemperature",
+        "CurveHeavyLiqCriticalTemperatureValue",
+        "CurveHeavyLiqCriticalZFactor",
+        "CurveHeavyLiqCriticalZFactorValue",
+        "CurveHeavyLiqDensity",
+        "CurveHeavyLiqDensityValue",
+        "CurveHeavyLiqMW",
+        "CurveHeavyLiqMWValue",
+        "CurveHeavyLiqMassFlow",
+        "CurveHeavyLiqMassFlowValue",
+        "CurveHeavyLiqMassSpecHeat",
+        "CurveHeavyLiqMassSpecHeatValue",
+        "CurveHeavyLiqPseudoCriticalPressure",
+        "CurveHeavyLiqPseudoCriticalPressureValue",
+        "CurveHeavyLiqPseudoCriticalTemperature",
+        "CurveHeavyLiqPseudoCriticalTemperatureValue",
+        "CurveHeavyLiqPseudoCriticalZFactor",
+        "CurveHeavyLiqPseudoCriticalZFactorValue",
+        "CurveHeavyLiqPseudoOmega",
+        "CurveHeavyLiqPseudoOmegaValue",
+        "CurveHeavyLiqSpecificGravity",
+        "CurveHeavyLiqSpecificGravityValue",
+        "CurveHeavyLiqSurfaceTension",
+        "CurveHeavyLiqSurfaceTensionValue",
+        "CurveHeavyLiqThermalConductivity",
+        "CurveHeavyLiqThermalConductivityValue",
+        "CurveHeavyLiqViscosity",
+        "CurveHeavyLiqViscosityValue",
+        "CurveLightLiqCriticalPressure",
+        "CurveLightLiqCriticalPressureValue",
+        "CurveLightLiqCriticalTemperature",
+        "CurveLightLiqCriticalTemperatureValue",
+        "CurveLightLiqCriticalZFactor",
+        "CurveLightLiqCriticalZFactorValue",
+        "CurveLightLiqDensity",
+        "CurveLightLiqDensityValue",
+        "CurveLightLiqMW",
+        "CurveLightLiqMWValue",
+        "CurveLightLiqMassFlow",
+        "CurveLightLiqMassFlowValue",
+        "CurveLightLiqMassSpecHeat",
+        "CurveLightLiqMassSpecHeatValue"
+      ]
+    },
+    "PA_3_Cooler": {
+      "Name": "PA_3_Cooler",
+      "TypeName": "coolerop",
+      "Duty": 10257.489840308,
+      "DutyValue": 10257.489840308,
+      "EnergyStream": "PA_3_Q",
+      "dir_sample": [
+        "AddRef",
+        "Application",
+        "AttachedFeeds",
+        "AttachedLogicalOps",
+        "AttachedProducts",
+        "CalcLevel",
+        "Classification",
+        "ClassificationName",
+        "CreateFluid",
+        "CreateUserVariable",
+        "CurveEnthalpy",
+        "CurveEnthalpyValue",
+        "CurveHeatFlow",
+        "CurveHeatFlowValue",
+        "CurveHeatOfVaporization",
+        "CurveHeatOfVaporizationValue",
+        "CurveHeavyLiqCriticalPressure",
+        "CurveHeavyLiqCriticalPressureValue",
+        "CurveHeavyLiqCriticalTemperature",
+        "CurveHeavyLiqCriticalTemperatureValue",
+        "CurveHeavyLiqCriticalZFactor",
+        "CurveHeavyLiqCriticalZFactorValue",
+        "CurveHeavyLiqDensity",
+        "CurveHeavyLiqDensityValue",
+        "CurveHeavyLiqMW",
+        "CurveHeavyLiqMWValue",
+        "CurveHeavyLiqMassFlow",
+        "CurveHeavyLiqMassFlowValue",
+        "CurveHeavyLiqMassSpecHeat",
+        "CurveHeavyLiqMassSpecHeatValue",
+        "CurveHeavyLiqPseudoCriticalPressure",
+        "CurveHeavyLiqPseudoCriticalPressureValue",
+        "CurveHeavyLiqPseudoCriticalTemperature",
+        "CurveHeavyLiqPseudoCriticalTemperatureValue",
+        "CurveHeavyLiqPseudoCriticalZFactor",
+        "CurveHeavyLiqPseudoCriticalZFactorValue",
+        "CurveHeavyLiqPseudoOmega",
+        "CurveHeavyLiqPseudoOmegaValue",
+        "CurveHeavyLiqSpecificGravity",
+        "CurveHeavyLiqSpecificGravityValue",
+        "CurveHeavyLiqSurfaceTension",
+        "CurveHeavyLiqSurfaceTensionValue",
+        "CurveHeavyLiqThermalConductivity",
+        "CurveHeavyLiqThermalConductivityValue",
+        "CurveHeavyLiqViscosity",
+        "CurveHeavyLiqViscosityValue",
+        "CurveLightLiqCriticalPressure",
+        "CurveLightLiqCriticalPressureValue",
+        "CurveLightLiqCriticalTemperature",
+        "CurveLightLiqCriticalTemperatureValue",
+        "CurveLightLiqCriticalZFactor",
+        "CurveLightLiqCriticalZFactorValue",
+        "CurveLightLiqDensity",
+        "CurveLightLiqDensityValue",
+        "CurveLightLiqMW",
+        "CurveLightLiqMWValue",
+        "CurveLightLiqMassFlow",
+        "CurveLightLiqMassFlowValue",
+        "CurveLightLiqMassSpecHeat",
+        "CurveLightLiqMassSpecHeatValue"
+      ]
     }
   },
   "duties": {
-    "Cond Q": {
-      "HeatFlowValue": 44579.392605218556
+    "Atmos Cond": {
+      "HeatFlowValue": 31927.001252498114
     },
-    "Reb Q": {
-      "HeatFlowValue": 60170.367989699385
+    "Q-Trim": {
+      "HeatFlowValue": 20792.363229183993
     }
   },
   "products": {
     "Off Gas": {
-      "T": 105.3523441664891,
-      "P": 197.8795857905,
-      "F": 0.11072725805460684,
-      "MassF": 2.2698157168837194,
+      "T": 41.47149367217071,
+      "P": 135.82675400947477,
+      "F": 1.1339582086025316e-08,
+      "MassF": 5.865156038904148e-07,
       "ComponentMassFractionValue": [
-        0.28175718419914997,
-        0.20089678851592616,
-        0.5173460272849237
+        0.03357455212007792,
+        0.026293272774137566,
+        0.15797091632924812,
+        0.05545016035819562,
+        0.13973033803019638,
+        0.02013054090191777,
+        0.18965791408961563,
+        0.15524295897199458,
+        0.09254171886457331,
+        0.054527240877131004,
+        0.03409958342004394,
+        0.020263506784352778,
+        0.011002725352581674,
+        0.005633849651133739,
+        0.002669110157437888,
+        0.001072313797725058,
+        0.00013695015980842956,
+        2.3263255667485576e-06,
+        2.0883703348642664e-08,
+        1.5029849883815284e-10,
+        2.5943922070039233e-13,
+        9.398808238669439e-17,
+        1.6644397808554518e-20,
+        2.1455551495820712e-24,
+        1.842855730340693e-28,
+        5.315477192330404e-30,
+        1.806237939339171e-30,
+        7.216376147377498e-35,
+        1.8871770057209857e-37,
+        1.58399407247701e-44,
+        1.0426614649556458e-33,
+        2.4222958608919626e-43,
+        1.0278111866957989e-44,
+        1.7533368650087636e-46,
+        4.568268205276785e-60,
+        1.3289168869462355e-29
       ],
       "ComponentMolarFractionValue": [
-        0.1694971653131618,
-        0.24182120564443263,
-        0.5886816290424055
+        0.10824550497171956,
+        0.04522672884722355,
+        0.18528941625020529,
+        0.04934348619279908,
+        0.12434196692614406,
+        0.057796465097217406,
+        0.1635526081138313,
+        0.12182423615884976,
+        0.0669994731120503,
+        0.03593710684955945,
+        0.020514086050627916,
+        0.011157258490168619,
+        0.00554283453075885,
+        0.0026116048603339525,
+        0.00114246201937133,
+        0.00042393339145924787,
+        5.003576579439997e-05,
+        7.858094674704131e-07,
+        6.518867829938836e-09,
+        4.348106975787778e-11,
+        6.960682880083484e-14,
+        2.3412428375089835e-17,
+        3.850123655368384e-21,
+        4.620347241666428e-25,
+        3.7038134938660866e-29,
+        9.999997980321586e-31,
+        3.196868526694449e-31,
+        1.208417110118485e-35,
+        2.977718209071137e-38,
+        2.3414749998507078e-45,
+        1.4145541361394062e-34,
+        2.975564121095423e-44,
+        1.1486612111440937e-45,
+        1.7898242569499322e-47,
+        4.340592271059908e-61,
+        1.1580355191306818e-30
       ]
     },
-    "Stripper Bottoms": {
-      "T": 124.03085482853146,
-      "P": 225.4586221376,
-      "F": 4.945761325871201,
-      "MassF": 89.09835752303802,
+    "Naphtha": {
+      "T": 41.47149367217071,
+      "P": 135.82675400947477,
+      "F": 0.3489157395871943,
+      "MassF": 30.966163736712478,
       "ComponentMassFractionValue": [
-        4.526193348722371e-07,
-        9.452229851449506e-06,
-        0.9999900951508136
+        0.00011563779617900612,
+        0.00047552157574440014,
+        0.009633244626467873,
+        0.008012406236321991,
+        0.028409902328600002,
+        0.00019757334109691334,
+        0.055295822218991986,
+        0.07278878686682132,
+        0.07730148552602309,
+        0.08268943754486308,
+        0.09530741732160661,
+        0.10683046091515658,
+        0.11271588979856045,
+        0.11519867635787522,
+        0.11194666550215567,
+        0.09540224440302991,
+        0.026631915605969406,
+        0.0010239890762558307,
+        2.252701988517408e-05,
+        3.9422939124084044e-07,
+        1.707386727805272e-09,
+        1.6167080919648263e-12,
+        7.884320069414327e-16,
+        2.894611428801378e-19,
+        7.376107942251645e-23,
+        1.2274152673680977e-26,
+        1.2086694905663472e-30,
+        5.072318063990222e-35,
+        1.341002489423964e-37,
+        1.1473772702738668e-44,
+        7.067702437523219e-34,
+        1.7441770543300132e-43,
+        7.38102887199857e-45,
+        1.2553386176535753e-46,
+        3.3109088584421056e-60,
+        7.74485868290719e-30
       ],
       "ComponentMolarFractionValue": [
-        2.392880627596368e-07,
-        9.998990421728397e-06,
-        0.9999897617215155
+        0.0006397109320983034,
+        0.0014034762913324172,
+        0.019387882900517395,
+        0.012234164255523065,
+        0.04337915494047748,
+        0.000973326393702705,
+        0.08182069192106162,
+        0.09801004525744544,
+        0.09602979216076069,
+        0.09351126875530075,
+        0.09838165494701218,
+        0.1009304743242042,
+        0.09743188585215122,
+        0.09162922802329533,
+        0.08221872891456913,
+        0.06471704015483083,
+        0.016695704016972762,
+        0.0005935077717625713,
+        1.2065705646220825e-05,
+        1.9569462628697513e-07,
+        7.860179096290997e-10,
+        6.910183946246413e-13,
+        3.1293573609982e-16,
+        1.0695707801372977e-19,
+        2.5437203190371937e-23,
+        3.962173578886153e-27,
+        3.6706392047007763e-31,
+        1.4574326864496553e-35,
+        3.630654042481961e-38,
+        2.910224808703464e-45,
+        1.645276254962184e-34,
+        3.6763514187923436e-44,
+        1.4154021239919892e-45,
+        2.198822831904839e-47,
+        5.3979511288617934e-61,
+        1.1580355217025906e-30
+      ]
+    },
+    "Kerosene": {
+      "T": 235.8336679184883,
+      "P": 205.75931046105345,
+      "F": 0.09096751898276799,
+      "MassF": 14.347830318230987,
+      "ComponentMassFractionValue": [
+        3.039063641922185e-14,
+        4.803336280645192e-12,
+        1.4959538252875137e-09,
+        9.406730149131959e-09,
+        6.682642298145746e-08,
+        1.6139151467880308e-10,
+        5.364143996730104e-07,
+        1.7954800478464918e-06,
+        5.929441478418031e-06,
+        2.1147085583102324e-05,
+        7.6153636774652e-05,
+        0.0003174607914178402,
+        0.0012112046475835979,
+        0.00409020141952763,
+        0.012097597460518392,
+        0.044267349296016875,
+        0.19060559668023194,
+        0.24570005385486698,
+        0.2532955918513939,
+        0.20163312728536772,
+        0.044121713821519165,
+        0.0024641490157326766,
+        8.755167135598444e-05,
+        2.6923244480959703e-06,
+        6.851742983035704e-08,
+        1.3890705185234643e-09,
+        1.9760053648056916e-11,
+        1.425350860467314e-13,
+        4.592254658783199e-16,
+        9.133827936520812e-19,
+        6.146175371184184e-23,
+        1.0627976243079483e-29,
+        1.0945135500493275e-29,
+        1.6881077551333976e-29,
+        1.935057811502406e-29,
+        3.482909779166038e-30
+      ],
+      "ComponentMolarFractionValue": [
+        2.987836290858644e-13,
+        2.5194798143797885e-11,
+        5.350680568084795e-09,
+        2.5526017888796914e-08,
+        1.8133957724155641e-07,
+        1.4130056247297989e-09,
+        1.4106013406105766e-06,
+        4.296548601806039e-06,
+        1.3090763381679886e-05,
+        4.250083587305038e-05,
+        0.00013970472925462854,
+        0.0005330283933394676,
+        0.001860657896658434,
+        0.005781816053947972,
+        0.015790350234139112,
+        0.053367469310529755,
+        0.21235916863602508,
+        0.2530867303635584,
+        0.24110690732053566,
+        0.1778790591843028,
+        0.036098233586384476,
+        0.001871793784198605,
+        6.175731306096741e-05,
+        1.7679895314652397e-06,
+        4.1992931756821396e-08,
+        7.968917074942066e-10,
+        1.0664863356106121e-11,
+        7.278415528560463e-14,
+        2.209603169233465e-16,
+        4.1172397729376087e-19,
+        2.5427201119614342e-23,
+        3.981163938636052e-30,
+        3.730071170204622e-30,
+        5.254876948125845e-30,
+        5.60671788209029e-30,
+        9.255153904225602e-31
+      ]
+    },
+    "Diesel": {
+      "T": 252.25961300205665,
+      "P": 213.6390351316538,
+      "F": 0.1435411668882768,
+      "MassF": 31.01542519816157,
+      "ComponentMassFractionValue": [
+        2.0052555726579667e-12,
+        1.0286154612053922e-10,
+        1.3912265743454318e-08,
+        4.781978684709347e-08,
+        2.6941603167734757e-07,
+        0.0005171071301235655,
+        1.5009639442716722e-06,
+        3.684775260170257e-06,
+        8.244137074383143e-06,
+        1.948585525254416e-05,
+        4.6432117289401314e-05,
+        0.00012406535666615874,
+        0.0003094378441559439,
+        0.000728656378729139,
+        0.0015879400180006278,
+        0.0032391349172674246,
+        0.0063690252313979975,
+        0.012562179120227382,
+        0.028522808423881205,
+        0.07824207439711746,
+        0.16006838541866986,
+        0.16935443441413478,
+        0.15332412723126337,
+        0.134527892618509,
+        0.10911486643816419,
+        0.07950797254285585,
+        0.04491219169555614,
+        0.014318726872355008,
+        0.0023421035719264315,
+        0.00024210801260371247,
+        5.081235491324798e-06,
+        2.028731423851121e-09,
+        4.0019431257097284e-13,
+        4.352461526888506e-17,
+        1.5264065047979063e-20,
+        6.900524904927919e-25
+      ],
+      "ComponentMolarFractionValue": [
+        2.7007732294647723e-11,
+        7.3913254233035e-10,
+        6.816949642754575e-08,
+        1.7776792564890808e-07,
+        1.0015420863540215e-06,
+        0.006202190540968398,
+        5.407238299593432e-06,
+        1.2079571680109976e-05,
+        2.493433414332492e-05,
+        5.364976275996233e-05,
+        0.00011669179830659994,
+        0.0002853725280296072,
+        0.0006512141275313711,
+        0.001411054317007991,
+        0.0028394100294658656,
+        0.005349627151389294,
+        0.009720972676608508,
+        0.017726805932346632,
+        0.03719424013907547,
+        0.09455939373525084,
+        0.17940747208393368,
+        0.17623371289952483,
+        0.14816166083033155,
+        0.12102247167121291,
+        0.09161370414562489,
+        0.06248662634646864,
+        0.03320724222961784,
+        0.010016612059108806,
+        0.0015438169407675222,
+        0.00014950781042622526,
+        2.8798132009305783e-06,
+        1.041083175185682e-09,
+        1.868393179279424e-13,
+        1.8560886359221494e-17,
+        6.058796315630572e-21,
+        2.512030644514171e-25
+      ]
+    },
+    "AGO": {
+      "T": 299.4635645157483,
+      "P": 218.56386305077902,
+      "F": 0.025475595404849578,
+      "MassF": 7.558189610643782,
+      "ComponentMassFractionValue": [
+        6.821935735143675e-14,
+        2.22813944374143e-12,
+        2.2038346295486738e-10,
+        6.183666135899079e-10,
+        3.2023374430756003e-09,
+        0.00048119946281121353,
+        1.6891102790545966e-08,
+        3.757928229892122e-08,
+        7.49742545108029e-08,
+        1.604711958418348e-07,
+        3.482894055436027e-07,
+        8.909683036937193e-07,
+        2.225206146804251e-06,
+        5.577558097639363e-06,
+        1.3937951720908229e-05,
+        3.532960965491765e-05,
+        9.240666768292189e-05,
+        0.000251245870871087,
+        0.0007514154173407296,
+        0.0021761659029880696,
+        0.005336096389358116,
+        0.011083534460830895,
+        0.020923122544816843,
+        0.03722237584261368,
+        0.06270795405745876,
+        0.10650395340635561,
+        0.1766197838816602,
+        0.22493785671034225,
+        0.19346168661118052,
+        0.12024540368642218,
+        0.03660350370471018,
+        0.0005390802298139287,
+        4.5815838596204155e-06,
+        2.965247663475987e-08,
+        3.7262270140774465e-10,
+        1.234882124341191e-12
+      ],
+      "ComponentMolarFractionValue": [
+        1.2615898462778631e-12,
+        2.1983853204487328e-11,
+        1.4827345144308576e-09,
+        3.1563414238565613e-09,
+        1.634575687401145e-08,
+        0.007924682747496676,
+        8.355172627878891e-08,
+        1.6915357656938032e-07,
+        3.1135575679234756e-07,
+        6.066491529999541e-07,
+        1.2018611082091935e-06,
+        2.8139479581410682e-06,
+        6.430027209862255e-06,
+        1.483054927733828e-05,
+        3.422040515837035e-05,
+        8.011714941577628e-05,
+        0.00019365656985767082,
+        0.00048680677580562954,
+        0.0013454131872075706,
+        0.003611174683374012,
+        0.00821203518252251,
+        0.01583663353192277,
+        0.027761569028304196,
+        0.04597798584076288,
+        0.07229218010832936,
+        0.11493023653649712,
+        0.17930817198812762,
+        0.21605840937291212,
+        0.17509625135503237,
+        0.10195660742480202,
+        0.028484580402995556,
+        0.00037984503094279457,
+        2.9370083002891347e-06,
+        1.7362686193597907e-08,
+        2.0308489717474073e-10,
+        6.172491240743853e-13
+      ]
+    },
+    "Residue": {
+      "T": 354.59154418050207,
+      "P": 225.4586221375546,
+      "F": 0.17889389161227062,
+      "MassF": 78.06420246210364,
+      "ComponentMassFractionValue": [
+        1.682152972362488e-09,
+        1.6018943502313468e-08,
+        6.218192430622995e-07,
+        8.596226206127124e-07,
+        3.5332180235924984e-06,
+        0.0002891143523220713,
+        1.0663260070000948e-05,
+        1.734041346196522e-05,
+        2.3603567783373263e-05,
+        3.3312637935441176e-05,
+        4.897323894147009e-05,
+        7.678162158386947e-05,
+        0.00011516165466752988,
+        0.00017058845695256652,
+        0.0002484652529821162,
+        0.0003617075171185581,
+        0.0005400265974180844,
+        0.0008384777610987785,
+        0.0014363936126987212,
+        0.0025127868468181815,
+        0.003937234949388684,
+        0.005574639977613341,
+        0.007619288552816754,
+        0.010288082598463985,
+        0.013297805119585126,
+        0.016917643644564474,
+        0.02135808008822962,
+        0.0259770045951751,
+        0.03069533637539593,
+        0.03689902681574535,
+        0.0844375975531394,
+        0.08954821821993042,
+        0.0973709206263373,
+        0.13603903959139532,
+        0.19955573167630986,
+        0.21375592046307293
+      ],
+      "ComponentMolarFractionValue": [
+        4.575504891828244e-08,
+        2.3246538497863564e-07,
+        6.153348711870988e-06,
+        6.453699689363674e-06,
+        2.652597490403434e-05,
+        0.0070030846882585705,
+        7.758011153579861e-05,
+        0.00011480349971601293,
+        0.00014417347717933887,
+        0.00018523050330680085,
+        0.00024856262184886474,
+        0.00035667614371464365,
+        0.0004894557464150313,
+        0.0006671534711150728,
+        0.0008972528151280028,
+        0.0012064439770476585,
+        0.0016645891202037668,
+        0.002389528448619685,
+        0.003782788146159992,
+        0.006133030457016452,
+        0.008912128556775535,
+        0.011715596123489385,
+        0.014869450040361176,
+        0.018691461915015792,
+        0.022548187112096253,
+        0.026851677334407874,
+        0.031892305846037236,
+        0.03669954404067689,
+        0.04086177718066779,
+        0.04601768628241144,
+        0.09664647350521048,
+        0.09280534063231928,
+        0.09180826614612371,
+        0.11716083993806091,
+        0.1599688781607494,
+        0.15715062271459193
       ]
     }
   }

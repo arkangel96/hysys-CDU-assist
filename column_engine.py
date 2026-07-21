@@ -5,12 +5,20 @@ Layer 2 intelligence (expert workflow):
   Classify States A–F → protect FINAL_TARGET → one bounded move →
   solve → response class → keep/reverse → PE board
 
-Never auto-relaxes locked product FINAL_TARGETs (e.g. NH3).
+Never auto-relaxes locked product FINAL_TARGETs (e.g. cut / ASTM / TBP).
 Never adds an extra Active spec when DOF is already 0 without a 1-for-1 swap.
 """
 from __future__ import annotations
 
 from column_api import ColumnController, is_sentinel
+from cdu_case_config import CduCaseConfig, load_case_config
+from cdu_expert_engine import build_expert_context, format_expert_board, propose_from_expert
+from cdu_quality_engine import (
+    build_product_quality_state,
+    format_quality_board,
+    quality_targets_to_final_targets,
+)
+from cdu_spec_philosophy import audit_spec_philosophy, format_spec_philosophy_board
 from column_models import (
     ColumnState,
     ConvergenceLimits,
@@ -21,7 +29,7 @@ from column_models import (
     ResponseClass,
     TrialAction,
     TrialResult,
-    default_sw_stripper_targets,
+    default_cdu_targets,
 )
 from column_spec_catalog import recommend_add_spec, recommend_specs_summary_clicks
 
@@ -107,6 +115,30 @@ def evaluate_final_targets(
 def operable(state: ColumnState, limits: ConvergenceLimits) -> bool:
     if not state.physical_solution:
         return False
+    # CDU multi-product: residue/draw rates may substitute for stripper-style btms flow
+    if state.product_streams and len(state.product_streams) > 2:
+        draw_specs = [
+            s
+            for s in state.specs
+            if s.is_active
+            and (
+                "prod rate" in s.name.lower()
+                or "draw" in s.name.lower()
+                or "_ss" in s.name.lower()
+            )
+        ]
+        if draw_specs:
+            flows = [
+                s.current_display or s.current_value
+                for s in draw_specs
+                if s.current_display is not None or s.current_value is not None
+            ]
+            if flows and all(
+                f is None or is_sentinel(f) or abs(float(f)) < 1e-9 for f in flows
+            ):
+                return False
+        if state.bottoms_molar_flow_kgmole_h is None and state.bottoms_molar_flow is None:
+            return True
     if state.bottoms_molar_flow_kgmole_h is not None:
         return state.bottoms_molar_flow_kgmole_h >= limits.min_bottoms_flow_kgmole_h
     flow = state.bottoms_molar_flow
@@ -156,9 +188,21 @@ def diagnose(
     state: ColumnState,
     limits: ConvergenceLimits | None = None,
     targets: list[FinalTarget] | None = None,
+    history: list[TrialResult] | None = None,
+    *,
+    columns: ColumnController | None = None,
+    case_config: CduCaseConfig | None = None,
 ) -> Diagnosis:
     limits = limits or ConvergenceLimits()
-    targets = targets if targets is not None else default_sw_stripper_targets()
+    case = case_config or load_case_config()
+    targets = targets if targets is not None else default_cdu_targets()
+    if not targets:
+        targets = quality_targets_to_final_targets(case)
+    if not targets:
+        targets = default_cdu_targets()
+
+    spec_report = audit_spec_philosophy(state, case)
+    product_quality = build_product_quality_state(state, case, columns)
     codes: list[DiagnosisCode] = []
     details: list[str] = []
     target_status = evaluate_final_targets(state, targets)
@@ -253,7 +297,7 @@ def diagnose(
             "Nudge Category-1 operating MVs only; FINAL_TARGET locked."
         )
         severity = "warn"
-        pe_read = "Separation/energy path — adjust RR/rates, not product GoalValue."
+        pe_read = "Separation/energy/split path — adjust Category-1 MVs (draws/PA/OH), not product GoalValue."
         potential = "going_somewhere"
     else:
         strategy = "report_infeasible"
@@ -266,8 +310,12 @@ def diagnose(
         codes.append(DiagnosisCode.UNKNOWN_FAILURE)
 
     has_rr = any("reflux ratio" in s.name.lower() for s in state.specs)
-    has_comp_target = any(t.spec_name_contains.lower() == "nh3" for t in targets) or any(
-        "nh3" in s.name.lower() or "frac" in s.name.lower() for s in state.specs
+    has_comp_target = bool(targets) or any(
+        any(
+            tok in s.name.lower()
+            for tok in ("cut", "astm", "tbp", "frac", "nh3", "gap", "rvp")
+        )
+        for s in state.specs
     )
     final_met = all(info["met"] for info in target_status.values()) if target_status else False
     add_recs = recommend_add_spec(
@@ -295,7 +343,7 @@ def diagnose(
         engineering_state=eng.value,
         bottoms_flow_kgmole_h=state.bottoms_molar_flow_kgmole_h,
         min_bottoms_flow_kgmole_h=limits.min_bottoms_flow_kgmole_h,
-        nh3_is_final_target=True,
+        final_target_monitor_only=bool(targets),
     )
     click_lines = []
     for c in click_recs:
@@ -312,6 +360,27 @@ def diagnose(
             bits.append("Sync Current→Goal")
         click_lines.append(f"{' | '.join(bits)} — {c.reason}")
 
+    expert = build_expert_context(
+        state,
+        eng,
+        limits,
+        target_status,
+        history=history,
+        spec_report=spec_report,
+        product_quality=product_quality,
+        mv_preference=case.mv_preference,
+    )
+    if spec_report.blocks_tuning:
+        strategy = "fix_dof"
+        summary = f"{spec_report.summary} — audit spec set before tuning."
+        pe_read = "Spec philosophy blocks MV moves — fix DOF/spec conflicts first."
+    elif expert.selected_hypothesis:
+        strategy = expert.selected_hypothesis.strategy_id
+    elif eng == EngineeringState.F_INFEASIBLE:
+        strategy = "report_infeasible"
+    elif eng == EngineeringState.D_CONSTRAINT:
+        strategy = "operability_review"
+
     return Diagnosis(
         codes=codes,
         summary=summary,
@@ -324,6 +393,11 @@ def diagnose(
         final_target_status=target_status,
         add_spec_recommendations=add_lines,
         specs_summary_clicks=click_lines,
+        expert_context=expert,
+        product_quality=product_quality,
+        spec_philosophy=spec_report,
+        case_objective=case.objective,
+        interactive_only=case.interactive_only,
     )
 
 
@@ -365,6 +439,14 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         f"Btms={state.bottoms_molar_flow_kgmole_h} kgmole/h | BtmsT={state.bottoms_temperature}",
     ]
     lines.append(format_connections_block(state))
+    if diagnosis.case_objective:
+        lines.append(f"  L0 OBJECTIVE: {diagnosis.case_objective}")
+    if diagnosis.interactive_only:
+        lines.append("  MODE: interactive_only (PE approves each trial)")
+    if diagnosis.product_quality is not None:
+        lines.append(format_quality_board(diagnosis.product_quality))
+    if diagnosis.spec_philosophy is not None:
+        lines.append(format_spec_philosophy_board(diagnosis.spec_philosophy))
     for sp in state.active_specs():
         goal = sp.goal_display if sp.goal_display is not None else sp.goal_value
         cur = sp.current_display if sp.current_display is not None else sp.current_value
@@ -386,6 +468,8 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         for rec in diagnosis.specs_summary_clicks:
             lines.append(f"    → {rec}")
     lines.append(f"  Summary: {diagnosis.summary}")
+    if diagnosis.expert_context is not None:
+        lines.append(format_expert_board(diagnosis.expert_context))
     for detail in diagnosis.details[:6]:
         lines.append(f"  • {detail}")
     return "\n".join(lines)
@@ -405,12 +489,26 @@ def propose_action(
     limits: ConvergenceLimits,
     diagnosis: Diagnosis,
     targets: list[FinalTarget] | None = None,
+    history: list[TrialResult] | None = None,
 ) -> TrialAction | None:
-    targets = targets if targets is not None else default_sw_stripper_targets()
+    targets = targets if targets is not None else default_cdu_targets()
     strategy = diagnosis.recommended_strategy
 
     if strategy == "none_converged":
         return None
+
+    expert = diagnosis.expert_context
+    if expert is None:
+        expert = build_expert_context(
+            state,
+            diagnosis.engineering_state,
+            limits,
+            diagnosis.final_target_status,
+            history=history,
+        )
+    expert_action = propose_from_expert(state, expert, limits)
+    if expert_action is not None:
+        return expert_action
 
     if strategy == "fix_dof":
         return TrialAction(
@@ -443,55 +541,19 @@ def propose_action(
             payload={"strategy_id": "refresh_estimates"},
         )
 
-    # State C / general: Category-1 operating MVs only
-    reflux = next((s for s in state.active_specs() if "reflux ratio" in s.name.lower()), None)
-    if reflux is not None and reflux.goal_value is not None:
-        nh3_miss = any(
-            tid.startswith("NH3") and not info["met"]
-            for tid, info in diagnosis.final_target_status.items()
-        )
-        base = float(reflux.goal_value)
-        current = reflux.current_value
-        use_reflux = False
-        direction = 1.0
-        frac = limits.reflux_nudge_fraction
-        if nh3_miss and state.physical_solution:
-            use_reflux = True
-            direction = 1.0
-        elif reflux.score_error() > limits.max_active_spec_error:
-            use_reflux = True
-            if current is not None and not is_sentinel(current) and abs(current) < 1e6:
-                direction = 1.0 if float(current) > base else -1.0
-            else:
-                direction = -1.0 if (reflux.error or 0.0) > 0 else 1.0
-            if current is not None and not is_sentinel(current) and abs(base) > 1e-12:
-                gap_ratio = abs(float(current) - base) / abs(base)
-                if gap_ratio > 0.5:
-                    frac = min(0.25, frac * 4.0)
-
-        if use_reflux:
-            new_goal = base * (1.0 + direction * frac)
-            new_goal = min(max(new_goal, limits.min_reflux_ratio), limits.max_reflux_ratio)
-            if abs(new_goal - base) >= 1e-12:
-                strategy_id = "reflux_nudge_down" if new_goal < base else "reflux_nudge_up"
-                return TrialAction(
-                    kind="set_goal",
-                    description=f"Nudge '{reflux.name}' GoalValue {base:.4g} → {new_goal:.4g}",
-                    payload={
-                        "spec_name": reflux.name,
-                        "goal": new_goal,
-                        "previous": base,
-                        "strategy_id": strategy_id,
-                    },
-                )
-
-    # Baseline swap if NH3 locked active
+    # Legacy fallback: baseline swap if a locked FINAL_TARGET is incorrectly Active
     if limits.allow_baseline_spec_swap and state.degrees_of_freedom == 0:
-        nh3 = next((s for s in state.active_specs() if "nh3" in s.name.lower()), None)
+        locked_active = next(
+            (
+                s
+                for s in state.active_specs()
+                if _is_locked_final_spec(s.name, targets, limits)
+            ),
+            None,
+        )
         ovhd = next((s for s in state.specs if "ovhd" in s.name.lower()), None)
         if (
-            nh3 is not None
-            and _is_locked_final_spec(nh3.name, targets, limits)
+            locked_active is not None
             and ovhd is not None
             and not ovhd.is_active
         ):
@@ -502,11 +564,11 @@ def propose_action(
                 return TrialAction(
                     kind="baseline_swap",
                     description=(
-                        f"1-for-1 baseline swap: deactivate '{nh3.name}', "
+                        f"1-for-1 baseline swap: deactivate '{locked_active.name}', "
                         f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor)."
                     ),
                     payload={
-                        "deactivate": nh3.name,
+                        "deactivate": locked_active.name,
                         "activate": ovhd.name,
                         "activate_goal": float(goal),
                         "strategy_id": "spec_swap_last_resort",
@@ -516,36 +578,20 @@ def propose_action(
     remaining = [s for s in state.active_specs() if s.goal_value is not None]
     remaining.sort(key=lambda s: s.score_error(), reverse=True)
     for spec in remaining:
-        if "reflux ratio" in spec.name.lower():
-            continue
         if _is_locked_final_spec(spec.name, targets, limits):
             continue
         base = float(spec.goal_value)
-        current = spec.current_value
-        name_l = spec.name.lower()
-        is_comp = "frac" in name_l
-        if is_comp and current is not None and not is_sentinel(current):
-            gap = float(current) - base
-            step = abs(base) * limits.reflux_nudge_fraction
-            if abs(gap) > 1e-30:
-                step = min(abs(gap), max(step, abs(gap) * limits.reflux_nudge_fraction))
-            new_goal = base + (step if gap > 0 else -step)
-            if new_goal <= 0:
-                new_goal = base * (1.0 + limits.reflux_nudge_fraction)
-        elif abs(base) < 1e-30:
-            new_goal = base + 1e-6
-        else:
-            new_goal = base * (1.0 - limits.reflux_nudge_fraction)
+        new_goal = base * (1.0 - limits.reflux_nudge_fraction)
         if abs(new_goal - base) < 1e-30:
             continue
         return TrialAction(
             kind="set_goal",
-            description=f"Nudge '{spec.name}' GoalValue {base:.4g} → {new_goal:.4g}",
+            description=f"Fallback nudge '{spec.name}' GoalValue {base:.4g} → {new_goal:.4g}",
             payload={
                 "spec_name": spec.name,
                 "goal": new_goal,
                 "previous": base,
-                "strategy_id": "reflux_nudge_down",
+                "strategy_id": "side_draw_rate_nudge",
             },
         )
 
@@ -610,19 +656,35 @@ class ConvergenceAssistant:
         columns: ColumnController,
         limits: ConvergenceLimits | None = None,
         targets: list[FinalTarget] | None = None,
+        case_config: CduCaseConfig | None = None,
     ) -> None:
         self.columns = columns
         self.limits = limits or ConvergenceLimits()
-        self.targets = targets if targets is not None else default_sw_stripper_targets()
+        self.case_config = case_config or load_case_config()
+        if targets is not None:
+            self.targets = targets
+        else:
+            from_targets = quality_targets_to_final_targets(self.case_config)
+            self.targets = from_targets if from_targets else default_cdu_targets()
         self.history: list[TrialResult] = []
         self._estimates_refreshed = False
+
+    def _diagnose(self, state: ColumnState) -> Diagnosis:
+        return diagnose(
+            state,
+            self.limits,
+            self.targets,
+            self.history,
+            columns=self.columns,
+            case_config=self.case_config,
+        )
 
     def inspect(self, column_name: str) -> ColumnState:
         return self.columns.inspect(column_name)
 
     def diagnose_column(self, column_name: str) -> tuple[ColumnState, Diagnosis]:
         state = self.inspect(column_name)
-        return state, diagnose(state, self.limits, self.targets)
+        return state, self._diagnose(state)
 
     def pe_board(self, column_name: str) -> str:
         state, diagnosis = self.diagnose_column(column_name)
@@ -630,8 +692,10 @@ class ConvergenceAssistant:
 
     def run_one_trial(self, column_name: str, dry_run: bool = False) -> TrialResult:
         before = self.inspect(column_name)
-        diagnosis = diagnose(before, self.limits, self.targets)
-        action = propose_action(before, self.limits, diagnosis, self.targets)
+        diagnosis = self._diagnose(before)
+        action = propose_action(
+            before, self.limits, diagnosis, self.targets, self.history
+        )
         before_score = score_state(before)
         board = format_pe_board(before, diagnosis)
 
@@ -685,7 +749,9 @@ class ConvergenceAssistant:
             and self.limits.allow_baseline_spec_swap
         ):
             diagnosis.recommended_strategy = "nudge_operating_mv"
-            alt = propose_action(before, self.limits, diagnosis, self.targets)
+            alt = propose_action(
+                before, self.limits, diagnosis, self.targets, self.history
+            )
             if alt is not None and alt.kind == "baseline_swap":
                 action = alt
 
@@ -722,7 +788,7 @@ class ConvergenceAssistant:
             self.columns.run_column(column_name)
             after = self.inspect(column_name)
             after_score = score_state(after)
-            after_diag = diagnose(after, self.limits, self.targets)
+            after_diag = self._diagnose(after)
 
             unphysical = not after.physical_solution
             if after.profile.temperatures:
@@ -785,7 +851,9 @@ class ConvergenceAssistant:
                     f"score {before_score:.4g} → {after_score:.4g}."
                 )
 
-            after_board = format_pe_board(after, diagnose(after, self.limits, self.targets))
+            after_board = format_pe_board(
+                after, self._diagnose(after)
+            )
             result = TrialResult(
                 action=action,
                 before_score=before_score,
@@ -824,6 +892,8 @@ class ConvergenceAssistant:
         dry_run: bool = False,
     ) -> list[TrialResult]:
         """Run the controlled trial loop until State E, blocked, or iteration limit."""
+        if self.case_config.interactive_only and not dry_run:
+            dry_run = True
         results: list[TrialResult] = []
         limit = max_iterations or self.limits.max_iterations
         for _ in range(limit):
@@ -846,6 +916,7 @@ class ConvergenceAssistant:
                 "fix_dof",
                 "report_infeasible",
                 "operability_review",
+                "feed_or_case_change",
             }:
                 results.append(
                     TrialResult(

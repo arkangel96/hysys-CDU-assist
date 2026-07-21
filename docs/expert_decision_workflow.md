@@ -3,14 +3,19 @@
 **Document status:** Engineering specification – Version 0.1.1  
 **Primary purpose:** Define the reasoning, decision hierarchy, iteration logic, recovery logic, and HYSYS interaction requirements for an external program that automates rigorous distillation-column convergence and product-specification attainment.
 
-**Related Studio docs:**
+**Related CDU Assist docs:**
 
 | Document | Role |
 |----------|------|
-| **This file** | Master PE reasoning specification (intelligence) |
-| [`column_convergence_playbook.md`](column_convergence_playbook.md) | SW Stripper / Studio v0.1 operational slice + COM transferability |
-| [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) | Integrated backlog: gaps, P0–P3 roadmap, anti-complexity layers |
+| **This file** | Master PE reasoning specification (intelligence) — shared Tower Assist bible |
+| [`expert/00_System_Architecture.md`](expert/00_System_Architecture.md) | **CDU Expert System Volume 0** — observation→hypothesis→experiment architecture |
+| [`expert/02_Reasoning_Engine.md`](expert/02_Reasoning_Engine.md) | Maps Volume 0 loop to executable code |
+| [`cdu_convergence_playbook.md`](cdu_convergence_playbook.md) | CDU Assist v0.1 operational slice + COM transferability |
+| [`SCOPE_CDU_ASSIST.md`](SCOPE_CDU_ASSIST.md) | Product identity & boundaries |
+| [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) | CDU backlog: gaps, P0–P3 roadmap, anti-complexity layers |
 | `trial_map.py` / `column_engine.py` | Current executable subset — must be aligned to this workflow over time |
+
+**v0.2.0:** Integrated CDU Expert System Volume 0 (`docs/expert/`).
 
 **v0.1.1:** Integrated senior-PE intelligence review (layered implementation, Assist gaps, success definition for State E).
 
@@ -64,7 +69,26 @@ The methodology is applicable to:
 
 The first implementation should avoid trying to automate every possible column configuration. It should begin with a constrained class of columns and expand after the reasoning engine has been validated.
 
-**Studio first class:** SW Stripper (full-reflux stripper) — see playbook.
+**CDU Assist first class:** atmospheric crude tower (side draws, pumparounds, cut/ASTM/TBP targets) — see [`cdu_convergence_playbook.md`](cdu_convergence_playbook.md).
+
+**Prior validation (platform lessons):** Simple Column Assist / SW Stripper proved COM trial discipline, FINAL_TARGET lock, snapshot/restore, and States A–F. Those PE rules carry forward; the click map does not.
+
+---
+
+## 2.1 CDU / complex fractionator applicability
+
+This master workflow applies to petroleum fractionation with the following adjustments:
+
+| Topic | Simple stripper lesson | CDU Assist application |
+|-------|------------------------|-------------------------|
+| FINAL_TARGET | e.g. bottoms NH₃ mass frac | Cut points / ASTM / TBP / flash-freeze-cloud as plant requires |
+| Category-1 MVs | RR, bottoms rate, energy | Side-draw rates, PA duty/return, reflux/OH, side-strip steam, overflash handles |
+| Diagnosis | Rectification vs stripping | Split / cut light-heavy / overlap / PA / side-strip / OH / furnace-overflash / nonphysical |
+| State E gates | Tiny bottoms, sentinel duties | Dry draws, sentinel duties, absurd T, unmet cut FINAL_TARGETs |
+| Do not | Auto-relax purity to fake success | Auto-relax cuts to fake success |
+| Structural | Feed stage / stages later | PA location, draw stage, stripper adds — permission only (P3) |
+
+COM knobs for draws / PAs / petroleum specs must be **discovered live** (`docs/cdu_com_discovery.md`) — do not invent APIs.
 
 ---
 
@@ -836,7 +860,7 @@ Because exact automation object names and accessible properties vary by HYSYS re
 
 ## Appendix A — Studio v0.1 transferability (current COM)
 
-Map of this workflow to what **HYSYS Automation Studio** can do today. Full detail remains in [`column_convergence_playbook.md`](column_convergence_playbook.md).
+Map of this workflow to what **CDU Assist** can do today. Full detail remains in [`cdu_convergence_playbook.md`](cdu_convergence_playbook.md).
 
 | Workflow concept | Studio today | Tag |
 |------------------|--------------|-----|
@@ -858,40 +882,43 @@ Map of this workflow to what **HYSYS Automation Studio** can do today. Full deta
 **Non-negotiable Studio policy (from this workflow):**
 
 ```text
-FINAL_TARGET (e.g. NH3 bottoms)  → locked unless user explicitly allows
-Category-1 MVs (e.g. RR / energy) → preferred Assist experiments
+FINAL_TARGET (e.g. cut / ASTM / TBP)  → locked unless user explicitly allows
+Category-1 MVs (draws, PA, OH, strip steam) → preferred Assist experiments
 Weak response / State F          → stop and report; do not relax product targets
 ```
 
 ---
 
-## Appendix B — Alignment with SW Stripper stress-test lessons
+## Appendix B — Alignment with platform lessons (Simple Column → CDU)
 
-| Lesson from live test | Workflow clause |
-|-----------------------|-----------------|
-| RR 2 → ~6.4 fixed energy deficiency | Category-1 MV; State C targeting |
-| NH₃ GoalValue relax forced “converged” | Violates §5.7 / §15 / §24.16 — wrong |
-| RR matched then more RR barely moved NH₃ | §9.5 weak response → switch / State F |
-| Duties -32767 | State B numerical recovery before purity chasing |
+Prior Simple Column / SW Stripper live tests proved PE rules that **carry into CDU unchanged**. The click map changes; the discipline does not.
+
+| Lesson from prior live test | Workflow clause for CDU |
+|-----------------------------|-------------------------|
+| Category-1 MV fixed energy/split deficiency | Category-1 draws/PA/OH; State C targeting |
+| Product GoalValue relax forced “converged” | Violates §5.7 / §15 / §24.16 — wrong for cuts too |
+| Weak MV response → switch / State F | §9.5 — same |
+| Sentinel duties | State B numerical recovery before quality chasing |
 | PE wants see-every-iteration judgment | Interactive pause in §4 / §22 |
-| Active swap RR+Ovhd recovered physical solve | §15 spec roles; State B baseline |
-| External stream NH₃ met while NH₃ inactive | FINAL_TARGET vs HYSYS Active (§5.7) |
-| Ovhd COM 4.64 vs UI ~16707 kgmole/h | Worksheet units mandatory (§28.3) |
-| Tiny bottoms flow after “green” | Operability gate before State E (§28.5) |
+| Active swap recovered physical solve | §15 spec roles; State B baseline |
+| External stream quality vs inactive GoalValue | FINAL_TARGET vs HYSYS Active (§5.7) |
+| COM internal vs worksheet units | Worksheet units mandatory (§28.3) |
+| Tiny product flow after “green” | Operability gate before State E (§28.5) |
 | Assist did not choose Active swap alone | Decision engine behind COM (§28.2) |
 
 ---
 
 ## 28. Intelligence implementation guidance (integrated review)
 
-This section integrates the senior HYSYS / PE review of Automation Studio Assist. Full backlog narrative remains in [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md).
+This section integrates the senior HYSYS / PE review for **CDU Assist**. Full backlog narrative remains in [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md).
 
 ### 28.1 Current capability vs judgment
 
 | Dimension | Assessment |
 |-----------|------------|
-| Ability to touch HYSYS (COM read/write) | Strong for v0.1 |
-| Simulation PE judgment in Assist Loop | Early / incomplete |
+| Ability to touch HYSYS (COM read/write) | Strong platform for v0.1 |
+| CDU draws / PA / cut COM discovery | Pending Phase 1 |
+| Simulation PE judgment in Assist Loop | Early / incomplete for CDU |
 | Ready to replace a senior PE | **No** |
 | Ready to assist a senior PE (interactive) | **Yes**, if FINAL_TARGETs stay locked and trials pause for review |
 
@@ -908,16 +935,16 @@ Layer 3:         Spec-role swaps, sensitivity, State F reporting
 Layer 4 (later): Structural moves, 2×2 matrices, hydraulics
 ```
 
-**Do not** implement Sections 1–27 of this workflow in code in one pass. Rich docs, thin automation; expand only after SW Stripper validation.
+**Do not** implement Sections 1–27 of this workflow in code in one pass. Rich docs, thin automation; expand only after CDU COM discovery and live validation.
 
 ### 28.3 Known Assist gaps (must close over time)
 
-1. **State classification** — dead bottoms / sentinel duties → State B recovery, not GoalValue spam.  
-2. **FINAL_TARGET vs Active specs** — never auto-relax product purity to force green.  
-3. **Units / truth sources** — worksheet units; prefer product **stream** for purity checks.  
+1. **State classification** — dead draws / sentinel duties → State B recovery, not GoalValue spam.  
+2. **FINAL_TARGET vs Active specs** — never auto-relax cut / ASTM / TBP to force green.  
+3. **Units / truth sources** — worksheet units; prefer product **stream / assay** for quality checks.  
 4. **Post-trial thinking** — response classes, not score-only keep/reverse.  
 5. **Active selection policy** — `IsActive` swaps only via spec-role rules + DOF = 0.  
-6. **Operability gates** — reject tiny bottoms flow / absurd duties as “success.”  
+6. **Operability gates** — reject dry draws / absurd duties as “success.”  
 7. **Going-nowhere detector** — flat sensitivity → switch family or State F.  
 8. **Interactive default** — one trial → PE board → approve; batch Assist only when allowed.
 
@@ -926,11 +953,11 @@ Layer 4 (later): Structural moves, 2×2 matrices, hydraulics
 | Priority | Upgrade | PE intent |
 |----------|---------|-----------|
 | **P0** | States A–F before moves | Don’t solve the wrong problem |
-| **P0** | External FINAL_TARGET layer | Don’t cheat purity |
-| **P0** | Worksheet units + stream product checks | Trust HYSYS UI numbers |
+| **P0** | External FINAL_TARGET layer (cuts / ASTM / TBP) | Don’t cheat quality |
+| **P0** | Worksheet units + stream/assay checks | Trust HYSYS UI numbers |
 | **P0** | Response classes after every trial | Continue / reverse / switch / State F |
 | **P1** | Spec-role engine (baseline vs final Active set) | Controlled Active selection |
-| **P1** | Operability gates (flow, duty, T profile) | Reject fake green |
+| **P1** | Operability gates (draws, duty, T profile) | Reject fake green |
 | **P1** | Interactive PE judgment board in GUI | User stays in the loop |
 | **P2** | Sensitivity / bracketing / continuation | Fewer blind steps |
 | **P2** | Failure-region memory | Don’t re-enter failed bands |
@@ -938,8 +965,8 @@ Layer 4 (later): Structural moves, 2×2 matrices, hydraulics
 
 ### 28.5 Definition of State E success (Assist may claim success only if all true)
 
-1. Numerically healthy (no sentinel duties/flows on key products).  
-2. Every hard FINAL_TARGET met on the **product stream** (within tolerance).  
+1. Numerically healthy (no sentinel duties/flows on key products/draws).  
+2. Every hard FINAL_TARGET met on the **product stream / assay** (within tolerance).  
 3. Approved Active spec set consistent; DOF = 0.  
 4. Material split and duties within engineering bounds.  
 5. T (and P) profiles pass basic physical checks.  
@@ -950,11 +977,12 @@ Otherwise report State B / C / D / F with evidence — not a fake win.
 ### 28.6 What better intelligence is *not*
 
 - Aggressive GoalValue spam  
-- Auto-relaxing product specs  
+- Auto-relaxing product / cut specs  
 - Random Active flips without role/DOF rules  
-- Residuals-only success with nonphysical bottoms  
+- Residuals-only success with nonphysical draws  
+- Stripper RR logic pretended as enough for crude cuts  
 - Silent batch loops without PE-readable reasons  
 
 ---
 
-*End of Version 0.1.1*
+*End of Version 0.1.2*

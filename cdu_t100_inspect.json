@@ -1,0 +1,227 @@
+{
+  "column": "T-100",
+  "stages": 29,
+  "feed_stage": 28,
+  "dof": 0,
+  "condenser": "Full Reflux (inferred)",
+  "converged": true,
+  "physical": false,
+  "feeds": [
+    "Main Steam",
+    "Atm Feed",
+    "Diesel Steam",
+    "AGO Steam"
+  ],
+  "products": [
+    "Residue",
+    "Off Gas",
+    "Naphtha",
+    "Waste Water",
+    "Kerosene",
+    "Diesel",
+    "AGO"
+  ],
+  "energy": [
+    "Q-Trim",
+    "Kero_SS_Energy",
+    "Atmos Cond"
+  ],
+  "duties": {
+    "condenser": -32767.0,
+    "reboiler": null
+  },
+  "flows_kgmole_h": {
+    "oh": null,
+    "btms": null
+  },
+  "temps": {
+    "oh": -32767.0,
+    "btms": -32767.0
+  },
+  "specs": [
+    {
+      "name": "Kero_SS Prod Flow",
+      "type": "clmdrawspec",
+      "active": true,
+      "goal": 0.017113245077568267,
+      "current": 0.017113191227874847,
+      "goal_display": 61.60768227924576,
+      "current_display": 61.60748842034945,
+      "unit": "kgmole/h",
+      "error": -3.1466675768136425e-06
+    },
+    {
+      "name": "Diesel_SS Prod Flow",
+      "type": "clmdrawspec",
+      "active": true,
+      "goal": 0.03542257717668701,
+      "current": 0.03542237836422882,
+      "goal_display": 127.52127783607324,
+      "current_display": 127.52056211122374,
+      "unit": "kgmole/h",
+      "error": -5.612591573989514e-06
+    },
+    {
+      "name": "AGO_SS Prod Flow",
+      "type": "clmdrawspec",
+      "active": true,
+      "goal": 0.008280602456887871,
+      "current": 0.008280551394544441,
+      "goal_display": 29.810168844796337,
+      "current_display": 29.80998502035999,
+      "unit": "kgmole/h",
+      "error": -6.166501011948435e-06
+    },
+    {
+      "name": "PA_1_Rate(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": 0.0920066939654208,
+      "current": 0.09200569330306597,
+      "goal_display": 331.2240982755149,
+      "current_display": 331.2204958910375,
+      "unit": "kgmole/h",
+      "error": -1.0875973385163134e-05
+    },
+    {
+      "name": "PA_1_Duty(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": -16118.912606198282,
+      "current": -16118.912606198282,
+      "goal_display": null,
+      "current_display": null,
+      "unit": "",
+      "error": -0.0
+    },
+    {
+      "name": "PA_2_Rate(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": 0.05520401637925248,
+      "current": 0.0552037530902231,
+      "goal_display": 198.73445896530893,
+      "current_display": 198.73351112480316,
+      "unit": "kgmole/h",
+      "error": -4.769381770492339e-06
+    },
+    {
+      "name": "PA_2_Duty(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": -10257.489840307999,
+      "current": -10257.489840307999,
+      "goal_display": null,
+      "current_display": null,
+      "unit": "",
+      "error": -0.0
+    },
+    {
+      "name": "PA_3_Rate(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": 0.05520401637925248,
+      "current": 0.05520350360877852,
+      "goal_display": 198.73445896530893,
+      "current_display": 198.73261299160268,
+      "unit": "kgmole/h",
+      "error": -9.288644334025454e-06
+    },
+    {
+      "name": "PA_3_Duty(Pa)",
+      "type": "clmpumpspec",
+      "active": true,
+      "goal": -10257.489840307999,
+      "current": -10257.489840307999,
+      "goal_display": null,
+      "current_display": null,
+      "unit": "",
+      "error": -0.0
+    },
+    {
+      "name": "Naphtha Prod Rate",
+      "type": "clmdrawspec",
+      "active": true,
+      "goal": 0.04232307922409357,
+      "current": 0.042323055964316035,
+      "goal_display": 152.36308520673686,
+      "current_display": 152.36300147153773,
+      "unit": "kgmole/h",
+      "error": -5.495766839514054e-07
+    },
+    {
+      "name": "Liquid Flow",
+      "type": "clmliquidflowspec",
+      "active": true,
+      "goal": 0.006440468577579456,
+      "current": 0.006440463458852166,
+      "goal_display": 23.18568687928604,
+      "current_display": 23.185668451867798,
+      "unit": "kgmole/h",
+      "error": -7.947756018780469e-07
+    },
+    {
+      "name": "Kero Reb Duty",
+      "type": "clmdutyspec",
+      "active": true,
+      "goal": 2198.0335372088566,
+      "current": 2198.026081635635,
+      "goal_display": null,
+      "current_display": null,
+      "unit": "",
+      "error": -5.887508903398248e-07
+    },
+    {
+      "name": "Vap Prod Flow",
+      "type": "clmvapourflowspec",
+      "active": true,
+      "goal": 0.0,
+      "current": 1.1339713593028076e-08,
+      "goal_display": 0.0,
+      "current_display": 4.082296893490107e-05,
+      "unit": "kgmole/h",
+      "error": 2.579388835136352e-07
+    },
+    {
+      "name": "Reflux Ratio",
+      "type": "clmrefluxspec",
+      "active": false,
+      "goal": 1.0,
+      "current": 0.7064626274045851,
+      "goal_display": null,
+      "current_display": null,
+      "unit": "",
+      "error": -0.2935373725954149
+    }
+  ],
+  "interesting_cfs_members": [
+    "ActiveSpecifications",
+    "ClearTrayCompositionEstimates",
+    "ColumnStages",
+    "FeedColumnStages",
+    "FeedStreams",
+    "FluidPackage",
+    "HeatSpecError",
+    "HeatSpecErrorTolerance",
+    "HeavyDrawColumnStages",
+    "InnerLoopAlgorithm",
+    "LiquidDrawColumnStages",
+    "LiquidProducts",
+    "LiquidPumpArounds",
+    "MixedDrawColumnStages",
+    "NonSeparationColumnStages",
+    "PAHeatFlows",
+    "PAHeatFlowsValue",
+    "PAMolarFlows",
+    "PAMolarFlowsValue",
+    "Parent",
+    "SeparationColumnStages",
+    "SideRectifiers",
+    "SideStrippers",
+    "Specifications",
+    "VapourDrawColumnStages",
+    "VapourProducts",
+    "VapourPumpArounds",
+    "WaterProducts"
+  ]
+}

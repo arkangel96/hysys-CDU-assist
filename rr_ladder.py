@@ -1,4 +1,7 @@
-"""RR ladder: hold Btms=12500, raise RR until NH3 <= plant target or weak response."""
+"""DEPRECATED — Simple Column / SW Stripper RR ladder. Not used by CDU Assist.
+
+Kept only as platform-history reference for bounded one-family trial discipline.
+"""
 from __future__ import annotations
 
 from column_api import ColumnController
@@ -6,7 +9,7 @@ from column_engine import ConvergenceAssistant, format_pe_board
 from column_models import ConvergenceLimits
 from hysys_api import HysysController
 
-COLUMN = "SW Stripper"
+COLUMN = "SW Stripper"  # reference case name — not a CDU default
 BTMS_KGMOLE_H = 12500.0
 BTMS_SI = BTMS_KGMOLE_H / 3600.0
 NH3_TARGET = 5e-5  # 50 ppmw plant-typical

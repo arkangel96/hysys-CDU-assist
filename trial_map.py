@@ -2,6 +2,7 @@
 High-level trial map: visited path + remaining strategy combinations.
 
 This is the engineer orientation layer — not raw COM dumps.
+CDU Assist strategy IDs are illustrative until COM discovery finalizes knobs.
 """
 from __future__ import annotations
 
@@ -30,31 +31,55 @@ class StrategyDef:
     last_resort: bool = False
 
 
-# Ordered playbook for a typical stripper / distillation convergence search
+# Ordered playbook for a typical atmospheric CDU convergence search
 STRATEGY_CATALOG: list[StrategyDef] = [
     StrategyDef(
         "refresh_estimates",
         "Refresh / use estimates",
         "Estimates",
-        "Update inactive rate estimates from the last solution before changing specs.",
+        "Update inactive rate/duty estimates from the last solution before changing specs.",
     ),
     StrategyDef(
-        "reflux_nudge_down",
-        "Nudge reflux ratio down",
-        "Active Spec",
-        "Small decrease of active reflux-ratio GoalValue; keep only if residuals improve.",
+        "pa_duty_nudge",
+        "Nudge pumparound duty",
+        "Pumparound",
+        "Bounded PA duty (or return T/flow) change — one PA family per trial.",
     ),
     StrategyDef(
-        "reflux_nudge_up",
-        "Nudge reflux ratio up",
-        "Active Spec",
-        "Small increase of active reflux-ratio GoalValue; keep only if residuals improve.",
+        "side_draw_rate_nudge",
+        "Nudge side-draw rate",
+        "Side draw",
+        "Bounded side-draw rate GoalValue change to correct overall split / cut.",
     ),
     StrategyDef(
-        "nh3_goal_nudge",
-        "Nudge NH3 bottoms goal (bounded)",
-        "Active Spec",
-        "Bounded move of composition purity GoalValue when reflux nudges are exhausted.",
+        "reflux_or_oh_nudge",
+        "Nudge reflux / overhead handle",
+        "Overhead",
+        "Bounded reflux or overhead product handle for naphtha / OH end-point issues.",
+    ),
+    StrategyDef(
+        "cut_point_nudge",
+        "Nudge cut / ASTM GoalValue (policy-gated)",
+        "Cut quality",
+        "Only when writable and policy-allowed; FINAL_TARGET stays locked unless user unlocks.",
+    ),
+    StrategyDef(
+        "side_strip_steam_nudge",
+        "Nudge side-strip steam / reboil",
+        "Side stripper",
+        "Bounded steam or reboil change when lights remain in a side product.",
+    ),
+    StrategyDef(
+        "overflash_or_furnace_nudge",
+        "Nudge overflash / furnace handle",
+        "Flash / furnace",
+        "Bounded overflash or flash-zone related handle when exposed via COM.",
+    ),
+    StrategyDef(
+        "baseline_spec_recovery",
+        "Baseline Active set for State B",
+        "Spec Set",
+        "Temporary baseline Active pair to recover a numerical solution (audit required).",
     ),
     StrategyDef(
         "lower_damping",
@@ -85,7 +110,7 @@ STRATEGY_CATALOG: list[StrategyDef] = [
         "feed_or_case_change",
         "Feed / case change (external)",
         "Case",
-        "Feed composition, T, P, or flow changed outside the assist loop — log as context.",
+        "Feed composition, T, P, assay, or flow changed outside the assist loop — log as context.",
     ),
 ]
 
@@ -139,19 +164,30 @@ def classify_strategy(action: TrialAction) -> str:
         return "refresh_estimates"
     if kind == "set_goal":
         name = str(payload.get("spec_name", "")).lower()
-        prev = payload.get("previous")
-        goal = payload.get("goal")
-        if "reflux" in name and "ratio" in name and prev is not None and goal is not None:
-            return "reflux_nudge_down" if float(goal) < float(prev) else "reflux_nudge_up"
-        if "nh3" in name or "ammonia" in name or "mass frac" in name:
-            return "nh3_goal_nudge"
-        return "nh3_goal_nudge" if "frac" in name else "reflux_nudge_down"
+        family = str(payload.get("family", "")).lower()
+        if family == "pumparound" or "pumparound" in name or name.startswith("pa"):
+            return "pa_duty_nudge"
+        if family == "side_draw" or "draw" in name:
+            return "side_draw_rate_nudge"
+        if "cut" in name or "astm" in name or "tbp" in name:
+            return "cut_point_nudge"
+        if "strip" in name and ("steam" in name or "reboil" in name):
+            return "side_strip_steam_nudge"
+        if "overflash" in name or "furnace" in name or "flash" in name:
+            return "overflash_or_furnace_nudge"
+        if "reflux" in name or "overhead" in name or "ovhd" in name:
+            return "reflux_or_oh_nudge"
+        if "baseline" in action.description.lower():
+            return "baseline_spec_recovery"
+        return "side_draw_rate_nudge"
     if "damp" in action.description.lower():
         return "lower_damping"
     if "estimate" in action.description.lower():
         return "refresh_estimates"
     if "swap" in action.description.lower():
         return "spec_swap_last_resort"
+    if "baseline" in action.description.lower() or "recovery" in action.description.lower():
+        return "baseline_spec_recovery"
     if "feed" in action.description.lower():
         return "feed_or_case_change"
     return "refresh_estimates"
@@ -166,7 +202,6 @@ def suggest_next(
         return "None — column appears converged."
     if diagnosis and diagnosis.recommended_strategy == "fix_dof":
         return "Fix degrees of freedom (DOF ≠ 0) before other trials."
-    # Prefer first OPEN (non-last-resort), else last-resort OPEN
     for spec in STRATEGY_CATALOG:
         if spec.last_resort:
             continue
@@ -255,14 +290,19 @@ def build_trial_map(
         )
 
     next_label = suggest_next(board_status, diagnosis, converged)
-    # Mark NEXT on board
     for row in board:
         if row.label == next_label or (
-            next_label.startswith(row.label) and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}
+            next_label.startswith(row.label)
+            and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}
         ):
-            if not converged and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}:
+            if not converged and row.status in {
+                StrategyStatus.OPEN,
+                StrategyStatus.LOCKED,
+            }:
                 row.status = StrategyStatus.NEXT
-                row.status_text = "NEXT suggested → " + row.status_text.replace("Open — ", "").replace("Locked ", "")
+                row.status_text = "NEXT suggested → " + row.status_text.replace(
+                    "Open — ", ""
+                ).replace("Locked ", "")
             break
 
     if state is None:
@@ -276,7 +316,6 @@ def build_trial_map(
         if diagnosis is not None:
             here += f" · {diagnosis.severity}: {diagnosis.summary}"
 
-    # Path strip text
     if not path:
         path_text = "Start -> (no trials yet) -> YOU ARE HERE"
     else:
@@ -298,7 +337,9 @@ def build_trial_map(
     )
 
 
-def manual_map_event(description: str, strategy_id: str = "feed_or_case_change") -> TrialResult:
+def manual_map_event(
+    description: str, strategy_id: str = "feed_or_case_change"
+) -> TrialResult:
     """Create a history entry for an external change (e.g. feed stress) without COM writes."""
     return TrialResult(
         action=TrialAction(

@@ -68,22 +68,18 @@ class FinalTarget:
     hard: bool = True
 
 
+def default_cdu_targets() -> list[FinalTarget]:
+    """Placeholder FINAL_TARGETs for CDU — configure per case after COM discovery.
+
+    Cut / ASTM / TBP targets are case-specific. Until Phase 1 discovery, return
+    an empty list so Assist does not invent stripper NH3 purity targets.
+    """
+    return []
+
+
 def default_sw_stripper_targets() -> list[FinalTarget]:
-    return [
-        FinalTarget(
-            id="NH3_BOTTOMS",
-            description="Bottoms NH3 mass fraction (FINAL_TARGET) — typical SWS ~30-100 ppmw",
-            spec_name_contains="nh3",
-            component_name_contains=("ammonia", "nh3"),
-            stream="bottoms",
-            relationship="less_or_equal",
-            # 50 ppmw = 5e-5 mass frac (plant-typical; NOT 0.1 ppm / 1e-7 stress value)
-            target_value=5e-5,
-            tolerance=0.0,
-            locked=True,
-            hard=True,
-        )
-    ]
+    """Deprecated alias — CDU Assist no longer defaults to NH3 stripper targets."""
+    return default_cdu_targets()
 
 
 @dataclass(slots=True)
@@ -193,6 +189,11 @@ class Diagnosis:
     final_target_status: dict[str, Any] = field(default_factory=dict)
     add_spec_recommendations: list[str] = field(default_factory=list)
     specs_summary_clicks: list[str] = field(default_factory=list)
+    expert_context: Any = None  # cdu_expert_engine.ExpertContext when built
+    product_quality: Any = None  # cdu_quality_engine.ProductQualityState
+    spec_philosophy: Any = None  # cdu_spec_philosophy.SpecPhilosophyReport
+    case_objective: str = ""
+    interactive_only: bool = True
 
 
 @dataclass(slots=True)

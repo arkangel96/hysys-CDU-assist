@@ -1,18 +1,18 @@
-# Simple Column Assist
+# CDU Assist
 
-External desktop assist for **simple distillation and stripping columns** in
+External desktop assist for **atmospheric Crude Distillation Units (CDU)** in
 Aspen HYSYS (Windows COM). Not an AspenTech product.
 
-> **Scope:** simple 2-product columns (e.g. sour-water stripper).  
-> **Not for:** CDU or VDU — those will be separate tools.  
-> Full boundary notes: [`docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`](docs/SCOPE_SIMPLE_COLUMN_ASSIST.md)
+> **Scope:** atmospheric crude towers — side draws, pumparounds, cut/ASTM/TBP targets.  
+> **Not for:** simple stripper purity chasing, or VDU (later).  
+> Full boundary notes: [`docs/SCOPE_CDU_ASSIST.md`](docs/SCOPE_CDU_ASSIST.md)
 
 ## What it does
 
 - Connect to a running HYSYS case
 - Inspect streams, edit supported specs, solve, chart, export Excel
 - **Column Assistant:** Inspect / Diagnose / Specs Summary Active·Estimate /
-  Connections READ / PE board / Trial Map / Assist trials
+  Connections READ / PE board / Trial Map / Assist trials (CDU Category-1 MVs)
 
 ## Requirements
 
@@ -34,10 +34,13 @@ Open a HYSYS case first, then run:
 python main.py
 ```
 
+Or double-click `Open CDU Assist.bat`.
+
 Click **Connect**. Use **Open Case** to select a `.hsc` file if needed.
 
 ## Notes
 
 - AspenTech COM members vary by release; the adapter tries common variants.
 - The application never saves the HYSYS case automatically.
-- See `ARCHITECTURE.md` and `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.
+- See `ARCHITECTURE.md` and `docs/SCOPE_CDU_ASSIST.md`.
+- COM discovery for draws / PAs / cut specs is Phase 1 — do not invent APIs.

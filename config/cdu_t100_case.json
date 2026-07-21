@@ -1,0 +1,86 @@
+{
+  "case_id": "t100_baseline",
+  "column_name": "T-100",
+  "objective": "Match product cut targets; hold residue rate; minimize PA duty (fill targets below)",
+  "interactive_only": true,
+  "quality_targets": [
+    {
+      "target_id": "DIESEL_D86_95",
+      "product": "Diesel",
+      "stream": "Diesel",
+      "property": "D86_95",
+      "target_value": null,
+      "unit": "degC",
+      "constraint": "maximum",
+      "hard": true,
+      "tolerance": 1.0,
+      "enabled": true,
+      "notes": "Set target_value from plant spec when known"
+    },
+    {
+      "target_id": "KERO_FLASH",
+      "product": "Kerosene",
+      "stream": "Kerosene",
+      "property": "flash_point",
+      "target_value": null,
+      "unit": "degC",
+      "constraint": "minimum",
+      "hard": true,
+      "tolerance": 1.0,
+      "enabled": true,
+      "notes": "Set target_value from plant spec when known"
+    },
+    {
+      "target_id": "RESIDUE_FLOW",
+      "product": "Residue",
+      "stream": "Residue",
+      "property": "mass_flow",
+      "target_value": null,
+      "unit": "kg/h",
+      "constraint": "target",
+      "hard": false,
+      "tolerance": 500.0,
+      "enabled": true,
+      "notes": "Optional yield anchor — configure when ready"
+    }
+  ],
+  "spec_roles": [
+    {"name": "Diesel_SS Prod Flow", "role": "solver_handle", "subsystem": "diesel_section"},
+    {"name": "Kero_SS Prod Flow", "role": "solver_handle", "subsystem": "kerosene_section"},
+    {"name": "AGO_SS Prod Flow", "role": "solver_handle", "subsystem": "ago_section"},
+    {"name": "Naphtha Prod Rate", "role": "solver_handle", "subsystem": "overhead"},
+    {"name": "Liquid Flow", "role": "solver_handle", "subsystem": "overhead"},
+    {"name": "PA_1_Rate(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "PA_1_Duty(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "PA_2_Rate(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "PA_2_Duty(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "PA_3_Rate(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "PA_3_Duty(Pa)", "role": "solver_handle", "subsystem": "pumparound"},
+    {"name": "Kero Reb Duty", "role": "solver_handle", "subsystem": "side_stripper"},
+    {"name": "Vap Prod Flow", "role": "plant_target", "subsystem": "overhead"},
+    {"name": "Reflux Ratio", "role": "monitor_only", "subsystem": "overhead"}
+  ],
+  "mv_preference": {
+    "diesel_too_heavy": [
+      "side_draw_rate_nudge",
+      "pa_duty_nudge",
+      "side_strip_steam_nudge",
+      "reflux_or_oh_nudge"
+    ],
+    "diesel_too_light": [
+      "side_draw_rate_nudge",
+      "side_strip_steam_nudge",
+      "pa_duty_nudge"
+    ],
+    "kerosene_off_spec": [
+      "side_strip_steam_nudge",
+      "side_draw_rate_nudge",
+      "pa_duty_nudge"
+    ]
+  },
+  "upstream_objects": {
+    "preflash": "PreFlash",
+    "crude_heater": "Crude Heater",
+    "notes": "Gates not enforced until Phase 4 — names for future COM reads"
+  }
+}

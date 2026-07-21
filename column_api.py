@@ -459,10 +459,13 @@ class ColumnController:
                         spec.goal_display = _si_kgmole_s_to_h(spec.goal_value)
 
         state.physical_solution = (
-            not is_sentinel(state.condenser_duty)
-            and not is_sentinel(state.reboiler_duty)
+            not is_sentinel(state.reboiler_duty)
             and not is_sentinel(state.bottoms_temperature)
         )
+        if len(state.product_streams) <= 2:
+            state.physical_solution = state.physical_solution and not is_sentinel(
+                state.condenser_duty
+            )
         return state
 
     def _stream_pressure_bar(self, name: str) -> float | None:

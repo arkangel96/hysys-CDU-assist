@@ -170,7 +170,12 @@ def try_dir_com(obj: Any) -> list[str]:
 
 
 def main() -> int:
-    column_name = sys.argv[1] if len(sys.argv) > 1 else "SW Stripper"
+    column_name = sys.argv[1] if len(sys.argv) > 1 else ""
+    if not column_name:
+        raise SystemExit(
+            "Usage: python discover_column_com.py <ColumnName>\n"
+            "Example: python discover_column_com.py \"Crude Tower\""
+        )
     report: dict[str, Any] = {
         "column_name": column_name,
         "notes": [
