@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 
 from column_engine import ConvergenceAssistant
 from trial_map import StrategyStatus, TrialMapSnapshot, build_trial_map
+from ui_style import style_table_headers
 
 
 MAP_STYLE = """
@@ -85,36 +86,9 @@ STATUS_COLORS = {
 
 def _setup_table_header(table: QTableWidget, labels: tuple[str, ...]) -> None:
     table.setColumnCount(len(labels))
-    table.setHorizontalHeaderLabels(list(labels))
-    header = table.horizontalHeader()
-    header.setVisible(True)
-    header.setMinimumHeight(40)
-    header.setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-    header.setStretchLastSection(True)
-    header.setMinimumSectionSize(90)
-    font = QFont()
-    font.setPointSize(11)
-    font.setBold(True)
-    header.setFont(font)
-    header.setStyleSheet(
-        "QHeaderView::section {"
-        " background-color: #21262d;"
-        " color: #ffffff;"
-        " padding: 12px 10px;"
-        " border: none;"
-        " border-right: 1px solid #30363d;"
-        " border-bottom: 2px solid #58a6ff;"
-        " font-size: 13px;"
-        " font-weight: 700;"
-        "}"
-    )
-    for index, text in enumerate(labels):
-        item = table.horizontalHeaderItem(index)
-        if item is None:
-            item = QTableWidgetItem(text)
-            table.setHorizontalHeaderItem(index, item)
-        item.setText(text)
-        item.setForeground(QColor("#ffffff"))
+    style_table_headers(table, labels)
+    table.horizontalHeader().setStretchLastSection(True)
+    table.horizontalHeader().setMinimumSectionSize(90)
 
 
 class TrialMapWindow(QMainWindow):

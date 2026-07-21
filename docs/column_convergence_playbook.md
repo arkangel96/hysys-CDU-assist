@@ -1,15 +1,31 @@
 # Column Convergence Playbook — Expert Process Engineer Flow
 
-**Document role:** Source-of-truth for how a simulation process engineer thinks when
-troubleshooting a distillation / stripper column in Aspen HYSYS — with every decision
-leaf mapped to **what HYSYS exposes** and **what Automation Studio can read or write**.
+**Document role:** Operational playbook for **SW Stripper / Studio v0.1** — maps PE
+decisions to **what HYSYS exposes** and **what Automation Studio can read or write**.
+
+**Master intelligence (read first):**
+[`expert_decision_workflow.md`](expert_decision_workflow.md) — full expert decision
+workflow (States A–F, external FINAL_TARGETs vs HYSYS specs, trial response classes,
+recovery, infeasibility, **§28 intelligence implementation / P0–P3 roadmap**).
+
+**Intelligence backlog (detail):**
+[`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) — gaps, anti-complexity
+layers, State E success definition (now integrated into workflow §28).
+
+This playbook is the **first constrained slice** of that specification for the SW Stripper
+stress-test case.
 
 **Reference case:** SW Stripper (8 stages, feed stage 3, full reflux condenser)
 
 **Audience:** Process engineers validating strategy · developers implementing
 `column_engine.py` · operators using Column Assistant + Trial Map
 
-**Version:** 0.1 draft · aligned with `trial_map.STRATEGY_CATALOG` strategy IDs
+**Version:** 0.1.1 draft · aligned with `trial_map.STRATEGY_CATALOG` strategy IDs
+
+**Policy from master workflow:** do **not** auto-relax product FINAL_TARGETs
+(e.g. bottoms NH₃). Prefer Category-1 operating MVs (RR / energy). Report State F
+when operating moves show weak response. Implement Assist intelligence in **layers**
+(workflow §28.2) — do not encode the entire bible in one code drop.
 
 ---
 
@@ -32,6 +48,7 @@ leaf mapped to **what HYSYS exposes** and **what Automation Studio can read or w
 15. [Worked example — stressed SW Stripper case](#15-worked-example--stressed-sw-stripper-case)
 16. [Implementation mapping (code ↔ playbook)](#16-implementation-mapping-code--playbook)
 17. [Glossary](#17-glossary)
+18. [Intelligence layers (integrated)](#18-intelligence-layers-integrated)
 
 ---
 
@@ -39,7 +56,8 @@ leaf mapped to **what HYSYS exposes** and **what Automation Studio can read or w
 
 ### What this document is
 
-A **flow-type decision process** for column convergence. Each box answers:
+A **flow-type operational playbook** for SW Stripper convergence, derived from the
+master [`expert_decision_workflow.md`](expert_decision_workflow.md). Each box answers:
 
 | Question | Example |
 |----------|---------|
@@ -47,13 +65,17 @@ A **flow-type decision process** for column convergence. Each box answers:
 | What does it mean physically? | Reflux target too low for separation duty |
 | What can HYSYS do? | Change `Reflux Ratio` spec `GoalValue` |
 | Can Studio automate it? | **Yes** — `set_spec_goal` + `run_column` |
-| When to stop or escalate? | 3 reversed trials → refresh estimates manually |
+| When to stop or escalate? | Weak NH₃ response at fixed FINAL_TARGET → State F |
+
+The master workflow owns States A–F, external targets, response classes, and
+escalation. This file owns COM transferability and SW Stripper-specific trials.
 
 ### What this document is not
 
 - Not a substitute for plant / licensor design limits
 - Not a guarantee that every HYSYS UI action has a COM path (see **Manual** tags)
 - Not permission to modify a live case without explicit user approval
+- Not the full intelligence bible — that is `expert_decision_workflow.md`
 
 ### Column types covered (v0.1)
 
@@ -79,6 +101,10 @@ P7  Spec swap is last resort      1-for-1 swap only; never add a spec when DOF i
 P8  Document the trail             Every trial logged on Trial Map with kept/reversed outcome.
 P9  Human owns business targets    Purity limits, duty caps, feed validity — engineer decides.
 P10 Stop on thrashing              Three consecutive reverses → escalate, do not loop forever.
+P11 FINAL_TARGET locked            Never auto-relax product purity (e.g. NH3) without permission.
+P12 State before knob              Classify A–F (esp. State B sentinels) before GoalValue nudges.
+P13 Worksheet units + stream truth Show rates/purities as HYSYS UI; judge product on streams.
+P14 Thin intelligence layers       Encode Assist in P0→P3 slices; keep full PE bible in MD.
 ```
 
 ---
@@ -627,11 +653,19 @@ Start → reflux_nudge_up (rev) → reflux_nudge_up (kept) → reflux_nudge_up (
 
 ### Gap list (playbook ahead of code)
 
-- [ ] `refresh_estimates` — COM path not implemented
-- [ ] `lower_damping` / `raise_iterations` — read optional; write not wired
-- [ ] Residual dominance — code prefers RR; NH₃-first path partial
-- [ ] Escalation ladder — Trial Map shows OPEN; Assist does not auto-escalate all levels
-- [ ] User-visible "PE hypothesis" string in UI — playbook text not yet surfaced
+Aligned with master workflow **§28** and [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md):
+
+- [ ] States A–F classification before targeting (P0)
+- [ ] External FINAL_TARGET layer — NH₃ locked (P0)
+- [ ] Worksheet units on Specs display (e.g. Ovhd kgmole/h not raw SI) (P0)
+- [ ] Product checks from bottoms **stream**, not only spec Current (P0)
+- [ ] Response classes after each trial (P0)
+- [ ] Spec-role Active swaps policy-driven in Assist (P1)
+- [ ] Operability gates — bottoms flow, duties, T profile (P1)
+- [ ] Interactive PE board default; Assist Loop opt-in (P1)
+- [ ] `refresh_estimates` COM (`UpdateCompositionEstimates`) wired (P1)
+- [ ] Going-nowhere / sensitivity stop → State F report (P2)
+- [ ] User-visible "PE hypothesis" string in UI (P1)
 
 ---
 
@@ -642,6 +676,7 @@ Start → reflux_nudge_up (rev) → reflux_nudge_up (kept) → reflux_nudge_up (
 | **DOF** | Degrees of freedom — must be 0 for fully specified column |
 | **Active spec** | Primary specification (`IsActive=True`); drives convergence |
 | **Inactive estimate** | Rate / draw estimate used to initialize but not solved to goal |
+| **FINAL_TARGET** | External product requirement — locked unless user allows change |
 | **GoalValue** | Engineer target on an active spec |
 | **CurrentValue** | Column calculated value for that spec |
 | **Error** | HYSYS weighted / absolute residual for the spec |
@@ -651,6 +686,22 @@ Start → reflux_nudge_up (rev) → reflux_nudge_up (kept) → reflux_nudge_up (
 | **1-for-1 swap** | Deactivate one active spec, activate one inactive — DOF unchanged |
 | **Trial Map** | Engineer orientation UI: path trail + strategy board |
 | **Assist Loop** | Automated Inspect → Diagnose → Trial → Evaluate cycle |
+| **State E** | Acceptable success — only if stream targets + operability pass |
+
+---
+
+## 18. Intelligence layers (integrated)
+
+Do **not** try to code the entire expert workflow at once. Executable Assist grows as:
+
+| Layer | Content | Status |
+|-------|---------|--------|
+| 1 | Read + one MV + keep/reverse + human judge | Partial today |
+| 2 | States A–F + FINAL_TARGET lock + units/stream checks | **Next code priority** |
+| 3 | Spec-role swaps, sensitivity, State F reporting | Planned |
+| 4 | Structural / multivariable / hydraulics | Later + permission |
+
+See master workflow **§28** for P0–P3 detail and State E success definition.
 
 ---
 
@@ -660,15 +711,17 @@ When COM capabilities expand:
 
 1. Move items from **MANUAL** to **AUTO** in Section 3
 2. Update strategy rows in Section 12
-3. Implement matching logic in `column_engine.propose_action`
+3. Implement matching logic in `column_engine.propose_action` **per §18 layer**
 4. Re-validate on SW Stripper live case
+5. Tick gap-list items; keep [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) in sync
 
 When adding a new column template:
 
 1. Copy this playbook to a column-specific addendum
 2. Document active spec names, typical goal ranges, and feed sensitivity
 3. Extend `STRATEGY_CATALOG` if new strategy families are needed
+4. Declare FINAL_TARGETs for that column (locked product specs)
 
 ---
 
-*End of playbook v0.1*
+*End of playbook v0.1.1*

@@ -13,6 +13,17 @@ from column_models import (
 from hysys_api import HysysController, HysysError
 
 
+def is_sentinel(value: Any) -> bool:
+    """HYSYS empty/failed placeholder is typically -32767."""
+    if value is None:
+        return True
+    try:
+        v = float(value)
+    except Exception:
+        return True
+    return abs(v + 32767.0) < 1.0 or abs(v - 32767.0) < 1.0
+
+
 def _items(collection: Any) -> Iterable[Any]:
     count = int(collection.Count)
     for index in range(count):
@@ -231,11 +242,73 @@ class ColumnController:
         if state.top_vapour_product:
             state.overhead_molar_flow = self._stream_flow(state.top_vapour_product)
             state.overhead_temperature = self._stream_temperature(state.top_vapour_product)
+            state.overhead_molar_flow_kgmole_h = self._stream_flow_unit(
+                state.top_vapour_product, "kgmole/h"
+            )
         if state.bottoms_liquid_product:
             state.bottoms_molar_flow = self._stream_flow(state.bottoms_liquid_product)
             state.bottoms_temperature = self._stream_temperature(state.bottoms_liquid_product)
+            state.bottoms_molar_flow_kgmole_h = self._stream_flow_unit(
+                state.bottoms_liquid_product, "kgmole/h"
+            )
+            state.bottoms_nh3_mass_frac = self.read_component_mass_fraction(
+                state.bottoms_liquid_product, ("ammonia", "nh3")
+            )
 
+        state.physical_solution = (
+            not is_sentinel(state.condenser_duty)
+            and not is_sentinel(state.reboiler_duty)
+            and not is_sentinel(state.bottoms_temperature)
+        )
         return state
+
+    def _stream_flow_unit(self, name: str, unit: str) -> float | None:
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(name)
+            flow = getattr(stream, "MolarFlow", None)
+            if flow is None:
+                return None
+            if hasattr(flow, "GetValue"):
+                value = float(flow.GetValue(unit))
+                return None if is_sentinel(value) else value
+        except Exception:
+            return None
+        return None
+
+    def read_component_mass_fraction(
+        self, stream_name: str, name_contains: tuple[str, ...]
+    ) -> float | None:
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(stream_name)
+            comps = stream.ComponentMassFraction
+            values = list(comps.Values)
+            names = list(self.hysys.component_names)
+            for comp_name, value in zip(names, values):
+                lower = str(comp_name).lower()
+                if any(token in lower for token in name_contains):
+                    return None if is_sentinel(value) else float(value)
+        except Exception:
+            return None
+        return None
+
+    def refresh_estimates(self, column_name: str) -> list[str]:
+        """Best-effort composition estimate refresh (State B recovery)."""
+        column = self._column(column_name)
+        cfs = self._column_flowsheet(column)
+        notes: list[str] = []
+        for attr, value in (("IsUsingSolutionForEstimates", True),):
+            try:
+                setattr(cfs, attr, value)
+                notes.append(f"set {attr}={value}")
+            except Exception as exc:
+                notes.append(f"{attr} failed: {exc}")
+        for meth in ("UpdateCompositionEstimates", "NormalizeCompositionEstimates"):
+            try:
+                getattr(cfs, meth)()
+                notes.append(f"{meth} OK")
+            except Exception as exc:
+                notes.append(f"{meth} failed: {exc}")
+        return notes
 
     def _stream_heat(self, name: str) -> float | None:
         for coll_name in ("EnergyStreams", "MaterialStreams"):

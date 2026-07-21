@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -33,27 +34,38 @@ from PyQt5.QtWidgets import (
 
 from trial_map import manual_map_event
 from trial_map_window import TrialMapWindow
+from intelligence_window import IntelligenceWindow
 from column_api import ColumnController
-from column_engine import ConvergenceAssistant, diagnose, score_state
+from column_engine import ConvergenceAssistant, diagnose, format_pe_board, score_state
 from column_models import ConvergenceLimits
 from exporter import export_workbook
 from hysys_api import HysysController, HysysError
+from ui_style import style_table_headers
 
 
 DARK_THEME = """
 QMainWindow, QWidget { background: #0d1117; color: #c9d1d9; }
 QFrame {
   border: 1px solid #21262d;
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: 4px;
+  padding: 0px;
+  background: #161b22;
+}
+QFrame#metricCard, QFrame#statusChip {
+  border: 1px solid #30363d;
   background: #161b22;
 }
 QGroupBox {
   border: 1px solid #30363d;
-  border-radius: 6px;
-  margin-top: 14px;
-  padding: 14px 10px 10px 10px;
+  border-radius: 4px;
+  margin-top: 12px;
+  padding: 10px 8px 8px 8px;
   font-weight: 600;
+}
+QGroupBox#compactBox {
+  margin-top: 8px;
+  padding: 6px 8px 6px 8px;
+  font-size: 11px;
 }
 QGroupBox::title {
   subcontrol-origin: margin;
@@ -66,11 +78,21 @@ QGroupBox::title {
 QPushButton {
   background: #21262d;
   border: 1px solid #30363d;
-  border-radius: 4px;
-  padding: 8px 14px;
-  min-height: 18px;
+  border-radius: 3px;
+  padding: 7px 12px;
+  min-height: 22px;
+  min-width: 88px;
+  font-size: 12px;
 }
-QPushButton:hover { background: #30363d; }
+QPushButton:hover { background: #30363d; border-color: #484f58; }
+QPushButton:pressed { background: #161b22; }
+QPushButton#primaryAction {
+  background: #1f6feb;
+  border: 1px solid #388bfd;
+  color: #ffffff;
+  font-weight: 600;
+}
+QPushButton#primaryAction:hover { background: #388bfd; }
 QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QTableWidget {
   background: #161b22;
   border: 1px solid #30363d;
@@ -78,20 +100,34 @@ QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QTableWidget {
   padding: 6px;
   min-height: 18px;
 }
+QHeaderView {
+  background-color: #21262d;
+}
 QHeaderView::section {
-  background: #161b22;
-  padding: 10px 8px;
-  border: 0;
+  background-color: #21262d;
+  color: #ffffff;
+  padding: 12px 10px;
+  border: none;
   border-right: 1px solid #30363d;
-  border-bottom: 1px solid #30363d;
-  font-weight: 600;
-  color: #c9d1d9;
+  border-bottom: 2px solid #58a6ff;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 36px;
 }
 QTableWidget {
   gridline-color: #30363d;
   selection-background-color: #1f6feb;
+  color: #e6edf3;
+  alternate-background-color: #12171e;
 }
-QTableWidget::item { padding: 6px; }
+QTableWidget::item {
+  padding: 6px;
+  color: #e6edf3;
+}
+QTableWidget::item:selected {
+  background-color: #1f6feb;
+  color: #ffffff;
+}
 QTabWidget::pane {
   border: 1px solid #30363d;
   border-radius: 4px;
@@ -114,23 +150,35 @@ QSplitter::handle { background: #21262d; width: 4px; }
 
 
 class MetricCard(QFrame):
+    """Stream property tile — uses QFont (not CSS font-size) to avoid Windows garble."""
+
     def __init__(self, title: str, unit: str, color: str) -> None:
         super().__init__()
+        self.setObjectName("metricCard")
+        self.setMinimumHeight(70)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(10, 8, 10, 8)
         layout.setSpacing(4)
+
         title_label = QLabel(title.upper())
-        title_label.setStyleSheet("color: #8b949e; font-size: 11px; border: none; background: transparent;")
+        title_label.setFont(QFont("Segoe UI", 9))
+        title_label.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+
         self.value = QLabel("—")
-        self.value.setStyleSheet(
-            f"font-size: 20px; font-weight: 700; color: {color}; border: none; background: transparent;"
-        )
-        unit_label = QLabel(unit)
-        unit_label.setStyleSheet("color: #8b949e; font-size: 11px; border: none; background: transparent;")
-        self.unit_label = unit_label
+        value_font = QFont("Segoe UI", 13)
+        value_font.setBold(True)
+        self.value.setFont(value_font)
+        self.value.setStyleSheet(f"color: {color}; border: none; background: transparent;")
+        self.value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
+        self.unit_label = QLabel(unit)
+        self.unit_label.setFont(QFont("Segoe UI", 9))
+        self.unit_label.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+
         layout.addWidget(title_label)
         layout.addWidget(self.value)
-        layout.addWidget(unit_label)
+        layout.addWidget(self.unit_label)
 
     def update_value(self, value: float | None) -> None:
         self.value.setText("—" if value is None else f"{value:,.4g}")
@@ -140,19 +188,28 @@ class MetricCard(QFrame):
 
 
 class StatusChip(QFrame):
-    """Small labeled status block for column overview."""
+    """Compact labeled status block for column overview."""
 
     def __init__(self, title: str) -> None:
         super().__init__()
+        self.setObjectName("statusChip")
+        self.setMinimumHeight(56)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setContentsMargins(8, 6, 8, 6)
         layout.setSpacing(2)
+
         self.title = QLabel(title)
-        self.title.setStyleSheet("color: #8b949e; font-size: 11px; border: none; background: transparent;")
+        self.title.setFont(QFont("Segoe UI", 9))
+        self.title.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+
         self.value = QLabel("—")
-        self.value.setStyleSheet(
-            "color: #c9d1d9; font-size: 16px; font-weight: 700; border: none; background: transparent;"
-        )
+        value_font = QFont("Segoe UI", 12)
+        value_font.setBold(True)
+        self.value.setFont(value_font)
+        self.value.setStyleSheet("color: #c9d1d9; border: none; background: transparent;")
+        self.value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+
         layout.addWidget(self.title)
         layout.addWidget(self.value)
 
@@ -160,7 +217,7 @@ class StatusChip(QFrame):
         self.value.setText(text)
         color = color or "#c9d1d9"
         self.value.setStyleSheet(
-            f"color: {color}; font-size: 16px; font-weight: 700; border: none; background: transparent;"
+            f"color: {color}; border: none; background: transparent;"
         )
 
 
@@ -171,6 +228,7 @@ class HysysStudio(QMainWindow):
         self.column_api = ColumnController(self.controller)
         self.assistant = ConvergenceAssistant(self.column_api, ConvergenceLimits())
         self.trial_map_window: TrialMapWindow | None = None
+        self.intelligence_window: IntelligenceWindow | None = None
         self.streams = {}
         self.stream_data = []
         self.operations = []
@@ -219,14 +277,19 @@ class HysysStudio(QMainWindow):
         root.addLayout(toolbar)
 
         components = QGroupBox("Component Setup")
+        components.setObjectName("compactBox")
+        components.setMaximumHeight(58)
         component_layout = QHBoxLayout(components)
-        component_layout.setContentsMargins(12, 8, 12, 10)
-        component_layout.setSpacing(10)
+        component_layout.setContentsMargins(8, 2, 8, 6)
+        component_layout.setSpacing(8)
         self.component_input = QLineEdit()
         self.component_input.setPlaceholderText("Methane, Ethane, Propane …")
-        self.apply_components_button = QPushButton("Apply Components")
-        component_layout.addWidget(self.component_input)
+        self.component_input.setMaximumWidth(420)
+        self.apply_components_button = QPushButton("Apply")
+        self.apply_components_button.setMinimumWidth(72)
+        component_layout.addWidget(self.component_input, 1)
         component_layout.addWidget(self.apply_components_button)
+        component_layout.addStretch(2)
         root.addWidget(components)
 
         splitter = QSplitter()
@@ -269,10 +332,12 @@ class HysysStudio(QMainWindow):
         left_layout.addWidget(edit_group)
 
         self.composition_table = QTableWidget(0, 2)
-        self.composition_table.setHorizontalHeaderLabels(("Component", "Mole Fraction"))
+        style_table_headers(self.composition_table, ("Component", "Mole Fraction"))
         self.composition_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.composition_table.horizontalHeader().setStretchLastSection(True)
-        left_layout.addWidget(self.composition_table, 1)
+        self.composition_table.verticalHeader().setVisible(False)
+        self.composition_table.setMaximumHeight(160)
+        left_layout.addWidget(self.composition_table, 0)
 
         right = QTabWidget()
         charts = QWidget()
@@ -291,7 +356,7 @@ class HysysStudio(QMainWindow):
         operations_layout = QVBoxLayout(operations_tab)
         operations_layout.setContentsMargins(8, 8, 8, 8)
         self.operations_table = QTableWidget(0, 3)
-        self.operations_table.setHorizontalHeaderLabels(("Operation", "Type", "Solved"))
+        style_table_headers(self.operations_table, ("Operation", "Type", "Solved"))
         self.operations_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.operations_table.horizontalHeader().setStretchLastSection(True)
         operations_layout.addWidget(self.operations_table)
@@ -304,33 +369,24 @@ class HysysStudio(QMainWindow):
         column_tab = QWidget()
         column_layout = QVBoxLayout(column_tab)
         column_layout.setContentsMargins(10, 10, 10, 10)
-        column_layout.setSpacing(10)
+        column_layout.setSpacing(8)
 
-        col_select = QHBoxLayout()
-        col_select.setSpacing(8)
-        col_select.addWidget(QLabel("Column"))
+        # --- Toolbar (HYSYS-like: one row of equal actions) ---
+        toolbar_row = QHBoxLayout()
+        toolbar_row.setSpacing(8)
+        toolbar_row.addWidget(QLabel("Column"))
         self.column_combo = QComboBox()
-        col_select.addWidget(self.column_combo, 1)
-        column_layout.addLayout(col_select)
+        self.column_combo.setMinimumWidth(160)
+        toolbar_row.addWidget(self.column_combo, 1)
 
-        col_actions = QHBoxLayout()
-        col_actions.setSpacing(8)
         self.inspect_column_button = QPushButton("Inspect")
         self.diagnose_column_button = QPushButton("Diagnose")
-        self.dry_run_button = QPushButton("Dry-Run Trial")
+        self.dry_run_button = QPushButton("Dry-Run")
         self.one_trial_button = QPushButton("One Trial")
         self.assist_button = QPushButton("Assist Loop")
-        self.assist_button.setObjectName("assistBtn")
-        self.assist_button.setStyleSheet(
-            "QPushButton#assistBtn { background: #238636; border: 1px solid #2ea043; }"
-            "QPushButton#assistBtn:hover { background: #2ea043; }"
-        )
-        self.trial_map_button = QPushButton("Open Trial Map")
-        self.trial_map_button.setObjectName("mapBtn")
-        self.trial_map_button.setStyleSheet(
-            "QPushButton#mapBtn { background: #1f6feb; border: 1px solid #388bfd; }"
-            "QPushButton#mapBtn:hover { background: #388bfd; }"
-        )
+        self.assist_button.setObjectName("primaryAction")
+        self.trial_map_button = QPushButton("Trial Map")
+        self.intelligence_button = QPushButton("PE Board")
         for button in (
             self.inspect_column_button,
             self.diagnose_column_button,
@@ -338,14 +394,15 @@ class HysysStudio(QMainWindow):
             self.one_trial_button,
             self.assist_button,
             self.trial_map_button,
+            self.intelligence_button,
         ):
-            col_actions.addWidget(button)
-        col_actions.addStretch()
-        column_layout.addLayout(col_actions)
+            button.setMinimumHeight(30)
+            toolbar_row.addWidget(button)
+        column_layout.addLayout(toolbar_row)
 
-        # Clear status chips instead of one cramped line
+        # --- Status chips (fixed height strip) ---
         chips = QHBoxLayout()
-        chips.setSpacing(8)
+        chips.setSpacing(6)
         self.chip_name = StatusChip("Column")
         self.chip_stages = StatusChip("Stages")
         self.chip_feed = StatusChip("Feed stage")
@@ -359,42 +416,68 @@ class HysysStudio(QMainWindow):
             chips.addWidget(chip)
         column_layout.addLayout(chips)
 
+        # --- Sub-pages like HYSYS Design → Monitor / Specs / Profile ---
+        self.column_pages = QTabWidget()
+        self.column_pages.setDocumentMode(True)
+
+        # Page 1: Diagnosis
+        diagnosis_page = QWidget()
+        diagnosis_layout = QVBoxLayout(diagnosis_page)
+        diagnosis_layout.setContentsMargins(8, 8, 8, 8)
+        diagnosis_layout.setSpacing(6)
+        how_to = QLabel(
+            "Workflow: Inspect → Diagnose → Dry-Run → One Trial / Assist Loop. "
+            "FINAL_TARGET (NH₃) stays locked unless you change it in HYSYS."
+        )
+        how_to.setWordWrap(True)
+        how_to.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+        diagnosis_layout.addWidget(how_to)
         self.column_summary = QLabel(
-            "How to use: Connect → choose column → Inspect.\n"
-            "Diagnose explains the problem. Dry-Run shows the planned change. "
-            "One Trial / Assist Loop run keep-or-reverse trials in HYSYS."
+            "Connect, choose a column, then Inspect. Diagnosis text appears here."
         )
         self.column_summary.setWordWrap(True)
+        self.column_summary.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.column_summary.setStyleSheet(
-            "color: #8b949e; padding: 10px; background: #161b22; "
-            "border: 1px solid #30363d; border-radius: 6px;"
+            "color: #c9d1d9; padding: 12px; background: #161b22; "
+            "border: 1px solid #30363d; border-radius: 4px;"
         )
-        column_layout.addWidget(self.column_summary)
+        diagnosis_layout.addWidget(self.column_summary, 1)
+        self.column_pages.addTab(diagnosis_page, "Diagnosis")
 
-        specs_group = QGroupBox("Column specifications (from HYSYS Monitor / Specs)")
-        specs_layout = QVBoxLayout(specs_group)
-        specs_layout.setContentsMargins(10, 8, 10, 10)
+        # Page 2: Specs (full page — no longer crushed)
+        specs_page = QWidget()
+        specs_layout = QVBoxLayout(specs_page)
+        specs_layout.setContentsMargins(8, 8, 8, 8)
         specs_layout.setSpacing(6)
-
-        legend = QLabel(
-            "Active Spec = used to solve (must match DOF).   "
-            "Estimate only = starting guess, not a constraint.   "
-            "Goal = target you set.   Current = HYSYS result.   "
-            "Residual = how far Current is from Goal (near 0 is good)."
+        specs_hint = QLabel(
+            "Same idea as HYSYS Design → Specs / Monitor. "
+            "Active = solver constraint. Estimate = guess only. Residual near 0 = met."
         )
-        legend.setWordWrap(True)
-        legend.setStyleSheet("color: #8b949e; border: none; background: transparent;")
-        specs_layout.addWidget(legend)
+        specs_hint.setWordWrap(True)
+        specs_hint.setStyleSheet("color: #8b949e; border: none; background: transparent;")
+        specs_layout.addWidget(specs_hint)
+
+        self.specs_empty_hint = QLabel(
+            "No specs loaded yet — click Inspect."
+        )
+        self.specs_empty_hint.setAlignment(Qt.AlignCenter)
+        self.specs_empty_hint.setMinimumHeight(120)
+        self.specs_empty_hint.setStyleSheet(
+            "color: #f0883e; padding: 24px; background: #12171e; "
+            "border: 1px dashed #30363d; border-radius: 4px;"
+        )
+        specs_layout.addWidget(self.specs_empty_hint)
 
         self.column_specs_table = QTableWidget(0, 5)
-        self.column_specs_table.setHorizontalHeaderLabels(
+        style_table_headers(
+            self.column_specs_table,
             (
                 "Specification name",
                 "What it is",
                 "Goal (target)",
                 "Current (result)",
                 "Residual (error)",
-            )
+            ),
         )
         self.column_specs_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.column_specs_table.setAlternatingRowColors(True)
@@ -402,33 +485,36 @@ class HysysStudio(QMainWindow):
         self.column_specs_table.setWordWrap(True)
         self.column_specs_table.verticalHeader().setVisible(False)
         header = self.column_specs_table.horizontalHeader()
-        header.setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        header.setMinimumHeight(36)
         header.setSectionResizeMode(0, QHeaderView.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
-        self.column_specs_table.setMinimumHeight(180)
-        specs_layout.addWidget(self.column_specs_table)
-        column_layout.addWidget(specs_group, 2)
+        self.column_specs_table.setVisible(False)
+        specs_layout.addWidget(self.column_specs_table, 1)
+        self.column_pages.addTab(specs_page, "Specs")
 
+        # Page 3: Temperature profile
+        profile_page = QWidget()
+        profile_layout = QVBoxLayout(profile_page)
+        profile_layout.setContentsMargins(8, 8, 8, 8)
         self.column_temp_plot = pg.PlotWidget(title="Stage temperatures — Main TS (top → bottom)")
         self.column_temp_plot.setBackground("#0d1117")
         self.column_temp_plot.setLabel("left", "Temperature", units="C")
         self.column_temp_plot.setLabel("bottom", "Stage")
-        self.column_temp_plot.setMinimumHeight(160)
-        column_layout.addWidget(self.column_temp_plot, 1)
+        profile_layout.addWidget(self.column_temp_plot, 1)
+        self.column_pages.addTab(profile_page, "Profile")
 
-        log_group = QGroupBox("Assistant activity")
-        log_layout = QVBoxLayout(log_group)
-        log_layout.setContentsMargins(8, 6, 8, 8)
+        # Page 4: Activity log
+        activity_page = QWidget()
+        activity_layout = QVBoxLayout(activity_page)
+        activity_layout.setContentsMargins(8, 8, 8, 8)
         self.column_assist_log = QTextEdit()
         self.column_assist_log.setReadOnly(True)
-        self.column_assist_log.setMinimumHeight(80)
-        self.column_assist_log.setMaximumHeight(120)
-        log_layout.addWidget(self.column_assist_log)
-        column_layout.addWidget(log_group)
+        activity_layout.addWidget(self.column_assist_log, 1)
+        self.column_pages.addTab(activity_page, "Activity")
+
+        column_layout.addWidget(self.column_pages, 1)
 
         right.addTab(column_tab, "Column Assistant")
         right.setCurrentIndex(right.count() - 1)
@@ -455,6 +541,7 @@ class HysysStudio(QMainWindow):
         self.one_trial_button.clicked.connect(lambda: self.run_column_trial(dry_run=False))
         self.assist_button.clicked.connect(self.run_assist_loop)
         self.trial_map_button.clicked.connect(self.open_trial_map)
+        self.intelligence_button.clicked.connect(self.open_intelligence)
 
     def _toggle_timer(self, enabled: bool) -> None:
         self.timer.start() if enabled else self.timer.stop()
@@ -552,17 +639,30 @@ class HysysStudio(QMainWindow):
         else:
             self.chip_dof.set_value(str(dof), "#f85149")
 
-        if state.appears_converged:
+        if state.appears_converged and getattr(state, "physical_solution", False):
             self.chip_converged.set_value("Converged", "#3fb950")
+        elif getattr(state, "physical_solution", True) is False:
+            self.chip_converged.set_value("State B (numerical)", "#f85149")
         else:
             self.chip_converged.set_value("Not converged", "#f0883e")
 
         self.chip_error.set_value(f"{state.max_active_spec_error:.3g}")
 
         if diagnosis is not None:
+            eng = getattr(diagnosis, "engineering_state", None)
+            pe = getattr(diagnosis, "pe_read", "")
+            pot = getattr(diagnosis, "potential", "")
             detail = diagnosis.summary
+            if eng is not None:
+                detail = f"[{eng.value}] potential={pot}\n{pe}\n{detail}"
             if diagnosis.details:
-                detail += "\n• " + "\n• ".join(diagnosis.details)
+                detail += "\n• " + "\n• ".join(diagnosis.details[:8])
+            if getattr(state, "bottoms_nh3_mass_frac", None) is not None:
+                detail += f"\n• Bottoms NH3 (stream)={state.bottoms_nh3_mass_frac:.4g}"
+            if getattr(state, "overhead_molar_flow_kgmole_h", None) is not None:
+                detail += f"\n• Ovhd={state.overhead_molar_flow_kgmole_h:.4g} kgmole/h"
+            if getattr(state, "bottoms_molar_flow_kgmole_h", None) is not None:
+                detail += f"\n• Btms={state.bottoms_molar_flow_kgmole_h:.4g} kgmole/h"
             self.column_summary.setText(f"{diagnosis.severity.upper()}: {detail}")
             color = {"info": "#3fb950", "warn": "#f0883e", "critical": "#f85149"}.get(
                 diagnosis.severity, "#8b949e"
@@ -574,42 +674,53 @@ class HysysStudio(QMainWindow):
         else:
             self.column_summary.setText(
                 f"{state.name} ({state.flowsheet_tag})  ·  score {score_state(state):.4g}\n"
-                "Active specs drive the solve. Inactive rows are estimates only."
+                "Active specs drive the solve. Inactive rows are estimates only.\n"
+                "FINAL_TARGET (NH3) is locked — Assist will not auto-relax product GoalValue."
             )
             self.column_summary.setStyleSheet(
                 "color: #8b949e; padding: 10px; background: #161b22; "
                 "border: 1px solid #30363d; border-radius: 6px;"
             )
 
-        self.column_specs_table.setRowCount(len(state.specs))
-        for row, spec in enumerate(state.specs):
-            if spec.is_active:
-                what = "Active spec (used to solve)"
-            else:
-                what = "Estimate only (not a constraint)"
-
-            if spec.error is None:
-                residual = "—"
-            elif abs(spec.error) >= 1e4:
-                residual = "n/a (inactive)"
-            else:
-                residual = f"{spec.error:.4g}"
-
-            values = (
-                spec.name,
-                what,
-                "—" if spec.goal_value is None else f"{spec.goal_value:.6g}",
-                "—" if spec.current_value is None else f"{spec.current_value:.6g}",
-                residual,
+        if not state.specs:
+            self.specs_empty_hint.setText(
+                "Inspect ran, but HYSYS returned no Specs for this column."
             )
-            for column, value in enumerate(values):
-                item = QTableWidgetItem(value)
-                if column == 1 and spec.is_active:
-                    item.setForeground(QColor("#3fb950"))
-                elif column == 1:
-                    item.setForeground(QColor("#8b949e"))
-                self.column_specs_table.setItem(row, column, item)
-            self.column_specs_table.setRowHeight(row, 28)
+            self.specs_empty_hint.setVisible(True)
+            self.column_specs_table.setVisible(False)
+            self.column_specs_table.setRowCount(0)
+        else:
+            self.specs_empty_hint.setVisible(False)
+            self.column_specs_table.setVisible(True)
+            self.column_specs_table.setRowCount(len(state.specs))
+            for row, spec in enumerate(state.specs):
+                if spec.is_active:
+                    what = "Active spec (used to solve)"
+                else:
+                    what = "Estimate only (not a constraint)"
+
+                if spec.error is None:
+                    residual = "—"
+                elif abs(spec.error) >= 1e4:
+                    residual = "n/a (inactive)"
+                else:
+                    residual = f"{spec.error:.4g}"
+
+                values = (
+                    spec.name,
+                    what,
+                    "—" if spec.goal_value is None else f"{spec.goal_value:.6g}",
+                    "—" if spec.current_value is None else f"{spec.current_value:.6g}",
+                    residual,
+                )
+                for column, value in enumerate(values):
+                    item = QTableWidgetItem(value)
+                    if column == 1 and spec.is_active:
+                        item.setForeground(QColor("#3fb950"))
+                    elif column == 1:
+                        item.setForeground(QColor("#8b949e"))
+                    self.column_specs_table.setItem(row, column, item)
+                self.column_specs_table.setRowHeight(row, 28)
 
         self.column_temp_plot.clear()
         temps = state.profile.temperatures
@@ -626,6 +737,7 @@ class HysysStudio(QMainWindow):
             state = self.assistant.inspect(self._selected_column())
             self._show_column_state(state)
             self._column_assist_log(f"Inspected {state.name}: DOF={state.degrees_of_freedom}")
+            self.column_pages.setCurrentIndex(1)  # Specs page
         except Exception as exc:
             self._show_error(exc)
 
@@ -633,9 +745,8 @@ class HysysStudio(QMainWindow):
         try:
             state, diagnosis = self.assistant.diagnose_column(self._selected_column())
             self._show_column_state(state, diagnosis)
-            self._column_assist_log(
-                f"Diagnosis [{diagnosis.recommended_strategy}]: {diagnosis.summary}"
-            )
+            self._column_assist_log(format_pe_board(state, diagnosis))
+            self.column_pages.setCurrentIndex(0)  # Diagnosis page
         except Exception as exc:
             self._show_error(exc)
 
@@ -651,6 +762,19 @@ class HysysStudio(QMainWindow):
             self.trial_map_window.raise_()
             self.trial_map_window.activateWindow()
             self._column_assist_log(f"Opened Trial Map for {name}")
+        except Exception as exc:
+            self._show_error(exc)
+
+    def open_intelligence(self) -> None:
+        try:
+            name = self.column_combo.currentText().strip() or "SW Stripper"
+            if self.intelligence_window is None:
+                self.intelligence_window = IntelligenceWindow(self.assistant)
+            self.intelligence_window.refresh(name)
+            self.intelligence_window.show()
+            self.intelligence_window.raise_()
+            self.intelligence_window.activateWindow()
+            self._column_assist_log(f"Opened PE Intelligence for {name}")
         except Exception as exc:
             self._show_error(exc)
 

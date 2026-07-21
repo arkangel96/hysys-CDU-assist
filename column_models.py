@@ -22,6 +22,67 @@ class DiagnosisCode(str, Enum):
     DUTY_EXTREME = "duty_extreme"
     PHASE_SUSPECT = "phase_suspect"
     UNKNOWN_FAILURE = "unknown_failure"
+    STATE_B_NUMERICAL = "state_b_numerical"
+    FINAL_TARGET_MISS = "final_target_miss"
+    OPERABILITY_FAIL = "operability_fail"
+    LIKELY_INFEASIBLE = "likely_infeasible"
+
+
+class EngineeringState(str, Enum):
+    """Expert workflow States A–F."""
+
+    A_INVALID = "A_invalid_model"
+    B_NUMERICAL = "B_numerical"
+    C_OFF_SPEC = "C_off_specification"
+    D_CONSTRAINT = "D_constraints_violated"
+    E_ACCEPTABLE = "E_acceptable"
+    F_INFEASIBLE = "F_likely_infeasible"
+
+
+class ResponseClass(str, Enum):
+    CONVERGED_IMPROVED = "CONVERGED_IMPROVED"
+    CONVERGED_STRONGLY_IMPROVED = "CONVERGED_STRONGLY_IMPROVED"
+    CONVERGED_NO_MATERIAL_CHANGE = "CONVERGED_NO_MATERIAL_CHANGE"
+    CONVERGED_WORSENED = "CONVERGED_WORSENED"
+    CONVERGED_CONSTRAINT_VIOLATED = "CONVERGED_CONSTRAINT_VIOLATED"
+    UNCONVERGED_RECOVERABLE = "UNCONVERGED_RECOVERABLE"
+    UNCONVERGED_REPEATED = "UNCONVERGED_REPEATED"
+    INVALID_STATE = "INVALID_STATE"
+    TARGET_MET = "TARGET_MET"
+    STOP_INFEASIBLE = "STOP_INFEASIBLE"
+
+
+@dataclass(slots=True)
+class FinalTarget:
+    """External product requirement — separate from HYSYS Active specs."""
+
+    id: str
+    description: str
+    spec_name_contains: str
+    component_name_contains: tuple[str, ...]
+    stream: str = "bottoms"  # bottoms | overhead
+    relationship: str = "less_or_equal"  # less_or_equal | greater_or_equal | equal
+    target_value: float = 0.0
+    tolerance: float = 0.0
+    locked: bool = True
+    hard: bool = True
+
+
+def default_sw_stripper_targets() -> list[FinalTarget]:
+    return [
+        FinalTarget(
+            id="NH3_BOTTOMS",
+            description="Bottoms NH3 mass fraction (FINAL_TARGET)",
+            spec_name_contains="nh3",
+            component_name_contains=("ammonia", "nh3"),
+            stream="bottoms",
+            relationship="less_or_equal",
+            target_value=1e-7,
+            tolerance=0.0,
+            locked=True,
+            hard=True,
+        )
+    ]
 
 
 @dataclass(slots=True)
@@ -83,6 +144,11 @@ class ColumnState:
     sum_active_spec_error: float = 0.0
     appears_converged: bool = False
     notes: list[str] = field(default_factory=list)
+    # Product / display enrichment (Layer 2 intelligence)
+    bottoms_nh3_mass_frac: float | None = None
+    overhead_molar_flow_kgmole_h: float | None = None
+    bottoms_molar_flow_kgmole_h: float | None = None
+    physical_solution: bool = False
 
     def active_specs(self) -> list[ColumnSpecState]:
         return [s for s in self.specs if s.is_active]
@@ -98,6 +164,11 @@ class Diagnosis:
     recommended_strategy: str = ""
     details: list[str] = field(default_factory=list)
     severity: str = "info"
+    engineering_state: EngineeringState = EngineeringState.C_OFF_SPEC
+    pe_read: str = ""
+    potential: str = ""  # going_somewhere | marginal | nowhere | success
+    final_target_status: dict[str, Any] = field(default_factory=dict)
+    add_spec_recommendations: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -115,6 +186,8 @@ class TrialResult:
     kept: bool
     message: str
     after_state: ColumnState | None = None
+    response_class: ResponseClass | None = None
+    pe_board: str = ""
 
 
 @dataclass(slots=True)
@@ -130,3 +203,9 @@ class ConvergenceLimits:
     damping_min: float = 0.1
     damping_max: float = 1.0
     damping_step: float = 0.1
+    # Layer 2 intelligence policy
+    allow_relax_final_targets: bool = False
+    allow_baseline_spec_swap: bool = True
+    min_bottoms_flow_kgmole_h: float = 1.0  # operability gate (worksheet)
+    weak_response_relative: float = 0.02  # <2% change = no material change
+
