@@ -626,9 +626,39 @@ def recommend_specs_summary_clicks(
             clicks.append(
                 SpecsSummaryClick(
                     spec_name=str(rr["name"]),
-                    set_active=True,
+                    set_active=False,
                     set_estimate=True,
-                    reason="Keep / ensure Reflux Ratio Active as energy-side DOF when used.",
+                    reason=(
+                        "T-100/CDU: keep Reflux Ratio Active OFF on Specs Summary — "
+                        "monitor/estimate only (not a DOF)."
+                    ),
+                )
+            )
+
+    # T-100 / CDU: Reflux Ratio monitor-only on Specs Summary
+    if rr and final_target_monitor_only:
+        if rr.get("is_active"):
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(rr["name"]),
+                    set_active=False,
+                    set_estimate=True,
+                    reason=(
+                        "Uncheck Active on Reflux Ratio — T-100 Specs Summary "
+                        "pattern (monitor/estimate only)."
+                    ),
+                )
+            )
+        else:
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(rr["name"]),
+                    set_active=False,
+                    set_estimate=True,
+                    reason=(
+                        "Keep Reflux Ratio Active OFF — monitor/estimate only per "
+                        "T-100 Specs Summary."
+                    ),
                 )
             )
 

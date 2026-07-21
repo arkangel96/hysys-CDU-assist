@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from column_api import ColumnController, is_sentinel
 from cdu_case_config import CduCaseConfig, load_case_config
+from cdu_t100_knowledge import format_subsystem_board
 from cdu_expert_engine import build_expert_context, format_expert_board, propose_from_expert
 from cdu_quality_engine import (
     build_product_quality_state,
@@ -369,6 +370,7 @@ def diagnose(
         spec_report=spec_report,
         product_quality=product_quality,
         mv_preference=case.mv_preference,
+        case_config=case,
     )
     if spec_report.blocks_tuning:
         strategy = "fix_dof"
@@ -447,6 +449,8 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         lines.append(format_quality_board(diagnosis.product_quality))
     if diagnosis.spec_philosophy is not None:
         lines.append(format_spec_philosophy_board(diagnosis.spec_philosophy))
+    if diagnosis.case_objective:
+        lines.append(format_subsystem_board(state, load_case_config()))
     for sp in state.active_specs():
         goal = sp.goal_display if sp.goal_display is not None else sp.goal_value
         cur = sp.current_display if sp.current_display is not None else sp.current_value
@@ -505,6 +509,7 @@ def propose_action(
             limits,
             diagnosis.final_target_status,
             history=history,
+            case_config=load_case_config(),
         )
     expert_action = propose_from_expert(state, expert, limits)
     if expert_action is not None:

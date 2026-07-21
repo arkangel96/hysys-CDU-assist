@@ -6,6 +6,14 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from column_api import is_sentinel
+from cdu_case_config import CduCaseConfig, load_case_config
+from cdu_t100_knowledge import (
+    build_subsystem_routed_seeds,
+    dominant_subsystem,
+    knowledge_for_spec,
+    specs_for_strategy,
+    validate_t100_specs_summary,
+)
 from column_models import (
     ColumnSpecState,
     ColumnState,
@@ -119,6 +127,11 @@ def collect_evidence(
         )
     if spec_report and spec_report.conflicts:
         evidence.append(f"spec_conflicts={len(spec_report.conflicts)}")
+    sub = dominant_subsystem(state)
+    evidence.append(f"dominant_subsystem={sub}")
+    for msg in validate_t100_specs_summary(state)[:2]:
+        if "must be" in msg.lower() or "⚠" in msg:
+            evidence.append(f"spec_summary={msg}")
     if state.product_streams:
         evidence.append(f"products={','.join(state.product_streams)}")
     if state.feed_streams:
@@ -166,22 +179,12 @@ def _mv_family_for_spec(spec: ColumnSpecState) -> tuple[str, str]:
     return "side_draw_rate_nudge", "Side draw"
 
 
-def _find_spec_for_strategy(
-    state: ColumnState, strategy_id: str, product_hint: str = ""
-) -> ColumnSpecState | None:
-    product_l = product_hint.lower()
-    for spec in state.specs:
-        name = spec.name.lower()
-        if product_l and product_l not in name:
-            continue
-        sid, _ = _mv_family_for_spec(spec)
-        if sid == strategy_id and spec.is_active and spec.goal_value is not None:
-            return spec
-    for spec in state.active_specs():
-        sid, _ = _mv_family_for_spec(spec)
-        if sid == strategy_id and spec.goal_value is not None:
-            return spec
-    return None
+_SYMPTOM_SUBSYSTEM = {
+    "diesel_too_heavy": "diesel_section",
+    "diesel_too_light": "diesel_section",
+    "kerosene_off_spec": "kerosene_section",
+    "naphtha_too_heavy": "overhead",
+}
 
 
 def _quality_routed_hypotheses(
@@ -191,7 +194,7 @@ def _quality_routed_hypotheses(
     mv_preference: dict[str, list[str]],
     limits: ConvergenceLimits,
 ) -> list[Hypothesis]:
-    """Phase 3 starter — route quality symptom to preferred MV family."""
+    """Route quality symptom to preferred MV family using T-100 knowledge."""
     from cdu_quality_engine import QualitySymptom
 
     order = mv_preference.get(symptom_key, [])
@@ -208,19 +211,27 @@ def _quality_routed_hypotheses(
     elif "kero" in symptom_key:
         product_hint = "kero"
 
+    subsystem = _SYMPTOM_SUBSYSTEM.get(symptom_key, dominant_subsystem(state))
     hyps: list[Hypothesis] = []
     for rank, strategy_id in enumerate(order):
-        spec = _find_spec_for_strategy(state, strategy_id, product_hint)
-        if spec is None:
+        specs = specs_for_strategy(
+            state,
+            strategy_id,
+            subsystem=subsystem if strategy_id != "pa_duty_nudge" else "",
+            product_hint=product_hint,
+        )
+        if not specs:
             continue
+        spec = specs[0]
         direction = _direction_from_spec_error(spec)
         if symptom_key == QualitySymptom.DIESEL_TOO_HEAVY.value and strategy_id == "side_draw_rate_nudge":
-            direction = -1.0  # reduce draw when cut too heavy
+            direction = -1.0
+        kn = knowledge_for_spec(spec.name)
         _, mv_family = _mv_family_for_spec(spec)
         hyps.append(
             Hypothesis(
                 rule_id=f"QRT-{symptom_key}-{strategy_id}",
-                subsystem=mv_family.lower().replace(" ", "_"),
+                subsystem=kn.subsystem if kn else subsystem,
                 symptom=symptom_key,
                 mechanism=f"{mechanism} — preferred MV #{rank + 1}: {strategy_id}",
                 evidence=[f"symptom={symptom_key}", f"spec={spec.name}"],
@@ -235,6 +246,25 @@ def _quality_routed_hypotheses(
     return hyps
 
 
+def _seeds_to_hypotheses(seeds: list) -> list[Hypothesis]:
+    return [
+        Hypothesis(
+            rule_id=s.rule_id,
+            subsystem=s.subsystem,
+            symptom=s.symptom,
+            mechanism=s.mechanism,
+            evidence=s.evidence,
+            confidence=s.confidence,
+            strategy_id=s.strategy_id,
+            spec_name=s.spec_name,
+            direction=s.direction,
+            predicted_response=f"Improvement via '{s.spec_name}'",
+            mv_family=s.mv_family,
+        )
+        for s in seeds
+    ]
+
+
 def generate_hypotheses(
     state: ColumnState,
     eng: EngineeringState,
@@ -244,10 +274,12 @@ def generate_hypotheses(
     spec_report: SpecPhilosophyReport | None = None,
     product_quality: ProductQualityState | None = None,
     mv_preference: dict[str, list[str]] | None = None,
+    case_config: CduCaseConfig | None = None,
 ) -> list[Hypothesis]:
     """Rules-first hypothesis generation for CDU (T-100 class)."""
     hyps: list[Hypothesis] = []
     mv_preference = mv_preference or {}
+    case = case_config or load_case_config()
 
     if spec_report and spec_report.blocks_tuning:
         hyps.append(
@@ -391,44 +423,59 @@ def generate_hypotheses(
         if hyps:
             return hyps[:6]
 
+    # Specs Summary / philosophy fixes before MV moves (T-100 UI knowledge)
+    for msg in validate_t100_specs_summary(state, case):
+        if "must be" in msg.lower():
+            hyps.append(
+                Hypothesis(
+                    rule_id="UI-REFLUX-MONITOR",
+                    subsystem="spec_philosophy",
+                    symptom="spec_philosophy_fix",
+                    mechanism=msg + " — fix on Design → Specs Summary before tuning",
+                    evidence=[msg],
+                    confidence=0.88,
+                    strategy_id="spec_philosophy_review",
+                    spec_name="Reflux Ratio",
+                    direction=0.0,
+                    predicted_response="DOF stable; reflux monitor-only",
+                    mv_family="Spec Set",
+                    reversible=True,
+                )
+            )
+            return hyps
+
+    if spec_report:
+        for conflict in spec_report.conflicts:
+            if conflict.rule_id == "MON-ACTIVE":
+                hyps.append(
+                    Hypothesis(
+                        rule_id=f"UI-{conflict.rule_id}",
+                        subsystem="spec_philosophy",
+                        symptom="spec_philosophy_fix",
+                        mechanism=conflict.message,
+                        evidence=[conflict.message],
+                        confidence=0.86,
+                        strategy_id="spec_philosophy_review",
+                        spec_name=conflict.spec_names[0] if conflict.spec_names else None,
+                        direction=0.0,
+                        predicted_response=conflict.recommendation,
+                        mv_family="Spec Set",
+                    )
+                )
+                return hyps[:3]
+
     target_miss = any(not info.get("met", True) for info in target_status.values())
-    active_sorted = sorted(state.active_specs(), key=lambda s: s.score_error(), reverse=True)
 
-    for spec in active_sorted:
-        if spec.score_error() <= limits.max_active_spec_error and not target_miss:
-            continue
-        strategy_id, mv_family = _mv_family_for_spec(spec)
-        direction = _direction_from_spec_error(spec)
-        mechanism = f"dominant residual on '{spec.name}' — bounded {strategy_id}"
-        if _is_pa_spec(spec) and "duty" in spec.name.lower():
-            mechanism = (
-                f"PA heat removal / fractionation via '{spec.name}' — "
-                "one PA, one knob per trial"
-            )
-        elif _is_draw_spec(spec):
-            mechanism = f"Material split / draw rate via '{spec.name}'"
-        elif _is_strip_energy_spec(spec):
-            mechanism = f"Side-strip energy via '{spec.name}'"
-
-        base_conf = 0.5 + min(spec.score_error() * 1000, 0.35)
-        if target_miss:
-            base_conf += 0.05
-
-        hyps.append(
-            Hypothesis(
-                rule_id=f"CDU-{strategy_id}-{spec.name[:20]}",
-                subsystem=mv_family.lower().replace(" ", "_"),
-                symptom="off_spec_or_high_residual",
-                mechanism=mechanism,
-                evidence=[f"spec={spec.name} err={spec.error}"],
-                confidence=base_conf,
-                strategy_id=strategy_id,
-                spec_name=spec.name,
-                direction=direction,
-                predicted_response=f"Residual on '{spec.name}' improves; neighbors monitored",
-                mv_family=mv_family,
-            )
+    # L2→L4 subsystem routing (replaces blind largest-residual selection)
+    if (
+        state.max_active_spec_error > limits.max_active_spec_error
+        or target_miss
+        or not state.appears_converged
+    ):
+        seeds = build_subsystem_routed_seeds(
+            state, case, limits, target_miss=target_miss
         )
+        hyps.extend(_seeds_to_hypotheses(seeds))
 
     if not hyps and state.max_active_spec_error > limits.max_active_spec_error:
         hyps.append(
@@ -536,6 +583,7 @@ def build_expert_context(
     spec_report: SpecPhilosophyReport | None = None,
     product_quality: ProductQualityState | None = None,
     mv_preference: dict[str, list[str]] | None = None,
+    case_config: CduCaseConfig | None = None,
 ) -> ExpertContext:
     process = classify_process_state(eng, connected=connected)
     evidence = collect_evidence(
@@ -553,6 +601,7 @@ def build_expert_context(
         spec_report=spec_report,
         product_quality=product_quality,
         mv_preference=mv_preference,
+        case_config=case_config,
     )
     ranked = rank_hypotheses(hyps, history, mv_preference=mv_preference)
     selected = select_hypothesis(ranked)
@@ -602,6 +651,20 @@ def hypothesis_to_action(
             kind="manual_dof",
             description=f"[{hypothesis.rule_id}] {hypothesis.mechanism}",
             payload={"dof": state.degrees_of_freedom, "strategy_id": sid},
+        )
+
+    if sid == "spec_philosophy_review":
+        return TrialAction(
+            kind="manual_dof",
+            description=(
+                f"[{hypothesis.rule_id}] {hypothesis.mechanism} — "
+                f"PE: fix on HYSYS Design → Specs Summary, then Refresh Assist."
+            ),
+            payload={
+                "strategy_id": sid,
+                "spec_name": hypothesis.spec_name,
+                "hypothesis_id": hypothesis.rule_id,
+            },
         )
 
     if sid in {"feed_or_case_change", "report_infeasible"}:

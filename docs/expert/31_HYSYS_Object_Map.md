@@ -3,6 +3,7 @@
 **Module ID:** 31  
 **Parent:** [`00_System_Architecture.md`](00_System_Architecture.md)  
 **Live discovery:** [`../cdu_com_discovery.md`](../cdu_com_discovery.md)  
+**PE UI click map (T-100):** [`T100_HYSYS_UI_Click_Map.md`](T100_HYSYS_UI_Click_Map.md)  
 **JSON:** `column_com_discovery.json`, `column_com_deep.json`, `cdu_t100_inspect.json`
 
 Integrated from `CDU_Expert_Modules_Starter/31_HYSYS_Object_Map.md` + T-100 COM evidence.

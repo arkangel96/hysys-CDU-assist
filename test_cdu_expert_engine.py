@@ -30,7 +30,7 @@ def _cdu_state_c_off_spec() -> ColumnState:
         feed_streams=["Crude"],
         specs=[
             ColumnSpecState(
-                name="PA_1 Duty",
+                name="PA_1_Duty(Pa)",
                 type_name="Pump Around Duty",
                 is_active=True,
                 goal_value=1.0e6,
@@ -38,7 +38,7 @@ def _cdu_state_c_off_spec() -> ColumnState:
                 error=0.04,
             ),
             ColumnSpecState(
-                name="Diesel_SS Prod Rate",
+                name="Diesel_SS Prod Flow",
                 is_active=True,
                 goal_value=100.0,
                 current_value=95.0,
@@ -58,15 +58,15 @@ def _cdu_state_c_off_spec() -> ColumnState:
     )
 
 
-def test_state_c_generates_pa_hypothesis_first() -> None:
+def test_state_c_routes_draw_before_pa() -> None:
     state = _cdu_state_c_off_spec()
     limits = ConvergenceLimits()
     hyps = generate_hypotheses(
         state, EngineeringState.C_OFF_SPEC, limits, target_status={}
     )
     assert hyps
-    assert hyps[0].strategy_id == "pa_duty_nudge"
-    assert hyps[0].spec_name == "PA_1 Duty"
+    assert hyps[0].strategy_id == "side_draw_rate_nudge"
+    assert hyps[0].spec_name == "Diesel_SS Prod Flow"
 
 
 def test_expert_context_process_flow_state_c() -> None:
@@ -90,8 +90,8 @@ def test_hypothesis_to_action_bounded_nudge() -> None:
     action = hypothesis_to_action(ctx.selected_hypothesis, state, limits)
     assert action is not None
     assert action.kind == "set_goal"
-    assert action.payload["spec_name"] == "PA_1 Duty"
-    assert action.payload["strategy_id"] == "pa_duty_nudge"
+    assert action.payload["spec_name"] == "Diesel_SS Prod Flow"
+    assert action.payload["strategy_id"] == "side_draw_rate_nudge"
     assert action.payload["goal"] != action.payload["previous"]
 
 

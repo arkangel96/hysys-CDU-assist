@@ -4,7 +4,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-from cdu_case_config import CduCaseConfig, SpecRoleEntry
+from cdu_case_config import CduCaseConfig, SpecRoleEntry, load_case_config
+from cdu_t100_knowledge import validate_t100_specs_summary
 from column_models import ColumnSpecState, ColumnState
 
 
@@ -142,6 +143,18 @@ def audit_spec_philosophy(
                 recommendation="If cuts drift while converged, audit draw spec set (Section 5.7)",
             )
         )
+
+    for msg in validate_t100_specs_summary(state, case):
+        if "must be" in msg.lower():
+            conflicts.append(
+                SpecConflict(
+                    rule_id="UI-REFLUX",
+                    severity=ConflictSeverity.WARN,
+                    message=msg,
+                    spec_names=["Reflux Ratio"],
+                    recommendation="Design → Specs Summary: uncheck Active on Reflux Ratio",
+                )
+            )
 
     blocks = any(c.severity == ConflictSeverity.BLOCK for c in conflicts)
     role_rows: list[dict] = []
