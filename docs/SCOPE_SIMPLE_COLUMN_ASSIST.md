@@ -71,6 +71,7 @@ Tower Assist family (concept)
 | Doc | Role |
 |-----|------|
 | `docs/CASE_SIMPLE_COLUMN_V1_NEW_INTELLIGENCE.md` | **This product case** — descriptions (this repo only) |
+| `docs/DISCUSSION_HISTORY_2026-07-22.md` | Session discussion history (PE decisions / Agent notes) |
 | `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md` | This file — identity & boundaries |
 | `docs/INTELLIGENCE_INVENTORY_V1.md` | **Coded vs paper vs planned** — read before adding intelligence |
 | `docs/MULTI_VARIABLE_ITERATION_MAP.md` | ChemE multi-family iteration (not RR-only) |
