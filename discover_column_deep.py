@@ -1,10 +1,13 @@
 """
-Deep probe: SW Stripper ColumnFlowsheet specs, Main TS profiles,
+Deep probe: ColumnFlowsheet specs, Main TS profiles,
 Condenser/Reboiler duties & pressures, and write-capability checks.
+
+Usage: python discover_column_deep.py <ColumnName>
 """
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -167,10 +170,17 @@ def main() -> int:
     import pythoncom
     import win32com.client
 
+    column_name = sys.argv[1] if len(sys.argv) > 1 else ""
+    if not column_name:
+        raise SystemExit(
+            "Usage: python discover_column_deep.py <ColumnName>\n"
+            "Example: python discover_column_deep.py \"Crude Tower\""
+        )
+
     pythoncom.CoInitialize()
     app = win32com.client.GetActiveObject("HYSYS.Application")
     case = app.ActiveDocument
-    col = case.Flowsheet.Operations.Item("SW Stripper")
+    col = case.Flowsheet.Operations.Item(column_name)
     cfs = col.ColumnFlowsheet
 
     report: dict[str, Any] = {
@@ -211,11 +221,21 @@ def main() -> int:
             ops[name] = probe_unit(op)
     report["column_operations"] = ops
 
-    # Energy stream duties from parent attached products/feeds
+    # Energy stream duties — probe attached energy names when present
     duties = {}
-    for stream_name in ("Cond Q", "Reb Q"):
+    energy_names = ["Cond Q", "Reb Q", "Atmos Cond", "Q-Trim", "Kero_SS_Energy"]
+    try:
+        for es in items(getattr(case.Flowsheet, "EnergyStreams", [])):
+            try:
+                n = str(es.Name)
+                if n not in energy_names:
+                    energy_names.append(n)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    for stream_name in energy_names:
         try:
-            # search material/energy on main FS
             for coll_name in ("EnergyStreams", "MaterialStreams"):
                 coll = getattr(case.Flowsheet, coll_name)
                 try:
@@ -229,13 +249,24 @@ def main() -> int:
             duties[stream_name] = {"error": str(exc)}
     report["duties"] = duties
 
-    # Product compositions (NH3 etc.)
+    # Product streams — use column attached products (CDU-aware)
+    product_names: list[str] = []
+    try:
+        for p in items(col.AttachedProducts):
+            product_names.append(str(p.Name))
+    except Exception:
+        product_names = ["Off Gas", "Naphtha", "Kerosene", "Diesel", "AGO", "Residue"]
+
     products = {}
-    for pname in ("Off Gas", "Stripper Bottoms"):
+    for pname in product_names:
         try:
-            s = case.Flowsheet.MaterialStreams.Item(pname)
-        except Exception:
-            s = cfs.MaterialStreams.Item(pname)
+            try:
+                s = case.Flowsheet.MaterialStreams.Item(pname)
+            except Exception:
+                s = cfs.MaterialStreams.Item(pname)
+        except Exception as exc:
+            products[pname] = {"error": str(exc)}
+            continue
         entry = {}
         for attr, keys in {
             "T": ("TemperatureValue", "Temperature"),
@@ -244,7 +275,6 @@ def main() -> int:
             "MassF": ("MassFlowValue", "MassFlow"),
         }.items():
             _, entry[attr] = scalar(s, *keys)
-        # mass fractions if available
         for attr in ("ComponentMassFractionValue", "ComponentMolarFractionValue"):
             g, v, _ = ok_get(s, attr)
             if g:

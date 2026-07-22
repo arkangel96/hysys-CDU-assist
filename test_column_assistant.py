@@ -10,7 +10,9 @@ from hysys_api import HysysController
 
 
 def main() -> int:
-    column_name = sys.argv[1] if len(sys.argv) > 1 else "SW Stripper"
+    column_name = sys.argv[1] if len(sys.argv) > 1 else ""
+    if not column_name:
+        raise SystemExit("Usage: python test_column_assistant.py <ColumnName>")
     hysys = HysysController()
     hysys.connect()
     columns = ColumnController(hysys)

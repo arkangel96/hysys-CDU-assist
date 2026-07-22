@@ -26,6 +26,7 @@ PyQt5 desktop UI
 - Stream inspector: selector, property cards, editable inputs and composition.
 - Operations table: operation name, type and solved state.
 - Analytics: temperature, pressure and molar-flow charts.
+- Column Assistant: CDU-oriented inspect / diagnose / specs / trial map.
 - Activity log and visible error messages.
 
 ### 2. HYSYS adapter
@@ -33,15 +34,15 @@ PyQt5 desktop UI
 - Attaches to a running HYSYS instance or starts one.
 - Uses the active case, or opens a selected `.hsc` case.
 - Enumerates fluid-package components, material streams and operations.
-- Reads stream conditions and composition.
-- Writes only explicitly supported stream specifications.
-- requests a case solve and reports COM errors without hiding them.
+- Reads stream conditions and composition / petroleum properties (as available).
+- Writes only explicitly supported specifications.
+- Requests a case solve and reports COM errors without hiding them.
 
 ### 3. Application/service layer
 
 - Converts COM objects into plain Python records for the UI.
 - Keeps units and display formatting outside the COM adapter.
-- Coordinates refresh and export operations.
+- Coordinates refresh, trial snapshot/restore, and export operations.
 - Prevents UI code from depending directly on HYSYS COM objects.
 
 ### 4. Export
@@ -56,15 +57,19 @@ PyQt5 desktop UI
 - Automatic refresh only reads data.
 - Editing and solving require an explicit user action.
 - HYSYS files are not automatically saved or overwritten.
+- First strategy family must not add Active specs when DOF is already zero.
+- FINAL_TARGETs (cuts / ASTM / TBP) are never auto-relaxed to fake success.
 
-## First-release scope
+## First-release scope (v0.1)
 
 - Windows only for live HYSYS connectivity.
 - Steady-state inspection and basic stream specification edits.
-- Temperature, pressure, molar-flow and mass-flow support.
-- Material streams and flowsheet operations.
-- Distillation **Column Assistant** (v1): inspect specs/DOF/profiles,
-  diagnose, and run bounded GoalValue trials with keep/reverse.
-  First strategy never adds active specs when DOF is already zero.
-- No column internals, dynamic-mode controls, case persistence or bulk writes.
+- Column Assistant: inspect specs/DOF/profiles, diagnose States A–F, and run
+  bounded GoalValue trials with keep/reverse on Category-1 CDU MVs
+  (draws, PA, reflux/OH, side-strip, overflash — after COM discovery).
+- No silent structural edits, dynamic-mode controls, case persistence or bulk writes.
 
+## Build phases
+
+See `docs/SCOPE_CDU_ASSIST.md` — Phase 0 identity → Phase 1 COM discovery →
+Phase 2 inspect/diagnose → Phase 3 Trial Map → Phase 4 intelligence → Phase 5 live validation.

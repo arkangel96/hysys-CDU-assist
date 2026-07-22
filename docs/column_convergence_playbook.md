@@ -1,21 +1,15 @@
-# Column Convergence Playbook — Expert Process Engineer Flow
+# (Superseded) Stripper column playbook
 
 > **Legacy simple-column validation:** This playbook is still an **SW Stripper** operational slice. Product line is **CDU Assist v1** — treat stripper examples as historical COM / trial proof, not CDU process guidance.
 
 **Document role:** Operational playbook for **SW Stripper / Studio v0.1** — maps PE
 decisions to **what HYSYS exposes** and **what Automation Studio can read or write**.
 
-**Master intelligence (read first):**
-[`expert_decision_workflow.md`](expert_decision_workflow.md) — full expert decision
-workflow (States A–F, external FINAL_TARGETs vs HYSYS specs, trial response classes,
-recovery, infeasibility, **§28 intelligence implementation / P0–P3 roadmap**).
+**CDU Assist** operational playbook is now:
 
-**Intelligence backlog (detail):**
-[`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) — gaps, anti-complexity
-layers, State E success definition (now integrated into workflow §28).
+→ [`cdu_convergence_playbook.md`](cdu_convergence_playbook.md)
 
-This playbook is the **first constrained slice** of that specification for the SW Stripper
-stress-test case.
+Master PE intelligence (States A–F) remains in:
 
 **Reference case:** SW Stripper (8 stages, feed stage 3, full reflux condenser)
 

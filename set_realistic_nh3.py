@@ -1,20 +1,23 @@
-"""Set plant-realistic NH3 FINAL_TARGET (50 ppmw) in HYSYS; restore sensible RR."""
+"""DEPRECATED — Simple Column / SW Stripper NH3 target helper. Not used by CDU Assist.
+
+Kept only as platform-history reference for FINAL_TARGET lock discipline.
+"""
 from __future__ import annotations
 
 from column_api import ColumnController
 from column_engine import ConvergenceAssistant, format_pe_board
-from column_models import ConvergenceLimits, default_sw_stripper_targets
+from column_models import ConvergenceLimits
 from hysys_api import HysysController
 
-COLUMN = "SW Stripper"
+COLUMN = "SW Stripper"  # reference case name — not a CDU default
 NH3_GOAL = 5e-5  # 50 ppmw
 RR_GOAL = 2.5  # plant-sensible energy after ladder
 BTMS_SI = 12500.0 / 3600.0
 
 
 def main() -> int:
-    target = default_sw_stripper_targets()[0]
-    print(f"Studio FINAL_TARGET: {target.id} = {target.target_value:g} ({target.target_value*1e6:g} ppmw)")
+    print(f"Legacy stripper FINAL_TARGET NH3 = {NH3_GOAL:g} ({NH3_GOAL*1e6:g} ppmw)")
+    print("CDU Assist uses cut/ASTM/TBP FINAL_TARGETs — see docs/SCOPE_CDU_ASSIST.md")
 
     c = HysysController()
     c.connect(None)

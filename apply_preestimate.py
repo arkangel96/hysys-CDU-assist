@@ -1,4 +1,8 @@
-"""Transfer PE pre-estimates into HYSYS SW Stripper (feed unchanged)."""
+"""DEPRECATED — Simple Column / SW Stripper helper. Not used by CDU Assist.
+
+Transfer PE pre-estimates into a stripper case (feed unchanged).
+Kept only as platform-history reference. Prefer CDU-specific helpers after Phase 1.
+"""
 from __future__ import annotations
 
 from column_api import ColumnController
@@ -6,12 +10,13 @@ from column_engine import ConvergenceAssistant, format_pe_board
 from column_models import ConvergenceLimits
 from hysys_api import HysysController
 
-# Manual PE pre-estimates
+# Manual PE pre-estimates (stripper reference only)
 RR_GOAL = 2.5
 BTMS_KGMOLE_H = 12500.0
 BTMS_GOAL_SI = BTMS_KGMOLE_H / 3600.0  # COM molar rate often kgmole/s
 NH3_GOAL = 5e-5  # 50 ppmw — plant-typical SWS bottoms
-COLUMN = "SW Stripper"
+COLUMN = "SW Stripper"  # reference case name — not a CDU default
+
 
 
 def main() -> int:

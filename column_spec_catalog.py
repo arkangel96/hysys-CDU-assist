@@ -87,7 +87,7 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         "Legacy SW Stripper primary (NH3). CDU: prefer petroleum cut/gap unless "
         "composition FINAL_TARGET is configured.",
         AddPolicy.EXISTING_ONLY,
-        typical_for_sw_stripper=True,
+        typical_for_cdu=False,
         name_contains=("mass frac", "mole frac", "comp frac", "nh3", "ammonia"),
     ),
     ColumnSpecTypeDef(
@@ -249,7 +249,7 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         "When boilup/reboil ratio is the stripping-side energy DOF.",
         "T-100 uses Kero Reb Duty rather than ratio; stripper may prefer this.",
         AddPolicy.RECOMMEND_ADD,
-        typical_for_sw_stripper=True,
+        typical_for_cdu=True,
         name_contains=("reboil", "boilup"),
     ),
     ColumnSpecTypeDef(
@@ -773,15 +773,21 @@ def _recommend_add_spec_stripper(
 def stripper_priority_add_types() -> list[ColumnSpecTypeDef]:
     """Legacy stripper priority order (COM shell)."""
     order = (
-        "reflux_ratio",
-        "comp_frac",
         "draw_rate",
+        "pump_around",
+        "cut_point",
+        "gap_cut",
+        "ep_cut",
+        "ep_gap",
         "liquid_flow",
         "vapour_flow",
-        "reboil_ratio",
         "duty",
-        "comp_recovery",
+        "reflux_ratio",
+        "vap_pressure",
         "temperature",
+        "comp_recovery",
+        "comp_frac",
+        "reboil_ratio",
         "feed_ratio",
     )
     by_id = {s.short_id: s for s in HYSYS_ADD_SPEC_TYPES}
@@ -827,15 +833,18 @@ def recommend_specs_summary_clicks(
     engineering_state: str,
     bottoms_flow_kgmole_h: float | None,
     min_bottoms_flow_kgmole_h: float = 1.0,
-    nh3_is_final_target: bool = True,
+    final_target_monitor_only: bool = True,
+    nh3_is_final_target: bool | None = None,
 ) -> list[SpecsSummaryClick]:
     """
     Map State → Specs Summary clicks (Active / Estimate / Sync Current→Goal).
 
-    State D (tiny bottoms + Ovhd Active): plant recovery path —
-      uncheck Active on Ovhd, check Active on Btms (after syncing Btms goal),
-      keep NH3 Active OFF (FINAL_TARGET monitor only).
+    Keep locked FINAL_TARGET specs as monitor/estimate (not Active DOF drivers)
+    unless the user explicitly allows otherwise.
     """
+    if nh3_is_final_target is not None:
+        final_target_monitor_only = nh3_is_final_target
+
     clicks: list[SpecsSummaryClick] = []
     by_l = {str(r["name"]).lower(): r for r in spec_rows}
 
@@ -889,7 +898,6 @@ def recommend_specs_summary_clicks(
             )
         )
         if btms:
-            # Do NOT sync Goal from tiny Current — that locks the bad heel.
             clicks.append(
                 SpecsSummaryClick(
                     spec_name=str(btms["name"]),
@@ -897,7 +905,7 @@ def recommend_specs_summary_clicks(
                     set_active=True,
                     set_estimate=True,
                     reason=(
-                        "Set Btms Goal to a plant rate (≥ min bottoms), then check Active — "
+                        "Set Btms/residue Goal to a plant rate (≥ min flow), then check Active — "
                         "do not sync from tiny Current."
                     ),
                 )
@@ -906,28 +914,61 @@ def recommend_specs_summary_clicks(
             clicks.append(
                 SpecsSummaryClick(
                     spec_name=str(rr["name"]),
-                    set_active=True,
+                    set_active=False,
                     set_estimate=True,
-                    reason="Keep / ensure Reflux Ratio Active as energy-side DOF.",
+                    reason=(
+                        "T-100/CDU: keep Reflux Ratio Active OFF on Specs Summary — "
+                        "monitor/estimate only (not a DOF)."
+                    ),
                 )
             )
 
-    if nh3 and nh3_is_final_target and nh3.get("is_active"):
+    # T-100 / CDU: Reflux Ratio monitor-only on Specs Summary
+    if rr and final_target_monitor_only:
+        if rr.get("is_active"):
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(rr["name"]),
+                    set_active=False,
+                    set_estimate=True,
+                    reason=(
+                        "Uncheck Active on Reflux Ratio — T-100 Specs Summary "
+                        "pattern (monitor/estimate only)."
+                    ),
+                )
+            )
+        else:
+            clicks.append(
+                SpecsSummaryClick(
+                    spec_name=str(rr["name"]),
+                    set_active=False,
+                    set_estimate=True,
+                    reason=(
+                        "Keep Reflux Ratio Active OFF — monitor/estimate only per "
+                        "T-100 Specs Summary."
+                    ),
+                )
+            )
+
+    if quality and final_target_monitor_only and quality.get("is_active"):
         clicks.append(
             SpecsSummaryClick(
-                spec_name=str(nh3["name"]),
+                spec_name=str(quality["name"]),
                 set_active=False,
                 set_estimate=True,
-                reason="Uncheck Active on NH3 — FINAL_TARGET stays monitor/estimate, not DOF driver.",
+                reason=(
+                    "Uncheck Active on quality/FINAL_TARGET spec — "
+                    "monitor/estimate only, not DOF driver."
+                ),
             )
         )
-    elif nh3 and nh3_is_final_target and not nh3.get("is_active"):
+    elif quality and final_target_monitor_only and not quality.get("is_active"):
         clicks.append(
             SpecsSummaryClick(
-                spec_name=str(nh3["name"]),
+                spec_name=str(quality["name"]),
                 set_active=False,
                 set_estimate=True,
-                reason="Leave NH3 Active OFF; Estimate ON — product check only.",
+                reason="Leave FINAL_TARGET quality Active OFF; Estimate ON — product check only.",
             )
         )
 

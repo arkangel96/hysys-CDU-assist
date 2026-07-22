@@ -1541,5 +1541,6 @@ class SimpleColumnAssist(QMainWindow):
 
 
 # Backward-compatible alias
-HysysStudio = SimpleColumnAssist
+HysysStudio = CduAssist
+SimpleColumnAssist = CduAssist  # backward-compatible alias
 

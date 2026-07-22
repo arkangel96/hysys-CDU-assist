@@ -68,14 +68,14 @@ PARTIAL / NEXT
 [ ] Optional H2S FINAL_TARGET table entry
 [ ] Learning/memory from new_intelligence (held)
 
-NOT CODED YET (by design)
+NOT CODED YET (by design / Phase 1+)
 -------------------------
 [ ] Auto HYSYS "Add Spec" via Specs.Add (silent) — blocked by design
 [ ] Auto feed stage / stage count / pressure
 [ ] Auto-save .hsc
 [ ] Full 2x2 multivariable solver
 [ ] Hydraulic flooding validation
-[ ] CDU / VDU tools (separate products)
+[ ] VDU Assist (separate product)
 
 DOCS (repo)
 -----------
@@ -84,7 +84,7 @@ docs/MULTI_VARIABLE_ITERATION_MAP.md
 new_intelligence/00_COMPLEMENTARY_INTRO.md
 docs/SCOPE_SIMPLE_COLUMN_ASSIST.md
 docs/expert_decision_workflow.md
-docs/column_convergence_playbook.md
+docs/cdu_convergence_playbook.md
 docs/intelligence_improvement_notes.md
 docs/hysys_add_spec_catalog.md
 """
@@ -126,7 +126,6 @@ class IntelligenceWindow(QMainWindow):
         tabs = QTabWidget()
         layout.addWidget(tabs, 1)
 
-        # Tab 1 — live PE board
         board_tab = QWidget()
         board_layout = QVBoxLayout(board_tab)
         self.board_text = QTextEdit()
@@ -174,7 +173,6 @@ class IntelligenceWindow(QMainWindow):
         catalog_layout.addWidget(pe_hint)
         tabs.addTab(catalog_tab, "Add Spec Catalog")
 
-        # Tab 3 — what's coded
         coded_tab = QWidget()
         coded_layout = QVBoxLayout(coded_tab)
         self.coded_text = QTextEdit()
@@ -211,12 +209,17 @@ class IntelligenceWindow(QMainWindow):
     def refresh(self, column_name: str | None = None) -> None:
         if column_name:
             self.column_name = column_name
-        name = self.column_name or "SW Stripper"
+        name = self.column_name.strip()
+        if not name:
+            self.board_text.setPlainText(
+                "Select a column in CDU Assist, then Refresh."
+            )
+            return
         self.title.setText(f"PE Intelligence — {name}")
         try:
             if not self.assistant.columns.hysys.connected:
                 self.board_text.setPlainText(
-                    "Not connected to HYSYS.\nConnect in Studio, then Refresh."
+                    "Not connected to HYSYS.\nConnect in CDU Assist, then Refresh."
                 )
                 return
             state, diagnosis = self.assistant.diagnose_column(name)

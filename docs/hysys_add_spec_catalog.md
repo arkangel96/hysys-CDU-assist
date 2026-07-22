@@ -7,6 +7,8 @@
 **Source dialog:** Aspen HYSYS *Add Specs - T-100 / COL1* / Column Specification Types (capture 2026-07-22)  
 **Reference JSON:** `config/cdu_t100_add_specs_reference.json`
 
+Petroleum cut / gap / PA types are preferred for CDU. Component-fraction purity examples remain in the catalog only as transferable notes from earlier Tower Assist work.
+
 ---
 
 ## Full Add Spec list (HYSYS column types)
@@ -86,7 +88,9 @@ Before recommending Add:
 
 ---
 
-## Code API
+## CDU priority (Assist recommendations)
+
+Prefer existing draw / PA / reflux / petroleum cut specs before adding new ones.
 
 ```python
 from column_spec_catalog import (

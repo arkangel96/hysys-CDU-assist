@@ -145,6 +145,30 @@ def evaluate_final_targets(
 def operable(state: ColumnState, limits: ConvergenceLimits) -> bool:
     if not state.physical_solution:
         return False
+    # CDU multi-product: residue/draw rates may substitute for stripper-style btms flow
+    if state.product_streams and len(state.product_streams) > 2:
+        draw_specs = [
+            s
+            for s in state.specs
+            if s.is_active
+            and (
+                "prod rate" in s.name.lower()
+                or "draw" in s.name.lower()
+                or "_ss" in s.name.lower()
+            )
+        ]
+        if draw_specs:
+            flows = [
+                s.current_display or s.current_value
+                for s in draw_specs
+                if s.current_display is not None or s.current_value is not None
+            ]
+            if flows and all(
+                f is None or is_sentinel(f) or abs(float(f)) < 1e-9 for f in flows
+            ):
+                return False
+        if state.bottoms_molar_flow_kgmole_h is None and state.bottoms_molar_flow is None:
+            return True
     if state.bottoms_molar_flow_kgmole_h is not None:
         if state.bottoms_molar_flow_kgmole_h < limits.min_bottoms_flow_kgmole_h:
             return False
@@ -953,6 +977,20 @@ def propose_action(
     if strategy == "none_converged":
         return None
 
+    expert = diagnosis.expert_context
+    if expert is None:
+        expert = build_expert_context(
+            state,
+            diagnosis.engineering_state,
+            limits,
+            diagnosis.final_target_status,
+            history=history,
+            case_config=load_case_config(),
+        )
+    expert_action = propose_from_expert(state, expert, limits)
+    if expert_action is not None:
+        return expert_action
+
     if strategy == "fix_dof":
         clue_text = " ".join(diagnosis.hysys_dialog_clues).lower()
         if "draw_exceeds_feed" in clue_text or "draw rate must be less than" in clue_text:
@@ -1250,8 +1288,7 @@ def propose_action(
         nh3 = next((s for s in state.active_specs() if "nh3" in s.name.lower()), None)
         ovhd = next((s for s in state.specs if "ovhd" in s.name.lower()), None)
         if (
-            nh3 is not None
-            and _is_locked_final_spec(nh3.name, targets, limits)
+            locked_active is not None
             and ovhd is not None
             and not ovhd.is_active
         ):
@@ -1266,7 +1303,7 @@ def propose_action(
                         f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor) [A_init]."
                     ),
                     payload={
-                        "deactivate": nh3.name,
+                        "deactivate": locked_active.name,
                         "activate": ovhd.name,
                         "activate_goal": float(goal),
                         "strategy_id": "spec_swap_last_resort",
@@ -1353,6 +1390,7 @@ class ConvergenceAssistant:
         columns: ColumnController,
         limits: ConvergenceLimits | None = None,
         targets: list[FinalTarget] | None = None,
+        case_config: CduCaseConfig | None = None,
     ) -> None:
         self.columns = columns
         self.limits = limits or ConvergenceLimits()
@@ -1375,6 +1413,16 @@ class ConvergenceAssistant:
         if {"B_energy", "C_split"}.issubset(self._skipped_families):
             return True
         return False
+
+    def _diagnose(self, state: ColumnState) -> Diagnosis:
+        return diagnose(
+            state,
+            self.limits,
+            self.targets,
+            self.history,
+            columns=self.columns,
+            case_config=self.case_config,
+        )
 
     def inspect(self, column_name: str) -> ColumnState:
         return self.columns.inspect(column_name)

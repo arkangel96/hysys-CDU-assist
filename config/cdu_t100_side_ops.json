@@ -1,0 +1,79 @@
+{
+  "side_strippers": [
+    {
+      "name": "Kero_SS",
+      "stages": 3,
+      "liq_draw_stage": "9_Main TS",
+      "vap_return_stage": "8_Main TS",
+      "product_stream": "Kerosene",
+      "prod_flow_spec": "Kero_SS Prod Flow",
+      "reb_duty_spec": "Kero Reb Duty",
+      "subsystem": "kerosene_section"
+    },
+    {
+      "name": "Diesel_SS",
+      "stages": 3,
+      "liq_draw_stage": "17_Main TS",
+      "vap_return_stage": "16_Main TS",
+      "product_stream": "Diesel",
+      "prod_flow_spec": "Diesel_SS Prod Flow",
+      "steam_feed": "Diesel Steam",
+      "subsystem": "diesel_section"
+    },
+    {
+      "name": "AGO_SS",
+      "stages": 3,
+      "liq_draw_stage": "22_Main TS",
+      "vap_return_stage": "21_Main TS",
+      "product_stream": "AGO",
+      "prod_flow_spec": "AGO_SS Prod Flow",
+      "steam_feed": "AGO Steam",
+      "subsystem": "ago_section"
+    }
+  ],
+  "pump_arounds": [
+    {
+      "name": "PA_1",
+      "draw_stage": "2_Main TS",
+      "return_stage": "1_Main TS",
+      "rate_spec": "PA_1_Rate(Pa)",
+      "duty_spec": "PA_1_Duty(Pa)",
+      "duty_btuh": -55000000,
+      "draw_temp_f": 262.5,
+      "subsystem": "overhead",
+      "serves": ["naphtha", "upper_column"]
+    },
+    {
+      "name": "PA_2",
+      "draw_stage": "17_Main TS",
+      "return_stage": "16_Main TS",
+      "rate_spec": "PA_2_Rate(Pa)",
+      "duty_spec": "PA_2_Duty(Pa)",
+      "duty_btuh": -35000000,
+      "draw_temp_f": 450.0,
+      "subsystem": "diesel_section",
+      "serves": ["diesel", "middle_distillate"]
+    },
+    {
+      "name": "PA_3",
+      "draw_stage": "22_Main TS",
+      "return_stage": "21_Main TS",
+      "rate_spec": "PA_3_Rate(Pa)",
+      "duty_spec": "PA_3_Duty(Pa)",
+      "duty_btuh": -35000000,
+      "draw_temp_f": 512.5,
+      "subsystem": "ago_section",
+      "serves": ["ago", "heavy_distillate"]
+    }
+  ],
+  "side_draws": [
+    {"stream": "Off Gas", "draw_stage": "Condenser", "type": "V", "subsystem": "overhead"},
+    {"stream": "Naphtha", "draw_stage": "Condenser", "type": "L", "subsystem": "overhead", "rate_spec": "Naphtha Prod Rate"},
+    {"stream": "Waste Water", "draw_stage": "Condenser", "type": "W", "subsystem": "overhead"},
+    {"stream": "Residue", "draw_stage": "29_Main TS", "type": "L", "subsystem": "bottom_section"},
+    {"stream": "Kerosene", "draw_stage": "Kero_SS_Reb", "type": "L", "subsystem": "kerosene_section"},
+    {"stream": "Diesel", "draw_stage": "3_Diesel_SS", "type": "L", "subsystem": "diesel_section"}
+  ],
+  "side_rectifiers": [],
+  "vap_bypasses": []
+}

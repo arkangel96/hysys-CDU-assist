@@ -2,6 +2,7 @@
 High-level trial map: visited path + remaining strategy combinations.
 
 This is the engineer orientation layer — not raw COM dumps.
+CDU Assist strategy IDs are illustrative until COM discovery finalizes knobs.
 """
 from __future__ import annotations
 
@@ -285,6 +286,8 @@ def classify_strategy(action: TrialAction) -> str:
         return "refresh_estimates"
     if "swap" in action.description.lower():
         return "spec_swap_last_resort"
+    if "baseline" in action.description.lower() or "recovery" in action.description.lower():
+        return "baseline_spec_recovery"
     if "feed" in action.description.lower():
         return "feed_or_case_change"
     return "refresh_estimates"
@@ -299,7 +302,6 @@ def suggest_next(
         return "None — column appears converged."
     if diagnosis and diagnosis.recommended_strategy == "fix_dof":
         return "Fix degrees of freedom (DOF ≠ 0) before other trials."
-    # Prefer first OPEN (non-last-resort), else last-resort OPEN
     for spec in STRATEGY_CATALOG:
         if spec.last_resort:
             continue
@@ -388,14 +390,19 @@ def build_trial_map(
         )
 
     next_label = suggest_next(board_status, diagnosis, converged)
-    # Mark NEXT on board
     for row in board:
         if row.label == next_label or (
-            next_label.startswith(row.label) and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}
+            next_label.startswith(row.label)
+            and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}
         ):
-            if not converged and row.status in {StrategyStatus.OPEN, StrategyStatus.LOCKED}:
+            if not converged and row.status in {
+                StrategyStatus.OPEN,
+                StrategyStatus.LOCKED,
+            }:
                 row.status = StrategyStatus.NEXT
-                row.status_text = "NEXT suggested → " + row.status_text.replace("Open — ", "").replace("Locked ", "")
+                row.status_text = "NEXT suggested → " + row.status_text.replace(
+                    "Open — ", ""
+                ).replace("Locked ", "")
             break
 
     if state is None:
@@ -409,7 +416,6 @@ def build_trial_map(
         if diagnosis is not None:
             here += f" · {diagnosis.severity}: {diagnosis.summary}"
 
-    # Path strip text
     if not path:
         path_text = "Start -> (no trials yet) -> YOU ARE HERE"
     else:
@@ -431,7 +437,9 @@ def build_trial_map(
     )
 
 
-def manual_map_event(description: str, strategy_id: str = "feed_or_case_change") -> TrialResult:
+def manual_map_event(
+    description: str, strategy_id: str = "feed_or_case_change"
+) -> TrialResult:
     """Create a history entry for an external change (e.g. feed stress) without COM writes."""
     return TrialResult(
         action=TrialAction(

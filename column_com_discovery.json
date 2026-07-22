@@ -1,5 +1,5 @@
 {
-  "column_name": "SW Stripper",
+  "column_name": "T-100",
   "notes": [
     "This is a live COM probe against the open HYSYS case.",
     "Use available=true members as the basis for the column module.",
@@ -66,17 +66,17 @@
     "name"
   ],
   "column_probe": {
-    "object": "SW Stripper",
+    "object": "T-100",
     "members": {
       "Name": {
         "available": true,
         "python_type": "str",
-        "repr": "SW Stripper"
+        "repr": "T-100"
       },
       "TypeName": {
         "available": true,
         "python_type": "str",
-        "repr": "distillation"
+        "repr": "columnop"
       },
       "OperType": {
         "available": false,
@@ -85,7 +85,7 @@
       "TaggedName": {
         "available": true,
         "python_type": "str",
-        "repr": "SW Stripper @Main"
+        "repr": "T-100 @Main"
       },
       "NumberOfStages": {
         "available": false,
@@ -154,18 +154,42 @@
       "AttachedFeeds": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 2,
+        "count": 6,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Stripper Feed",
+            "Name": "Main Steam",
             "TypeName": "materialstream"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Reb Q",
+            "Name": "Atm Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Diesel Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "AGO Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Q-Trim",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Energy",
             "TypeName": "energystream"
           }
         ]
@@ -173,12 +197,12 @@
       "AttachedProducts": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 3,
+        "count": 8,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Stripper Bottoms",
+            "Name": "Residue",
             "TypeName": "materialstream"
           },
           {
@@ -190,7 +214,37 @@
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Cond Q",
+            "Name": "Naphtha",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Waste Water",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Kerosene",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Diesel",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "AGO",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "Atmos Cond",
             "TypeName": "energystream"
           }
         ]
@@ -442,12 +496,12 @@
     }
   },
   "nested_ColumnFlowsheet": {
-    "object": "SW Stripper.ColumnFlowsheet",
+    "object": "T-100.ColumnFlowsheet",
     "members": {
       "Operations": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 3,
+        "count": 9,
         "items_preview": [
           {
             "index": 0,
@@ -459,20 +513,56 @@
             "index": 1,
             "type": "CDispatch",
             "Name": "Condenser",
-            "TypeName": "partialcondenser"
+            "TypeName": "condenser3op"
           },
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Reboiler",
+            "Name": "Kero_SS",
+            "TypeName": "traysection"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Reb",
             "TypeName": "bpreboiler"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Diesel_SS",
+            "TypeName": "traysection"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "AGO_SS",
+            "TypeName": "traysection"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "PA_1_Cooler",
+            "TypeName": "coolerop"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "PA_2_Cooler",
+            "TypeName": "coolerop"
+          },
+          {
+            "index": 8,
+            "type": "CDispatch",
+            "Name": "PA_3_Cooler",
+            "TypeName": "coolerop"
           }
         ]
       },
       "MaterialStreams": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 7,
+        "count": 27,
         "items_preview": [
           {
             "index": 0,
@@ -489,31 +579,139 @@
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Boilup",
+            "Name": "Main Steam",
             "TypeName": "materialstream"
           },
           {
             "index": 3,
             "type": "CDispatch",
-            "Name": "To Reboiler",
+            "Name": "Residue",
             "TypeName": "materialstream"
           },
           {
             "index": 4,
             "type": "CDispatch",
-            "Name": "Off Gas",
+            "Name": "Atm Feed",
             "TypeName": "materialstream"
           },
           {
             "index": 5,
             "type": "CDispatch",
-            "Name": "Stripper Bottoms",
+            "Name": "Off Gas",
             "TypeName": "materialstream"
           },
           {
             "index": 6,
             "type": "CDispatch",
-            "Name": "Stripper Feed",
+            "Name": "Waste Water",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "Naphtha",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 8,
+            "type": "CDispatch",
+            "Name": "Kerosene",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 9,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 10,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 11,
+            "type": "CDispatch",
+            "Name": "Kero_SS_BoilUp",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 12,
+            "type": "CDispatch",
+            "Name": "Kero_SS_ToReb",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 13,
+            "type": "CDispatch",
+            "Name": "Diesel Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 14,
+            "type": "CDispatch",
+            "Name": "Diesel",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 15,
+            "type": "CDispatch",
+            "Name": "Diesel_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 16,
+            "type": "CDispatch",
+            "Name": "Diesel_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 17,
+            "type": "CDispatch",
+            "Name": "AGO",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 18,
+            "type": "CDispatch",
+            "Name": "AGO Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 19,
+            "type": "CDispatch",
+            "Name": "AGO_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 20,
+            "type": "CDispatch",
+            "Name": "AGO_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 21,
+            "type": "CDispatch",
+            "Name": "PA_1_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 22,
+            "type": "CDispatch",
+            "Name": "PA_1_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 23,
+            "type": "CDispatch",
+            "Name": "PA_2_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 24,
+            "type": "CDispatch",
+            "Name": "PA_2_Return",
             "TypeName": "materialstream"
           }
         ]
@@ -521,18 +719,42 @@
       "EnergyStreams": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 2,
+        "count": 6,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Cond Q",
+            "Name": "Q-Trim",
             "TypeName": "energystream"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Reb Q",
+            "Name": "Atmos Cond",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Energy",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "PA_1_Q",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "PA_2_Q",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "PA_3_Q",
             "TypeName": "energystream"
           }
         ]
@@ -540,52 +762,133 @@
       "Specifications": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 5,
+        "count": 14,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Reflux Ratio",
-            "TypeName": "clmrefluxspec",
+            "Name": "Kero_SS Prod Flow",
+            "TypeName": "clmdrawspec",
             "IsActive": true,
-            "CurrentValue": 9.99999480301892,
-            "Error": -5.196981080146656e-07
+            "CurrentValue": 0.01711303024186912,
+            "Error": -1.254610254993778e-05
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "NH3 Mass Frac (Reboiler)",
-            "TypeName": "clmcompfracspec",
+            "Name": "Diesel_SS Prod Flow",
+            "TypeName": "clmdrawspec",
             "IsActive": true,
-            "CurrentValue": 9.998776777967176e-06,
-            "Error": -2.1250730012286567e-05
+            "CurrentValue": 0.03542182106415362,
+            "Error": -2.1337372407495672e-05
           },
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Ovhd Vap Rate",
+            "Name": "AGO_SS Prod Flow",
             "TypeName": "clmdrawspec",
-            "IsActive": false,
-            "CurrentValue": 0.11072725970588362,
-            "Error": -32767.0
+            "IsActive": true,
+            "CurrentValue": 0.008280308252225749,
+            "Error": -3.552937888924241e-05
           },
           {
             "index": 3,
             "type": "CDispatch",
-            "Name": "Reflux Rate",
-            "TypeName": "clmliquidflowspec",
-            "IsActive": false,
-            "CurrentValue": 1.1072720216113625,
-            "Error": -32767.0
+            "Name": "PA_1_Rate(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": 0.09200513784617102,
+            "Error": -1.6913109065318025e-05
           },
           {
             "index": 4,
             "type": "CDispatch",
-            "Name": "Btms Prod Rate",
+            "Name": "PA_1_Duty(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": -16118.912606198282,
+            "Error": -0.0
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "PA_2_Rate(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": 0.0552037530902231,
+            "Error": -4.769381770492339e-06
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "PA_2_Duty(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": -10257.489840307999,
+            "Error": -0.0
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "PA_3_Rate(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": 0.05520350360877852,
+            "Error": -9.288644334025454e-06
+          },
+          {
+            "index": 8,
+            "type": "CDispatch",
+            "Name": "PA_3_Duty(Pa)",
+            "TypeName": "clmpumpspec",
+            "IsActive": true,
+            "CurrentValue": -10257.489840307999,
+            "Error": -0.0
+          },
+          {
+            "index": 9,
+            "type": "CDispatch",
+            "Name": "Naphtha Prod Rate",
             "TypeName": "clmdrawspec",
+            "IsActive": true,
+            "CurrentValue": 0.042323055964316035,
+            "Error": -5.495766839514054e-07
+          },
+          {
+            "index": 10,
+            "type": "CDispatch",
+            "Name": "Liquid Flow",
+            "TypeName": "clmliquidflowspec",
+            "IsActive": true,
+            "CurrentValue": 0.006440463458852166,
+            "Error": -7.947756018780469e-07
+          },
+          {
+            "index": 11,
+            "type": "CDispatch",
+            "Name": "Kero Reb Duty",
+            "TypeName": "clmdutyspec",
+            "IsActive": true,
+            "CurrentValue": 2198.026081635635,
+            "Error": -5.887508903398248e-07
+          },
+          {
+            "index": 12,
+            "type": "CDispatch",
+            "Name": "Vap Prod Flow",
+            "TypeName": "clmvapourflowspec",
+            "IsActive": true,
+            "CurrentValue": 1.1339713593028076e-08,
+            "Error": 2.579388835136352e-07
+          },
+          {
+            "index": 13,
+            "type": "CDispatch",
+            "Name": "Reflux Ratio",
+            "TypeName": "clmrefluxspec",
             "IsActive": false,
-            "CurrentValue": 4.945761324219925,
-            "Error": -32767.0
+            "CurrentValue": 0.7064626274045851,
+            "Error": -0.2935373725954149
           }
         ]
       },
@@ -615,7 +918,7 @@
       "TaggedName": {
         "available": true,
         "python_type": "str",
-        "repr": "SW Stripper (COL1)"
+        "repr": "T-100 (COL1)"
       },
       "NumberOfStages": {
         "available": false,
@@ -692,25 +995,49 @@
       "FeedStreams": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 3,
+        "count": 7,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Cond Q",
+            "Name": "Atmos Cond",
             "TypeName": "energystream"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Stripper Feed",
-            "TypeName": "materialstream"
+            "Name": "Q-Trim",
+            "TypeName": "energystream"
           },
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Reb Q",
+            "Name": "Atm Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Main Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Energy",
             "TypeName": "energystream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Diesel Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "AGO Steam",
+            "TypeName": "materialstream"
           }
         ]
       },
@@ -897,7 +1224,7 @@
       "RefluxRatio": {
         "available": true,
         "python_type": "float",
-        "repr": 9.99999480301892
+        "repr": 0.7064626274045851
       },
       "RefluxRate": {
         "available": false,
@@ -966,7 +1293,7 @@
       "NumberOfStages": {
         "available": true,
         "python_type": "int",
-        "repr": 8
+        "repr": 29
       },
       "NoOfStages": {
         "available": false,
@@ -987,12 +1314,54 @@
       "FeedStages": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 1,
+        "count": 8,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "3__Main TS",
+            "Name": "28__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 1,
+            "type": "CDispatch",
+            "Name": "28__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "1__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "8__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "16__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "21__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "16__Main TS",
+            "TypeName": "bpsepstage"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "21__Main TS",
             "TypeName": "bpsepstage"
           }
         ]
@@ -1040,7 +1409,7 @@
       "AttachedFeeds": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 3,
+        "count": 10,
         "items_preview": [
           {
             "index": 0,
@@ -1051,32 +1420,110 @@
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Boilup",
+            "Name": "Main Steam",
             "TypeName": "materialstream"
           },
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Stripper Feed",
+            "Name": "Atm Feed",
             "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "PA_1_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Diesel_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "AGO_SS_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "PA_2_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 8,
+            "type": "CDispatch",
+            "Name": "PA_3_Return",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 9,
+            "type": "CDispatch",
+            "Name": "Q-Trim",
+            "TypeName": "energystream"
           }
         ]
       },
       "AttachedProducts": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 2,
+        "count": 8,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "To Reboiler",
+            "Name": "Residue",
             "TypeName": "materialstream"
           },
           {
             "index": 1,
             "type": "CDispatch",
             "Name": "To Condenser",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "PA_1_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "Kero_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 4,
+            "type": "CDispatch",
+            "Name": "Diesel_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "AGO_SS_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "PA_2_Draw",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "PA_3_Draw",
             "TypeName": "materialstream"
           }
         ]
@@ -1388,65 +1835,141 @@
   "ColumnFlowsheet_operation_names": [
     "Main TS",
     "Condenser",
-    "Reboiler"
+    "Kero_SS",
+    "Kero_SS_Reb",
+    "Diesel_SS",
+    "AGO_SS",
+    "PA_1_Cooler",
+    "PA_2_Cooler",
+    "PA_3_Cooler"
   ],
   "nested_Flowsheet": {
-    "object": "SW Stripper.Flowsheet",
+    "object": "T-100.Flowsheet",
     "members": {
       "Operations": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 2,
+        "count": 4,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Feed Bottoms",
-            "TypeName": "heatexop",
-            "Error": 4.242198422614947e-05,
-            "Tolerance": 0.0001
+            "Name": "PreFlash",
+            "TypeName": "flashtank"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "SW Stripper",
-            "TypeName": "distillation"
+            "Name": "Crude Heater",
+            "TypeName": "heaterop"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Mixer",
+            "TypeName": "mixerop"
+          },
+          {
+            "index": 3,
+            "type": "CDispatch",
+            "Name": "T-100",
+            "TypeName": "columnop"
           }
         ]
       },
       "MaterialStreams": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 5,
+        "count": 15,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "SourH2O Feed",
+            "Name": "Raw Crude",
             "TypeName": "materialstream"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Stripper Feed",
+            "Name": "PreFlsh Vap",
             "TypeName": "materialstream"
           },
           {
             "index": 2,
             "type": "CDispatch",
-            "Name": "Stripper Bottoms",
+            "Name": "PreFlsh Liq",
             "TypeName": "materialstream"
           },
           {
             "index": 3,
             "type": "CDispatch",
-            "Name": "Effluent",
+            "Name": "Hot Crude",
             "TypeName": "materialstream"
           },
           {
             "index": 4,
             "type": "CDispatch",
+            "Name": "Atm Feed",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 5,
+            "type": "CDispatch",
+            "Name": "Main Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 6,
+            "type": "CDispatch",
+            "Name": "Diesel Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 7,
+            "type": "CDispatch",
+            "Name": "AGO Steam",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 8,
+            "type": "CDispatch",
+            "Name": "Residue",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 9,
+            "type": "CDispatch",
             "Name": "Off Gas",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 10,
+            "type": "CDispatch",
+            "Name": "Waste Water",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 11,
+            "type": "CDispatch",
+            "Name": "Naphtha",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 12,
+            "type": "CDispatch",
+            "Name": "Kerosene",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 13,
+            "type": "CDispatch",
+            "Name": "Diesel",
+            "TypeName": "materialstream"
+          },
+          {
+            "index": 14,
+            "type": "CDispatch",
+            "Name": "AGO",
             "TypeName": "materialstream"
           }
         ]
@@ -1454,18 +1977,24 @@
       "EnergyStreams": {
         "available": true,
         "python_type": "CDispatch",
-        "count": 2,
+        "count": 3,
         "items_preview": [
           {
             "index": 0,
             "type": "CDispatch",
-            "Name": "Cond Q",
+            "Name": "Crude Duty",
             "TypeName": "energystream"
           },
           {
             "index": 1,
             "type": "CDispatch",
-            "Name": "Reb Q",
+            "Name": "Q-Trim",
+            "TypeName": "energystream"
+          },
+          {
+            "index": 2,
+            "type": "CDispatch",
+            "Name": "Atmos Cond",
             "TypeName": "energystream"
           }
         ]
@@ -1804,7 +2333,9 @@
     }
   },
   "Flowsheet_operation_names": [
-    "Feed Bottoms",
-    "SW Stripper"
+    "PreFlash",
+    "Crude Heater",
+    "Mixer",
+    "T-100"
   ]
 }

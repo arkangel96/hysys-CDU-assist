@@ -21,7 +21,7 @@ Complementary PE package: [`new_intelligence/00_COMPLEMENTARY_INTRO.md`](new_int
 - Connect to a running HYSYS case
 - Inspect streams, edit supported specs, solve, chart, export Excel
 - **Column Assistant:** Inspect / Diagnose / Specs Summary Active·Estimate /
-  Connections READ / PE board / Trial Map / Assist trials
+  Connections READ / PE board / Trial Map / Assist trials (CDU Category-1 MVs)
 
 ## Requirements
 
@@ -42,6 +42,8 @@ Open a HYSYS case first, then run:
 ```powershell
 python main.py
 ```
+
+Or double-click `Open CDU Assist.bat`.
 
 Click **Connect**. Use **Open Case** to select a `.hsc` file if needed.
 

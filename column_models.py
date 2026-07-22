@@ -70,6 +70,15 @@ class FinalTarget:
     property_type: str = "composition"
 
 
+def default_cdu_targets() -> list[FinalTarget]:
+    """Placeholder FINAL_TARGETs for CDU — configure per case after COM discovery.
+
+    Cut / ASTM / TBP targets are case-specific. Until Phase 1 discovery, return
+    an empty list so Assist does not invent stripper NH3 purity targets.
+    """
+    return []
+
+
 def default_sw_stripper_targets() -> list[FinalTarget]:
     """Legacy simple-column / SW Stripper FINAL_TARGET set (COM shell validation)."""
     return [

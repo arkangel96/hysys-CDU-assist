@@ -893,24 +893,25 @@ Never auto-save .hsc; never auto Specs.Add when DOF = 0
 | RR matched then more RR barely moved NH₃ | §9.5 weak response → switch / State F |
 | Duties -32767 | State B numerical recovery before quality chasing |
 | PE wants see-every-iteration judgment | Interactive pause in §4 / §22 |
-| Active swap RR+Ovhd recovered physical solve | §15 spec roles; State B baseline |
-| External stream NH₃ met while NH₃ inactive | FINAL_TARGET vs HYSYS Active (§5.7) |
-| Ovhd COM 4.64 vs UI ~16707 kgmole/h | Worksheet units mandatory (§28.3) |
-| Tiny bottoms flow after “green” | Operability gate before State E (§28.5) |
+| Active swap recovered physical solve | §15 spec roles; State B baseline |
+| External stream quality vs inactive GoalValue | FINAL_TARGET vs HYSYS Active (§5.7) |
+| COM internal vs worksheet units | Worksheet units mandatory (§28.3) |
+| Tiny product flow after “green” | Operability gate before State E (§28.5) |
 | Assist did not choose Active swap alone | Decision engine behind COM (§28.2) |
 
 ---
 
 ## 28. Intelligence implementation guidance (integrated review)
 
-This section integrates the senior HYSYS / PE review of Automation Studio Assist. Full backlog narrative remains in [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md).
+This section integrates the senior HYSYS / PE review for **CDU Assist**. Full backlog narrative remains in [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md).
 
 ### 28.1 Current capability vs judgment
 
 | Dimension | Assessment |
 |-----------|------------|
-| Ability to touch HYSYS (COM read/write) | Strong for v0.1 |
-| Simulation PE judgment in Assist Loop | Early / incomplete |
+| Ability to touch HYSYS (COM read/write) | Strong platform for v0.1 |
+| CDU draws / PA / cut COM discovery | Pending Phase 1 |
+| Simulation PE judgment in Assist Loop | Early / incomplete for CDU |
 | Ready to replace a senior PE | **No** |
 | Ready to assist a senior PE (interactive) | **Yes**, if FINAL_TARGETs stay locked and trials pause for review |
 
@@ -932,12 +933,12 @@ Current coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY
 
 ### 28.3 Known Assist gaps (must close over time)
 
-1. **State classification** — dead bottoms / sentinel duties → State B recovery, not GoalValue spam.  
-2. **FINAL_TARGET vs Active specs** — never auto-relax product purity to force green.  
-3. **Units / truth sources** — worksheet units; prefer product **stream** for purity checks.  
+1. **State classification** — dead draws / sentinel duties → State B recovery, not GoalValue spam.  
+2. **FINAL_TARGET vs Active specs** — never auto-relax cut / ASTM / TBP to force green.  
+3. **Units / truth sources** — worksheet units; prefer product **stream / assay** for quality checks.  
 4. **Post-trial thinking** — response classes, not score-only keep/reverse.  
 5. **Active selection policy** — `IsActive` swaps only via spec-role rules + DOF = 0.  
-6. **Operability gates** — reject tiny bottoms flow / absurd duties as “success.”  
+6. **Operability gates** — reject dry draws / absurd duties as “success.”  
 7. **Going-nowhere detector** — flat sensitivity → switch family or State F.  
 8. **Interactive default** — one trial → PE board → approve; batch Assist only when allowed.
 
@@ -946,11 +947,11 @@ Current coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY
 | Priority | Upgrade | PE intent |
 |----------|---------|-----------|
 | **P0** | States A–F before moves | Don’t solve the wrong problem |
-| **P0** | External FINAL_TARGET layer | Don’t cheat purity |
-| **P0** | Worksheet units + stream product checks | Trust HYSYS UI numbers |
+| **P0** | External FINAL_TARGET layer (cuts / ASTM / TBP) | Don’t cheat quality |
+| **P0** | Worksheet units + stream/assay checks | Trust HYSYS UI numbers |
 | **P0** | Response classes after every trial | Continue / reverse / switch / State F |
 | **P1** | Spec-role engine (baseline vs final Active set) | Controlled Active selection |
-| **P1** | Operability gates (flow, duty, T profile) | Reject fake green |
+| **P1** | Operability gates (draws, duty, T profile) | Reject fake green |
 | **P1** | Interactive PE judgment board in GUI | User stays in the loop |
 | **P2** | Sensitivity / bracketing / continuation | Fewer blind steps |
 | **P2** | Failure-region memory | Don’t re-enter failed bands |
@@ -958,8 +959,8 @@ Current coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY
 
 ### 28.5 Definition of State E success (Assist may claim success only if all true)
 
-1. Numerically healthy (no sentinel duties/flows on key products).  
-2. Every hard FINAL_TARGET met on the **product stream** (within tolerance).  
+1. Numerically healthy (no sentinel duties/flows on key products/draws).  
+2. Every hard FINAL_TARGET met on the **product stream / assay** (within tolerance).  
 3. Approved Active spec set consistent; DOF = 0.  
 4. Material split and duties within engineering bounds.  
 5. T (and P) profiles pass basic physical checks.  
@@ -970,11 +971,12 @@ Otherwise report State B / C / D / F with evidence — not a fake win.
 ### 28.6 What better intelligence is *not*
 
 - Aggressive GoalValue spam  
-- Auto-relaxing product specs  
+- Auto-relaxing product / cut specs  
 - Random Active flips without role/DOF rules  
-- Residuals-only success with nonphysical bottoms  
+- Residuals-only success with nonphysical draws  
+- Stripper RR logic pretended as enough for crude cuts  
 - Silent batch loops without PE-readable reasons  
 
 ---
 
-*End of Version 0.1.1*
+*End of Version 0.1.2*
