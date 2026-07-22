@@ -1,8 +1,8 @@
-# Architecture — Simple Column Assist v1 (New Intelligence)
+# Architecture — CDU Assist v1 (New Intelligence)
 
-External COM assist for **simple distillation / stripping** in Aspen HYSYS.
+External COM assist for **CDU / atmospheric crude distillation** in Aspen HYSYS.
 **Version 1.0** — New Intelligence line (States A–F, PE board, Trial Map).
-CDU/VDU are out of scope (separate future tools). See `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.
+Simple column / VDU are out of scope (separate tools). See `docs/SCOPE_CDU_ASSIST.md`.
 
 ## High level
 

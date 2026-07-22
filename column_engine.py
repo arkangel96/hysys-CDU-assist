@@ -1,8 +1,8 @@
 """
-Distillation convergence assistant engine.
+CDU / atmospheric crude convergence assistant engine.
 
 Multi-variable ChemE intelligence (not RR-only):
-  Classify States A–F → choose variable family A/B/C → one bounded move →
+  Classify States A–F → choose variable family A/B/C/C2 → one bounded move →
   solve → judge FINAL_TARGET + operability → keep/reverse → switch or State F
 
 Never auto-relaxes locked product FINAL_TARGETs.
@@ -30,9 +30,16 @@ from column_models import (
     ResponseClass,
     TrialAction,
     TrialResult,
-    default_sw_stripper_targets,
+    default_final_targets,
 )
 from column_spec_catalog import recommend_add_spec, recommend_specs_summary_clicks
+from cdu_reasoning import format_d1_board_lines, refine_preferred_family_cdu, trial_cdu_footnote
+from cdu_connections import connections_topology_cue
+from cdu_monitor import format_monitor_block
+from cdu_specs import format_specs_page_block, format_specs_summary_block
+from cdu_subcooling import format_subcooling_block
+from cdu_side_ops import format_side_ops_block
+from cdu_rating import format_rating_block
 from hysys_dialog_watcher import (
     clue_engineering_hint,
     clue_to_preferred_family,
@@ -90,7 +97,20 @@ def _spec_matches_final_target(spec_name: str, targets: list[FinalTarget]) -> Fi
 
 
 def _final_target_value(state: ColumnState, target: FinalTarget) -> float | None:
-    if target.stream == "bottoms":
+    """Resolve measured value for a FINAL_TARGET (stream composition or matching spec Current)."""
+    comps = tuple(c.lower() for c in target.component_name_contains)
+    if comps and any(c in {"nh3", "ammonia"} for c in comps) and target.stream == "bottoms":
+        if state.bottoms_nh3_mass_frac is not None:
+            return state.bottoms_nh3_mass_frac
+
+    needle = (target.spec_name_contains or "").lower().strip()
+    if needle:
+        for spec in state.specs:
+            if needle in spec.name.lower() and spec.current_value is not None:
+                if not is_sentinel(spec.current_value):
+                    return float(spec.current_value)
+
+    if target.stream == "bottoms" and state.bottoms_nh3_mass_frac is not None:
         return state.bottoms_nh3_mass_frac
     return None
 
@@ -187,13 +207,52 @@ def classify_engineering_state(
     return EngineeringState.B_NUMERICAL
 
 
+def _is_pa_spec(name: str) -> bool:
+    lower = name.lower()
+    if "pump around" in lower or "pumparound" in lower:
+        return True
+    if "pa duty" in lower or "pa circ" in lower or "pa return" in lower:
+        return True
+    if lower.startswith("pa ") and ("duty" in lower or "circ" in lower or "return" in lower):
+        return True
+    return False
+
+
+def _is_steam_spec(name: str) -> bool:
+    lower = name.lower()
+    return "steam" in lower and (
+        "strip" in lower or "rate" in lower or "flow" in lower or "duty" in lower
+    )
+
+
+def _is_side_draw_spec(name: str) -> bool:
+    lower = name.lower()
+    if "ovhd" in lower or "overhead" in lower or "distill" in lower:
+        return False
+    if "btms" in lower or "bottoms" in lower or "residue" in lower:
+        return False
+    return "draw" in lower
+
+
 def _spec_family(name: str) -> str:
     lower = name.lower()
-    if "frac" in lower or "nh3" in lower or "comp" in lower or "purity" in lower:
-        return "D_target"
-    if "reflux ratio" in lower or (
-        "reflux" in lower and "ratio" in lower
+    if (
+        "cut" in lower
+        or "gap" in lower
+        or "astm" in lower
+        or "d86" in lower
+        or "tbp" in lower
+        or "frac" in lower
+        or "nh3" in lower
+        or "comp" in lower
+        or "purity" in lower
     ):
+        return "D_target"
+    if _is_steam_spec(name):
+        return "C2_steam"
+    if _is_pa_spec(name):
+        return "B_energy"
+    if "reflux ratio" in lower or ("reflux" in lower and "ratio" in lower):
         return "B_energy"
     if "reflux" in lower or "boilup" in lower or "boil" in lower:
         return "B_energy"
@@ -205,6 +264,7 @@ def _spec_family(name: str) -> str:
         or "overhead" in lower
         or "btms" in lower
         or "bottoms" in lower
+        or "residue" in lower
         or "draw" in lower
     ):
         return "C_split"
@@ -214,10 +274,22 @@ def _spec_family(name: str) -> str:
 def _strategy_for_spec(name: str, new_goal: float, old_goal: float) -> str:
     lower = name.lower()
     fam = _spec_family(name)
+    if fam == "C2_steam":
+        return "steam_nudge"
+    if _is_pa_spec(name):
+        if "return" in lower or ("temp" in lower and "pa" in lower):
+            return "pa_return_t_nudge"
+        if "circ" in lower or ("flow" in lower and "duty" not in lower):
+            return "pa_circ_nudge"
+        return "pa_duty_nudge"
     if fam == "C_split":
-        if "btms" in lower or "bottoms" in lower:
+        if "btms" in lower or "bottoms" in lower or "residue" in lower:
             return "bottoms_rate_nudge"
-        return "ovhd_rate_nudge"
+        if "ovhd" in lower or "distill" in lower or "overhead" in lower:
+            return "ovhd_rate_nudge"
+        if _is_side_draw_spec(name) or "draw" in lower:
+            return "side_draw_nudge"
+        return "side_draw_nudge"
     if "reflux ratio" in lower or ("reflux" in lower and "ratio" in lower):
         return "reflux_nudge_down" if new_goal < old_goal else "reflux_nudge_up"
     if "reflux" in lower:
@@ -225,6 +297,8 @@ def _strategy_for_spec(name: str, new_goal: float, old_goal: float) -> str:
     if "boilup" in lower or "boil" in lower or "reb" in lower:
         return "boilup_nudge"
     if fam == "D_target":
+        if "cut" in lower or "gap" in lower or "astm" in lower or "d86" in lower or "tbp" in lower:
+            return "astm_cut_goal_nudge"
         return "nh3_goal_nudge"
     return "reflux_nudge_up" if new_goal >= old_goal else "reflux_nudge_down"
 
@@ -389,7 +463,7 @@ def diagnose(
     exhausted_families: set[str] | None = None,
 ) -> Diagnosis:
     limits = limits or ConvergenceLimits()
-    targets = targets if targets is not None else default_sw_stripper_targets()
+    targets = targets if targets is not None else default_final_targets()
     codes: list[DiagnosisCode] = []
     details: list[str] = []
     target_status = evaluate_final_targets(state, targets)
@@ -429,7 +503,8 @@ def diagnose(
         codes.append(DiagnosisCode.OPERABILITY_FAIL)
         details.append(
             f"Operability gate failed (bottoms flow / duty / T window). "
-            f"Need bottoms ≥ {limits.min_bottoms_flow_kgmole_h:g} kgmole/h."
+            f"Need bottoms ≥ {limits.min_bottoms_flow_kgmole_h:g} "
+            f"{getattr(state, 'molar_flow_unit', 'kgmole/h')}."
         )
 
     temps = state.profile.temperatures
@@ -525,12 +600,34 @@ def diagnose(
         pe_hypothesis = "Stop operating nudges; structural/feed changes need engineer approval."
         codes.append(DiagnosisCode.LIKELY_INFEASIBLE)
 
+    # Complementary D1 soft hint (does not replace States A–F)
+    preferred_family, cdu_hint = refine_preferred_family_cdu(state, eng, preferred_family)
+    if cdu_hint:
+        pe_hypothesis = f"{pe_hypothesis} {cdu_hint}".strip() if pe_hypothesis else cdu_hint
+        details.append(cdu_hint)
+
+    topo_cue = connections_topology_cue(state)
+    if topo_cue:
+        pe_read = f"{pe_read} {topo_cue}".strip() if pe_read else topo_cue
+        details.append(topo_cue)
+
     if not codes:
         codes.append(DiagnosisCode.UNKNOWN_FAILURE)
 
     has_rr = any("reflux ratio" in s.name.lower() for s in state.specs)
-    has_comp_target = any(t.spec_name_contains.lower() == "nh3" for t in targets) or any(
+    has_comp_target = any(
+        t.property_type == "composition" or "nh3" in t.spec_name_contains.lower()
+        for t in targets
+    ) or any(
         "nh3" in s.name.lower() or "frac" in s.name.lower() for s in state.specs
+    )
+    has_petroleum_target = any(
+        t.property_type in {"astm_d86", "tbp", "cut", "gap", "cold_prop"}
+        or any(tok in t.spec_name_contains.lower() for tok in ("cut", "gap", "astm", "d86", "tbp"))
+        for t in targets
+    ) or any(
+        any(tok in s.name.lower() for tok in ("cut", "gap", "astm", "d86", "tbp"))
+        for s in state.specs
     )
     final_met = all(info["met"] for info in target_status.values()) if target_status else False
     add_recs = recommend_add_spec(
@@ -541,11 +638,16 @@ def diagnose(
         physical_solution=state.physical_solution,
         final_target_met=final_met,
         weak_operating_response=infeasible_evidence,
+        product_line="cdu",
+        has_petroleum_final_target=has_petroleum_target,
     )
     add_lines = [
         f"{r.action}: {r.hysys_type_name or '(none)'} — {r.reason}" for r in add_recs
     ]
 
+    nh3_locked = any(
+        "nh3" in t.id.lower() or "nh3" in t.spec_name_contains.lower() for t in targets
+    )
     click_recs = recommend_specs_summary_clicks(
         spec_rows=[
             {
@@ -558,7 +660,7 @@ def diagnose(
         engineering_state=eng.value,
         bottoms_flow_kgmole_h=state.bottoms_molar_flow_kgmole_h,
         min_bottoms_flow_kgmole_h=limits.min_bottoms_flow_kgmole_h,
-        nh3_is_final_target=True,
+        nh3_is_final_target=nh3_locked,
     )
     click_lines = []
     for c in click_recs:
@@ -671,21 +773,63 @@ def diagnose(
 
 def format_connections_block(state: ColumnState) -> str:
     """HYSYS Design → Connections snapshot for PE board / UI."""
-    feeds = ", ".join(state.feed_streams) if state.feed_streams else "—"
-    feed_loc = state.feed_stage_label or (
-        str(state.feed_stage) if state.feed_stage is not None else "—"
-    )
+    p_u = state.pressure_unit or "bar"
     lines = [
         "CONNECTIONS (Design → Connections) [READ]",
         f"  Stages={state.number_of_stages} numbering={state.stage_numbering or '—'}",
-        f"  Feed={feeds} @ {feed_loc}",
-        f"  Condenser={state.condenser_type or '—'}  "
-        f"P_cond={state.condenser_pressure_bar} bar  dP={state.condenser_dp_bar}",
-        f"  Reboiler P_reb={state.reboiler_pressure_bar} bar  dP={state.reboiler_dp_bar}",
-        f"  Ovhd product={state.top_vapour_product or '—'}  "
-        f"Btms product={state.bottoms_liquid_product or '—'}",
-        f"  Energy={', '.join(state.energy_streams) or '—'}",
+        f"  P_top={state.condenser_pressure_bar} {p_u}  "
+        f"dP_top={state.condenser_dp_bar}  "
+        f"P_bot={state.reboiler_pressure_bar} {p_u}  "
+        f"dP_bot={state.reboiler_dp_bar}",
+        f"  Condenser={state.condenser_type or '—'}",
     ]
+    if state.cdu_topology:
+        lines.append("  Topology=CDU (side draws / strippers / PAs)")
+
+    if state.inlet_rows:
+        lines.append("  Inlet Streams:")
+        for row in state.inlet_rows:
+            role = f"  [{row.role}]" if row.role and row.role != "unknown" else ""
+            lines.append(f"    {row.display_line()}{role}")
+    else:
+        feeds = ", ".join(state.feed_streams) if state.feed_streams else "—"
+        feed_loc = state.feed_stage_label or (
+            str(state.feed_stage) if state.feed_stage is not None else "—"
+        )
+        lines.append(f"  Feed={feeds} @ {feed_loc}")
+
+    if state.outlet_rows:
+        lines.append("  Outlet Streams:")
+        for row in state.outlet_rows:
+            role = f"  [{row.role}]" if row.role and row.role != "unknown" else ""
+            lines.append(f"    {row.display_line()}{role}")
+    else:
+        lines.append(
+            f"  Ovhd product={state.top_vapour_product or '—'}  "
+            f"Btms product={state.bottoms_liquid_product or '—'}"
+        )
+        lines.append(f"  Energy={', '.join(state.energy_streams) or '—'}")
+
+    role_bits: list[str] = []
+    if state.feed_stage_label or state.feed_stage is not None:
+        role_bits.append(
+            f"crude@{state.feed_stage_label or state.feed_stage}"
+        )
+    if state.overhead_liquid_product:
+        role_bits.append(f"naphtha={state.overhead_liquid_product}")
+    if state.top_vapour_product:
+        role_bits.append(f"offgas={state.top_vapour_product}")
+    if state.bottoms_liquid_product:
+        role_bits.append(f"residue={state.bottoms_liquid_product}")
+    if state.side_products:
+        role_bits.append(f"sides={','.join(state.side_products)}")
+    if state.steam_streams:
+        role_bits.append(f"steam={','.join(state.steam_streams)}")
+    if state.pa_energy_streams:
+        role_bits.append(f"PA={','.join(state.pa_energy_streams)}")
+    if role_bits:
+        lines.append("  Roles: " + " | ".join(role_bits))
+
     if state.monitor_equilibrium_error is not None or state.monitor_heat_spec_error is not None:
         lines.append(
             f"  Monitor(COM): iter={state.monitor_iteration} "
@@ -701,13 +845,38 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         f"  {diagnosis.pe_read}",
         f"  Family: {diagnosis.preferred_family or '—'} | Strategy: {diagnosis.recommended_strategy}",
         f"  Hypothesis: {diagnosis.pe_hypothesis or '—'}",
+    ]
+    lines.extend(
+        format_d1_board_lines(
+            diagnosis.engineering_state,
+            state=state,
+            preferred_family=diagnosis.preferred_family,
+            targets_count=len(diagnosis.final_target_status),
+        )
+    )
+    lines.extend(
+        [
         f"  DOF={state.degrees_of_freedom} physical={state.physical_solution} "
         f"converged_flag={state.appears_converged} score={score_state(state):.4g}",
         f"  CondQ={state.condenser_duty} RebQ={state.reboiler_duty}",
-        f"  Offgas={state.overhead_molar_flow_kgmole_h} kgmole/h | "
-        f"Btms={state.bottoms_molar_flow_kgmole_h} kgmole/h | BtmsT={state.bottoms_temperature}",
-    ]
+        f"  Offgas={state.overhead_molar_flow_kgmole_h} {state.molar_flow_unit} | "
+        f"Btms={state.bottoms_molar_flow_kgmole_h} {state.molar_flow_unit} | "
+        f"BtmsT={state.bottoms_temperature} {state.temperature_unit}",
+        ]
+    )
+    if state.overhead_liquid_product or state.side_products:
+        lines.append(
+            f"  Products: naphtha={state.overhead_liquid_product or '—'} | "
+            f"sides={', '.join(state.side_products) or '—'} | "
+            f"residue={state.bottoms_liquid_product or '—'}"
+        )
     lines.append(format_connections_block(state))
+    lines.append(format_monitor_block(state))
+    lines.append(format_specs_page_block(state))
+    lines.append(format_specs_summary_block(state))
+    lines.append(format_subcooling_block(state))
+    lines.append(format_side_ops_block(state))
+    lines.append(format_rating_block(state))
     if diagnosis.structural_recommendations:
         lines.append("CONNECTIONS STRUCTURAL [F] — MECHANICAL / APPROVAL REQUIRED")
         lines.append(
@@ -729,8 +898,9 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         goal = sp.goal_display if sp.goal_display is not None else sp.goal_value
         cur = sp.current_display if sp.current_display is not None else sp.current_value
         unit = f" {sp.display_unit}" if sp.display_unit else ""
+        fam = f" [{sp.mv_family}]" if getattr(sp, "mv_family", "") else ""
         lines.append(
-            f"  ACTIVE {sp.name}: goal={goal}{unit} current={cur}{unit} err={sp.error}"
+            f"  ACTIVE{fam} {sp.name}: goal={goal}{unit} current={cur}{unit} err={sp.error}"
         )
     for tid, info in diagnosis.final_target_status.items():
         lines.append(
@@ -776,7 +946,7 @@ def propose_action(
     skipped_families: set[str] | None = None,
 ) -> TrialAction | None:
     """Multi-variable ChemE chooser — energy, split, and init families (not RR alone)."""
-    targets = targets if targets is not None else default_sw_stripper_targets()
+    targets = targets if targets is not None else default_final_targets()
     skipped = skipped_families or set()
     strategy = diagnosis.recommended_strategy
 
@@ -848,7 +1018,7 @@ def propose_action(
             payload={"strategy_id": "refresh_estimates", "family": "A_init"},
         )
 
-    # --- Build candidate nudges across families B and C ---
+    # --- Build candidate nudges across families B, C, C2 ---
     candidates: list[TrialAction] = []
 
     # Dominant Active residual (any family except locked D)
@@ -860,7 +1030,7 @@ def propose_action(
                 dom,
                 direction=None,
                 frac=limits.rate_nudge_fraction
-                if fam == "C_split"
+                if fam in {"C_split", "C2_steam"}
                 else limits.reflux_nudge_fraction,
                 limits=limits,
                 toward_current=True,
@@ -868,16 +1038,43 @@ def propose_action(
             if action is not None:
                 candidates.append(action)
 
-    # B_energy: RR — impurity miss → increase energy; else toward current
+    # B_energy: PA first (CDU mid-section), then RR / reflux / boilup
     if "B_energy" not in skipped:
+        for spec in state.active_specs():
+            if not _is_pa_spec(spec.name):
+                continue
+            if _is_locked_final_spec(spec.name, targets, limits):
+                continue
+            action = _nudge_goal(
+                spec,
+                direction=None,
+                frac=limits.reflux_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is not None:
+                # Prefer PA when diagnosis wants energy or mid-cut
+                if diagnosis.preferred_family in {None, "", "B_energy"}:
+                    candidates.insert(0, action)
+                else:
+                    candidates.append(action)
+
         rr = _find_active(state, "reflux ratio") or _find_active(state, "reflux", "ratio")
         if rr is not None and rr.goal_value is not None:
             nh3_miss = any(
                 (not info["met"]) and tid.upper().startswith("NH3")
                 for tid, info in diagnosis.final_target_status.items()
             )
-            hard_miss = any(not info["met"] for info in diagnosis.final_target_status.values())
-            if (nh3_miss or hard_miss) and state.physical_solution:
+            hard_miss = bool(diagnosis.final_target_status) and any(
+                not info["met"] for info in diagnosis.final_target_status.values()
+            )
+            # Mid-cut / draw / steam problems: do NOT default to raising top RR
+            prefer_rr_up = (
+                state.physical_solution
+                and (nh3_miss or hard_miss)
+                and diagnosis.preferred_family not in {"C_split", "C2_steam"}
+            )
+            if prefer_rr_up:
                 action = _nudge_goal(
                     rr, direction=1.0, frac=limits.reflux_nudge_fraction, limits=limits
                 )
@@ -898,6 +1095,8 @@ def propose_action(
                 continue
             if "ratio" in spec.name.lower() and needle == ("reflux",):
                 continue
+            if _is_pa_spec(spec.name) or _is_steam_spec(spec.name):
+                continue
             if _is_locked_final_spec(spec.name, targets, limits):
                 continue
             action = _nudge_goal(
@@ -910,7 +1109,7 @@ def propose_action(
             if action is not None:
                 candidates.append(action)
 
-    # C_split: Ovhd / Btms — especially State D / dry bottoms
+    # C_split: side draws + Ovhd / Btms / residue
     if "C_split" not in skipped:
         prefer_btms_up = (
             diagnosis.engineering_state == EngineeringState.D_CONSTRAINT
@@ -919,12 +1118,35 @@ def propose_action(
                 and state.bottoms_molar_flow_kgmole_h < limits.min_bottoms_flow_kgmole_h
             )
         )
-        btms = _find_active(state, "btms") or _find_active(state, "bottoms")
+        btms = (
+            _find_active(state, "btms")
+            or _find_active(state, "bottoms")
+            or _find_active(state, "residue")
+        )
         ovhd = (
             _find_active(state, "ovhd")
             or _find_active(state, "distill")
             or _find_active(state, "overhead")
         )
+        side_draws = [
+            s
+            for s in state.active_specs()
+            if _is_side_draw_spec(s.name) and not _is_locked_final_spec(s.name, targets, limits)
+        ]
+        for draw in side_draws:
+            action = _nudge_goal(
+                draw,
+                direction=None,
+                frac=limits.rate_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is not None:
+                if diagnosis.preferred_family == "C_split":
+                    candidates.insert(0, action)
+                else:
+                    candidates.append(action)
+
         if prefer_btms_up and btms is not None and not _is_locked_final_spec(btms.name, targets, limits):
             action = _nudge_goal(
                 btms, direction=1.0, frac=limits.rate_nudge_fraction, limits=limits
@@ -932,7 +1154,6 @@ def propose_action(
             if action is not None:
                 candidates.insert(0, action)
         if prefer_btms_up and ovhd is not None and not _is_locked_final_spec(ovhd.name, targets, limits):
-            # High Ovhd can starve bottoms on Full Reflux — reduce Ovhd or move toward current
             action = _nudge_goal(
                 ovhd,
                 direction=-1.0,
@@ -963,6 +1184,26 @@ def propose_action(
                 )
             if action is not None:
                 candidates.append(action)
+
+    # C2_steam: stripping steam
+    if "C2_steam" not in skipped:
+        for spec in state.active_specs():
+            if not _is_steam_spec(spec.name):
+                continue
+            if _is_locked_final_spec(spec.name, targets, limits):
+                continue
+            action = _nudge_goal(
+                spec,
+                direction=None,
+                frac=limits.rate_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is not None:
+                if diagnosis.preferred_family == "C2_steam":
+                    candidates.insert(0, action)
+                else:
+                    candidates.append(action)
 
     # Deduplicate by spec name (keep first)
     seen: set[str] = set()
@@ -1115,7 +1356,7 @@ class ConvergenceAssistant:
     ) -> None:
         self.columns = columns
         self.limits = limits or ConvergenceLimits()
-        self.targets = targets if targets is not None else default_sw_stripper_targets()
+        self.targets = targets if targets is not None else default_final_targets()
         self.history: list[TrialResult] = []
         self._estimates_refreshed = False
         self._flat_product_streak = 0
@@ -1333,6 +1574,10 @@ class ConvergenceAssistant:
                     f"KEPT [{response.value}] — {action.description}. "
                     f"score {before_score:.4g} → {after_score:.4g}."
                 )
+
+            footnote = trial_cdu_footnote(action)
+            if footnote:
+                message = f"{message}\n  {footnote}"
 
             after_board = format_pe_board(
                 after,

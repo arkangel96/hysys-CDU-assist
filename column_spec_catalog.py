@@ -1,8 +1,9 @@
 """
 HYSYS Column "Add Specs" catalog + when-to-add intelligence.
 
-Source: Aspen HYSYS dialog "Add Specs - SW Stripper (COL1)" /
-"Column Specification Types" (user capture 2026-07-21).
+Source: Aspen HYSYS dialog "Add Specs - T-100 / COL1" /
+"Column Specification Types" (user capture 2026-07-22).
+Earlier SW Stripper capture remains as legacy stripper flags only.
 
 Layer policy:
   - Catalog + recommend WHEN to add  → coded now
@@ -10,7 +11,7 @@ Layer policy:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 
 
@@ -34,13 +35,13 @@ class AddPolicy(str, Enum):
     EXISTING_ONLY = "existing_only"  # prefer specs already on column
     RECOMMEND_ADD = "recommend_add"  # may suggest user/HYSYS Add Spec
     AUTO_ADD_LATER = "auto_add_later"  # reserved when COM Add is validated
-    RARE = "rare"  # almost never for SW Stripper
-    NOT_FOR_STRIPPER = "not_for_stripper"
+    RARE = "rare"  # uncommon for atmospheric CDU
+    NOT_FOR_STRIPPER = "not_for_stripper"  # legacy stripper exclusion (CDU may still use)
 
 
 @dataclass(frozen=True, slots=True)
 class ColumnSpecTypeDef:
-    """One row from HYSYS Add Specs dialog."""
+    """One row from HYSYS Add Specs dialog (exact type name)."""
 
     hysys_name: str
     family: SpecFamily
@@ -49,27 +50,33 @@ class ColumnSpecTypeDef:
     pe_notes: str
     policy: AddPolicy = AddPolicy.RECOMMEND_ADD
     typical_for_sw_stripper: bool = False
-    # Names often seen after add (partial match)
+    typical_for_cdu: bool = False
+    # Names often seen after add (partial match) — includes T-100 Monitor tokens
     name_contains: tuple[str, ...] = ()
+    # Example from T-100 Monitor / Connections when known
+    t100_example: str = ""
 
 
-# Exact list from user's Add Specs screenshot (order preserved where visible).
+# Exact HYSYS "Column Specification Types" list (Add Specs - T-100), order preserved.
 HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
     ColumnSpecTypeDef(
         "Column Cold Properties Spec",
         SpecFamily.PROPERTY,
         "cold_properties",
-        "When cold properties (e.g. RVP-related cold props) are the product control.",
-        "Uncommon for sour-water stripper NH3 duty.",
-        AddPolicy.RARE,
+        "When naphtha / light product cold props (RVP, pour, freeze, cloud) are FINAL_TARGET.",
+        "CDU: use as quality Monitor/Active only when plant buys cold-prop specs — "
+        "do not spam-add while draw/PA set already closes DOF.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("cold", "rvp", "pour", "freeze", "cloud"),
     ),
     ColumnSpecTypeDef(
         "Column Component Flow",
         SpecFamily.COMPOSITION,
         "comp_flow",
         "When a component molar/mass flow in a product must be fixed.",
-        "Use if plant controls NH3 or H2S rate rather than fraction.",
-        AddPolicy.RECOMMEND_ADD,
+        "CDU rare vs cut/draw; stripper may use NH3/H2S rate.",
+        AddPolicy.RARE,
         name_contains=("component flow", "comp flow"),
     ),
     ColumnSpecTypeDef(
@@ -77,7 +84,8 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         SpecFamily.COMPOSITION,
         "comp_frac",
         "When product purity/impurity (mole/mass frac) is the FINAL_TARGET.",
-        "SW Stripper primary product spec family — e.g. NH3 Mass Frac (Reboiler).",
+        "Legacy SW Stripper primary (NH3). CDU: prefer petroleum cut/gap unless "
+        "composition FINAL_TARGET is configured.",
         AddPolicy.EXISTING_ONLY,
         typical_for_sw_stripper=True,
         name_contains=("mass frac", "mole frac", "comp frac", "nh3", "ammonia"),
@@ -87,15 +95,15 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         SpecFamily.COMPOSITION,
         "comp_ratio",
         "When relative amounts of two components must be controlled.",
-        "Rare for simple stripper; more for multicomponent fractionation.",
+        "Rare on atmospheric CDU; more for multicomponent fractionation.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Component Recovery",
         SpecFamily.RECOVERY,
         "comp_recovery",
-        "When % recovery of a key to overhead or bottoms is the design target.",
-        "Alternative to fraction specs when recovery is the contract basis.",
+        "When % recovery of a key to a product is the design/contract basis.",
+        "Alternative to fraction/cut when recovery is the plant language.",
         AddPolicy.RECOMMEND_ADD,
         name_contains=("recovery",),
     ),
@@ -103,60 +111,82 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         "Column Cut Point",
         SpecFamily.PETROLEUM,
         "cut_point",
-        "Petroleum TBP/cut-point product specs.",
-        "Not typical for sour-water stripper.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When ASTM/TBP cut temperature of a product is FINAL_TARGET or Active quality.",
+        "CDU core quality type — prefer after draw/PA traffic is healthy; keep locked "
+        "FINAL_TARGET out of free GoalValue spam.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("cut point", "cut", "astm", "tbp", "d86"),
     ),
     ColumnSpecTypeDef(
         "Column Draw Rate",
         SpecFamily.DRAWS_FLOWS,
         "draw_rate",
-        "When a product/side draw molar or mass rate is a DOF (Ovhd/Btms rate).",
-        "SW Stripper uses Ovhd Vap Rate / Btms Prod Rate — baseline or split control.",
+        "When a product / side-stripper draw rate is a DOF (T-100: Kero/Diesel/AGO/Naphtha).",
+        "CDU primary C_split family. T-100 already has side-stripper Prod Flow + Naphtha Prod Rate — "
+        "prefer GoalValue nudge; Add only if a product draw type is missing.",
         AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
         typical_for_sw_stripper=True,
-        name_contains=("ovhd", "btms", "draw", "prod rate", "vap rate"),
+        name_contains=(
+            "prod flow",
+            "prod rate",
+            "draw",
+            "ovhd",
+            "btms",
+            "residue",
+            "kero_ss",
+            "diesel_ss",
+            "ago_ss",
+            "naphtha",
+        ),
+        t100_example="Kero_SS / Diesel_SS / AGO_SS Prod Flow; Naphtha Prod Rate (USGPM)",
     ),
     ColumnSpecTypeDef(
         "Column DT (Heater/Cooler) Spec",
         SpecFamily.TEMPERATURE,
         "dt_heater",
-        "When approach ΔT on an attached heater/cooler is specified.",
-        "Utility/equipment constraint — not first purity lever.",
+        "When approach ΔT on an attached heater/cooler (incl. PA exchanger) is specified.",
+        "Utility/equipment constraint — secondary to PA Rate/Duty on T-100.",
         AddPolicy.RARE,
+        name_contains=("dt", "delta t", "approach"),
     ),
     ColumnSpecTypeDef(
         "Column Dt Spec",
         SpecFamily.TEMPERATURE,
         "dt_spec",
         "When a temperature difference between stages/streams is specified.",
-        "Advanced; avoid for first-pass stripper convergence.",
+        "Advanced; avoid for first-pass CDU convergence.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Duty",
         SpecFamily.DUTY,
         "duty",
-        "When condenser or reboiler duty is the energy-side DOF.",
-        "Category-1 MV alternative to reflux/boilup when duty is the plant handle.",
-        AddPolicy.RECOMMEND_ADD,
+        "When condenser, PA, or side-stripper reboiler duty is the energy DOF.",
+        "T-100: PA_*_Duty(Pa), Kero Reb Duty, Atmos Cond — Family B_energy. "
+        "Prefer existing Active duties before Add.",
+        AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
         typical_for_sw_stripper=True,
-        name_contains=("duty", "cond", "reb"),
+        name_contains=("duty", "cond", "reb", "pa_1_duty", "pa_2_duty", "pa_3_duty"),
+        t100_example="PA_1/2/3_Duty(Pa) (Btu/hr); Kero Reb Duty",
     ),
     ColumnSpecTypeDef(
         "Column Duty Ratio",
         SpecFamily.DUTY,
         "duty_ratio",
-        "When relative duties (e.g. PA / reboiler) are fixed.",
-        "More for complex columns with pump-arounds.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When relative duties (e.g. PA / condenser) are fixed.",
+        "Optional on multi-PA CDUs; T-100 uses absolute PA duties instead.",
+        AddPolicy.RARE,
+        typical_for_cdu=True,
     ),
     ColumnSpecTypeDef(
         "Column Feed Ratio",
         SpecFamily.DRAWS_FLOWS,
         "feed_ratio",
-        "When product or reflux is specified as ratio to feed.",
-        "Useful for capacity-flexible cases; optional for stripper.",
+        "When product or reflux is specified as ratio to feed (capacity-flexible).",
+        "Useful when crude rate swings; T-100 uses absolute USGPM draws today.",
         AddPolicy.RECOMMEND_ADD,
         name_contains=("feed ratio",),
     ),
@@ -164,42 +194,60 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         "Column Gap Cut Point",
         SpecFamily.PETROLEUM,
         "gap_cut",
-        "Petroleum gap/cut specifications.",
-        "Not for sour-water stripper.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When gap between adjacent product cuts is FINAL_TARGET / quality Active.",
+        "CDU neighbor-product control (D6) — Add if gap missing and plant buys gap.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("gap",),
     ),
     ColumnSpecTypeDef(
         "Column Liquid Flow",
         SpecFamily.DRAWS_FLOWS,
         "liquid_flow",
-        "When an internal or draw liquid rate is specified (e.g. reflux rate).",
-        "SW Stripper has Reflux Rate estimate — can be Active for baseline.",
+        "When an internal / reflux / liquid circulation rate is specified.",
+        "T-100 has Active 'Liquid Flow' (USGPM) — often internal traffic; "
+        "distinguish from PA Rate and product Draw Rate.",
         AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
         typical_for_sw_stripper=True,
-        name_contains=("reflux rate", "liquid flow", "liquid"),
+        name_contains=("liquid flow", "reflux rate", "liquid"),
+        t100_example="Liquid Flow = 102.1 USGPM (Active)",
     ),
     ColumnSpecTypeDef(
         "Column Physical Properties Spec",
         SpecFamily.PROPERTY,
         "phys_props",
-        "When a physical property (density, MW, etc.) is the target.",
-        "Rare for NH3 stripping.",
+        "When density / MW / other phys prop is the product target.",
+        "Secondary to cut/draw on atmospheric CDU.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Pump Around",
         SpecFamily.HYDRAULIC_PA,
         "pump_around",
-        "When pump-around rate/duty/ΔT is a DOF.",
-        "Not applicable to simple SW Stripper without PA.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When PA circulation rate and/or duty (or ΔT) is a section-energy DOF.",
+        "CDU primary B_energy. T-100: PA_1/2/3_Rate + Duty pairs already Active — "
+        "Add only if a PA circuit has no spec type yet.",
+        AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
+        name_contains=(
+            "pump around",
+            "pumparound",
+            "pa_1",
+            "pa_2",
+            "pa_3",
+            "pa rate",
+            "pa duty",
+            "pa circ",
+        ),
+        t100_example="PA_1_Rate(Pa)=1458 USGPM; PA_1_Duty(Pa)=-5.5e7 Btu/hr (+ PA_2/3)",
     ),
     ColumnSpecTypeDef(
         "Column Reboil Ratio Spec",
         SpecFamily.ENERGY_REFLUX,
         "reboil_ratio",
         "When boilup/reboil ratio is the stripping-side energy DOF.",
-        "Strong Category-1 alternative to reboiler duty for bottoms stripping.",
+        "T-100 uses Kero Reb Duty rather than ratio; stripper may prefer this.",
         AddPolicy.RECOMMEND_ADD,
         typical_for_sw_stripper=True,
         name_contains=("reboil", "boilup"),
@@ -209,15 +257,15 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         SpecFamily.RECOVERY,
         "recovery",
         "Overall recovery-type specification.",
-        "Prefer Component Recovery when key is clear.",
+        "Prefer Component Recovery or Cut Point when key is clear.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Reflux Feed Ratio Spec",
         SpecFamily.ENERGY_REFLUX,
         "reflux_feed_ratio",
-        "When reflux is specified as R/F.",
-        "Scale-friendly energy spec; optional stripper baseline.",
+        "When reflux is specified as R/F (scale-friendly).",
+        "Optional top-section energy; T-100 holds Reflux Ratio as Estimate only.",
         AddPolicy.RECOMMEND_ADD,
         name_contains=("reflux feed", "r/f"),
     ),
@@ -225,26 +273,29 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         "Column Reflux Fraction Spec",
         SpecFamily.ENERGY_REFLUX,
         "reflux_fraction",
-        "When reflux fraction (partial condenser related) is specified.",
-        "Check condenser type; full-reflux stripper may not need it.",
+        "When reflux fraction (partial condenser) is specified.",
+        "Check condenser type; T-100 condenser products Off Gas / Waste Water / Naphtha.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Reflux Ratio",
         SpecFamily.ENERGY_REFLUX,
         "reflux_ratio",
-        "Default rectification/energy DOF for many columns including strippers.",
-        "SW Stripper primary Category-1 MV — already present.",
+        "Top rectification energy DOF — often Estimate on CDU while draws/PAs are Active.",
+        "T-100: Reflux Ratio Estimate (spec 1.0, current ~0.706) — prefer draw/PA/steam "
+        "families before activating RR as primary MV.",
         AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
         typical_for_sw_stripper=True,
         name_contains=("reflux ratio",),
+        t100_example="Reflux Ratio = 1.0 Estimate / Current ~0.706 (not Active)",
     ),
     ColumnSpecTypeDef(
         "Column Stream Property Spec",
         SpecFamily.PROPERTY,
         "stream_property",
         "When an arbitrary stream property is the target.",
-        "Flexible but opaque — prefer standard frac/duty/rate specs.",
+        "Flexible but opaque — prefer Draw / PA / Cut / Duty types.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
@@ -252,24 +303,25 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         SpecFamily.OTHER,
         "tee_split",
         "When an associated tee split fraction is column-tied.",
-        "Not typical for standalone SW Stripper.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "Uncommon on atmospheric CDU main column.",
+        AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Temperature",
         SpecFamily.TEMPERATURE,
         "temperature",
         "When a stage or product temperature is a DOF/constraint.",
-        "Use for condenser/reboiler T limits — not first for NH3 purity.",
+        "Use for condenser/flash-zone / PA return T limits — not first for cut control.",
         AddPolicy.RECOMMEND_ADD,
-        name_contains=("temp", "temperature"),
+        typical_for_cdu=True,
+        name_contains=("temp", "temperature", "return t"),
     ),
     ColumnSpecTypeDef(
         "Column Transport Properties Spec",
         SpecFamily.PROPERTY,
         "transport_props",
         "Viscosity/conductivity-type targets.",
-        "Not for stripper NH3 convergence.",
+        "Not first-pass CDU convergence.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
@@ -277,57 +329,66 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
         SpecFamily.PROPERTY,
         "user_property",
         "User-defined property target.",
-        "Only if plant defines a custom property.",
+        "Only if plant defines a custom HYSYS user property.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Vapour Flow",
         SpecFamily.DRAWS_FLOWS,
         "vapour_flow",
-        "When vapour draw/internal vapour rate is specified.",
-        "Related to Ovhd Vap Rate family.",
+        "When vapour product / internal vapour rate is specified.",
+        "T-100: Vap Prod Flow Active = 0 lbmole/hr (Off Gas held off) — "
+        "related to overhead vapor product; do not confuse with liquid Naphtha Prod Rate.",
         AddPolicy.EXISTING_ONLY,
+        typical_for_cdu=True,
         typical_for_sw_stripper=True,
-        name_contains=("vap", "vapour", "vapor", "ovhd"),
+        name_contains=("vap prod", "vapour flow", "vapor flow", "vap rate", "ovhd"),
+        t100_example="Vap Prod Flow = 0 lbmole/hr (Active)",
     ),
     ColumnSpecTypeDef(
         "Column Vapour Fraction Spec",
         SpecFamily.PROPERTY,
         "vap_frac",
         "When vapour fraction of a product/stage is specified.",
-        "Phase condition control — secondary for stripper.",
+        "Phase condition control — secondary on CDU.",
         AddPolicy.RARE,
     ),
     ColumnSpecTypeDef(
         "Column Vapour Pressure Spec",
         SpecFamily.PRESSURE_VP,
         "vap_pressure",
-        "When product Reid VP / vapour pressure is the target.",
-        "Stabilizer/debutanizer style — not NH3 stripper primary.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When product Reid VP / vapour pressure is the target (naphtha RVP).",
+        "CDU naphtha quality alternative to Cold Properties — Add if plant buys RVP.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("vapour pressure", "vapor pressure", "rvp", "reid"),
     ),
     ColumnSpecTypeDef(
         "End Point Based Column Cut Point Spec",
         SpecFamily.PETROLEUM,
         "ep_cut",
-        "Petroleum endpoint cut-point specs.",
-        "Not for sour-water stripper.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When endpoint-based cut (EP / TBP end) is the product quality spec.",
+        "CDU petroleum FINAL_TARGET family — prefer after traffic (draws/PAs) healthy.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("end point", "endpoint", "ep cut"),
     ),
     ColumnSpecTypeDef(
         "End Point Based Column Gap Spec",
         SpecFamily.PETROLEUM,
         "ep_gap",
-        "Petroleum endpoint gap specs.",
-        "Not for sour-water stripper.",
-        AddPolicy.NOT_FOR_STRIPPER,
+        "When endpoint-based gap between products is the quality spec.",
+        "Neighbor-cut control — Add if gap missing and plant buys EP gap.",
+        AddPolicy.RECOMMEND_ADD,
+        typical_for_cdu=True,
+        name_contains=("ep gap", "endpoint gap"),
     ),
     ColumnSpecTypeDef(
         "Stream Specification",
         SpecFamily.OTHER,
         "stream_spec",
         "Generic stream specification attached via column.",
-        "Prefer explicit column spec types for clarity.",
+        "Prefer explicit column types (Draw Rate, Pump Around, Cut Point, Duty).",
         AddPolicy.RARE,
     ),
 ]
@@ -335,6 +396,38 @@ HYSYS_ADD_SPEC_TYPES: list[ColumnSpecTypeDef] = [
 
 def list_add_spec_names() -> list[str]:
     return [s.hysys_name for s in HYSYS_ADD_SPEC_TYPES]
+
+
+def get_spec_type_by_name(hysys_name: str) -> ColumnSpecTypeDef | None:
+    want = (hysys_name or "").strip().lower()
+    for item in HYSYS_ADD_SPEC_TYPES:
+        if item.hysys_name.lower() == want:
+            return item
+    return None
+
+
+def format_add_spec_hysys_steps(hysys_type_name: str, *, column_hint: str = "T-100") -> str:
+    """Exact HYSYS UI click path matching Design → Specs → Add… dialog."""
+    item = get_spec_type_by_name(hysys_type_name)
+    when = item.when_to_add if item else ""
+    pe = item.pe_notes if item else ""
+    lines = [
+        f"ADD SPEC in HYSYS — {column_hint}",
+        f"  Type: {hysys_type_name}",
+        "  1. Open column → Design → Specs (or Monitor).",
+        "  2. Click Add… (opens 'Add Specs' / Column Specification Types).",
+        f"  3. Select: {hysys_type_name}",
+        "  4. Click Add Spec(s)…",
+        "  5. On Specs detail pane: set Spec Name, Specification Value, Active/Estimate,",
+        "     Fixed/Ranged, attach stage/stream as HYSYS prompts.",
+        "  6. If DOF was already 0: deactivate one other Active (1-for-1) before Activate.",
+        "  7. Run → Inspect in Assist.",
+    ]
+    if when:
+        lines.append(f"  When: {when}")
+    if pe:
+        lines.append(f"  PE: {pe}")
+    return "\n".join(lines)
 
 
 def get_spec_type(short_id: str) -> ColumnSpecTypeDef | None:
@@ -378,23 +471,198 @@ def recommend_add_spec(
     physical_solution: bool,
     final_target_met: bool,
     weak_operating_response: bool = False,
+    product_line: str = "cdu",
+    has_petroleum_final_target: bool = False,
 ) -> list[AddSpecRecommendation]:
     """
     Decide if a missing HYSYS spec TYPE should be added.
 
-    PE order for SW Stripper:
-      1. Prefer existing Reflux Ratio + composition FINAL_TARGET
-      2. If State B — prefer existing draw/liquid rate as baseline Active
-      3. If weak RR response on stripping — recommend Reboil Ratio or Duty (user add)
-      4. Never recommend petroleum/PA types for this stripper
+    CDU (default): prefer existing draw / PA / reflux / cut set; recommend PA or
+    Draw Rate when missing; never auto-Add when DOF tools already exist.
+
+    Legacy stripper: RR + composition FINAL_TARGET; not petroleum/PA.
     """
+    if product_line in {"sw_stripper", "simple_column", "legacy_stripper"}:
+        return _recommend_add_spec_stripper(
+            existing_spec_names=existing_spec_names,
+            engineering_state=engineering_state,
+            has_reflux_ratio=has_reflux_ratio,
+            has_composition_final_target=has_composition_final_target,
+            physical_solution=physical_solution,
+            final_target_met=final_target_met,
+            weak_operating_response=weak_operating_response,
+        )
+    return _recommend_add_spec_cdu(
+        existing_spec_names=existing_spec_names,
+        engineering_state=engineering_state,
+        has_reflux_ratio=has_reflux_ratio,
+        has_petroleum_final_target=has_petroleum_final_target,
+        physical_solution=physical_solution,
+        final_target_met=final_target_met,
+        weak_operating_response=weak_operating_response,
+    )
+
+
+def _recommend_add_spec_cdu(
+    *,
+    existing_spec_names: list[str],
+    engineering_state: str,
+    has_reflux_ratio: bool,
+    has_petroleum_final_target: bool,
+    physical_solution: bool,
+    final_target_met: bool,
+    weak_operating_response: bool = False,
+) -> list[AddSpecRecommendation]:
     recs: list[AddSpecRecommendation] = []
     names_l = [n.lower() for n in existing_spec_names]
 
     def has_token(*tokens: str) -> bool:
         return any(any(t in n for t in tokens) for n in names_l)
 
-    # Already have the usual stripper set
+    has_draw = has_token(
+        "draw",
+        "ovhd",
+        "btms",
+        "bottoms",
+        "residue",
+        "kero",
+        "diesel",
+        "ago",
+        "naphtha",
+        "prod flow",
+        "prod rate",
+    )
+    has_pa = has_token(
+        "pump around",
+        "pumparound",
+        "pa duty",
+        "pa circ",
+        "pa_1",
+        "pa_2",
+        "pa_3",
+        "pa rate",
+    )
+
+    if has_draw and (has_reflux_ratio or has_pa or has_petroleum_final_target):
+        recs.append(
+            AddSpecRecommendation(
+                needed=False,
+                reason=(
+                    "CDU Active set present (draw and/or PA/reflux/cut) — "
+                    "do not Add Spec; adjust Active/Goal or recover numerically."
+                ),
+                action="use_existing",
+            )
+        )
+
+    if engineering_state.startswith("B") or not physical_solution:
+        if has_draw or has_pa or has_token("reflux"):
+            recs.append(
+                AddSpecRecommendation(
+                    needed=False,
+                    hysys_type_name="Column Draw Rate / Column Pump Around",
+                    short_id="draw_rate",
+                    reason=(
+                        "State B — use existing draw/PA/reflux as baseline Active "
+                        "(1-for-1 swap). Do not add new specs until physical."
+                    ),
+                    action="use_existing",
+                )
+            )
+        else:
+            recs.append(
+                AddSpecRecommendation(
+                    needed=True,
+                    hysys_type_name="Column Draw Rate",
+                    short_id="draw_rate",
+                    reason=(
+                        "No draw-rate spec found — recommend Add Spec: Column Draw Rate "
+                        "for a product draw (then pair with PA or reflux)."
+                    ),
+                    action="recommend_user_add",
+                )
+            )
+        return recs
+
+    if weak_operating_response and not final_target_met:
+        if not has_pa:
+            recs.append(
+                AddSpecRecommendation(
+                    needed=True,
+                    hysys_type_name="Column Pump Around",
+                    short_id="pump_around",
+                    reason=(
+                        "Weak response on current MVs / mid-cut miss — consider Add Spec: "
+                        "Column Pump Around (duty/circ), then 1-for-1 Active. "
+                        "COM auto-add not enabled."
+                    ),
+                    action="recommend_user_add",
+                )
+            )
+        if not has_draw:
+            recs.append(
+                AddSpecRecommendation(
+                    needed=True,
+                    hysys_type_name="Column Draw Rate",
+                    short_id="draw_rate",
+                    reason="Missing side-draw rate — recommend Add Spec: Column Draw Rate.",
+                    action="recommend_user_add",
+                )
+            )
+
+    if not has_petroleum_final_target and not has_token("cut", "gap", "astm", "d86", "tbp"):
+        recs.append(
+            AddSpecRecommendation(
+                needed=True,
+                hysys_type_name="Column Cut Point / Gap Cut Point",
+                short_id="cut_point",
+                reason=(
+                    "No petroleum cut/gap spec visible — recommend Add Spec for cut/gap "
+                    "as Monitor (FINAL_TARGET stays external/locked; do not GoalValue-spam)."
+                ),
+                action="recommend_user_add",
+            )
+        )
+
+    if not has_reflux_ratio and not has_token("reflux ratio"):
+        recs.append(
+            AddSpecRecommendation(
+                needed=True,
+                hysys_type_name="Column Reflux Ratio",
+                short_id="reflux_ratio",
+                reason="Missing Reflux Ratio — recommend Add Spec: Column Reflux Ratio (top section).",
+                action="recommend_user_add",
+            )
+        )
+
+    if not recs:
+        recs.append(
+            AddSpecRecommendation(
+                needed=False,
+                reason="No Add Spec recommended — work with existing specification set.",
+                action="none",
+            )
+        )
+    return recs
+
+
+def _recommend_add_spec_stripper(
+    *,
+    existing_spec_names: list[str],
+    engineering_state: str,
+    has_reflux_ratio: bool,
+    has_composition_final_target: bool,
+    physical_solution: bool,
+    final_target_met: bool,
+    weak_operating_response: bool = False,
+) -> list[AddSpecRecommendation]:
+    """Legacy SW Stripper when-to-add (COM shell validation)."""
+    recs: list[AddSpecRecommendation] = []
+    names_l = [n.lower() for n in existing_spec_names]
+
+    def has_token(*tokens: str) -> bool:
+        return any(any(t in n for t in tokens) for n in names_l)
+
     if has_reflux_ratio and has_composition_final_target:
         recs.append(
             AddSpecRecommendation(
@@ -407,7 +675,6 @@ def recommend_add_spec(
             )
         )
 
-    # State B: recommend using existing draw/liquid, not new exotic specs
     if engineering_state.startswith("B") or not physical_solution:
         if has_token("ovhd", "vap rate", "btms", "reflux rate"):
             recs.append(
@@ -438,7 +705,6 @@ def recommend_add_spec(
             )
         return recs
 
-    # Weak energy response while purity missed → recommend reboil/duty type if missing
     if weak_operating_response and not final_target_met:
         if not has_token("reboil", "boilup"):
             recs.append(
@@ -468,7 +734,6 @@ def recommend_add_spec(
                 )
             )
 
-    # Missing composition FINAL_TARGET entirely
     if not has_composition_final_target and not has_token("frac", "nh3", "ammonia"):
         recs.append(
             AddSpecRecommendation(
@@ -506,7 +771,7 @@ def recommend_add_spec(
 
 
 def stripper_priority_add_types() -> list[ColumnSpecTypeDef]:
-    """Types most relevant to SW Stripper, in PE priority order."""
+    """Legacy stripper priority order (COM shell)."""
     order = (
         "reflux_ratio",
         "comp_frac",
@@ -518,6 +783,28 @@ def stripper_priority_add_types() -> list[ColumnSpecTypeDef]:
         "comp_recovery",
         "temperature",
         "feed_ratio",
+    )
+    by_id = {s.short_id: s for s in HYSYS_ADD_SPEC_TYPES}
+    return [by_id[i] for i in order if i in by_id]
+
+
+def cdu_priority_add_types() -> list[ColumnSpecTypeDef]:
+    """Atmospheric CDU Add Spec priority order (T-100 lesson)."""
+    order = (
+        "draw_rate",
+        "pump_around",
+        "duty",
+        "liquid_flow",
+        "vapour_flow",
+        "reflux_ratio",
+        "cut_point",
+        "gap_cut",
+        "ep_cut",
+        "ep_gap",
+        "cold_properties",
+        "vap_pressure",
+        "temperature",
+        "reboil_ratio",
     )
     by_id = {s.short_id: s for s in HYSYS_ADD_SPEC_TYPES}
     return [by_id[i] for i in order if i in by_id]
@@ -561,10 +848,30 @@ def recommend_specs_summary_clicks(
                 return row
         return None
 
+    # CDU Specs Summary (T-100): keep RR Active OFF when draws/PAs already Active
+    rr = find("reflux ratio")
+    has_cdu_actives = any(
+        any(t in n for t in ("pa_", "kero", "diesel", "ago", "naphtha", "prod flow", "prod rate"))
+        and bool(r.get("is_active"))
+        for n, r in by_l.items()
+    )
+    if rr and rr.get("is_active") and has_cdu_actives:
+        clicks.append(
+            SpecsSummaryClick(
+                spec_name=str(rr["name"]),
+                set_active=False,
+                reason=(
+                    "Specs Summary (T-100): uncheck Active on Reflux Ratio — "
+                    "draws/PAs already hold DOF; prefer draw/PA GoalValue."
+                ),
+            )
+        )
+
     ovhd = find("ovhd") or find("vap rate")
     btms = find("btms") or find("bottoms")
     nh3 = find("nh3") or find("ammonia")
-    rr = find("reflux ratio")
+    if rr is None:
+        rr = find("reflux ratio")
 
     tiny_btms = (
         bottoms_flow_kgmole_h is not None
@@ -595,7 +902,7 @@ def recommend_specs_summary_clicks(
                     ),
                 )
             )
-        if rr and not rr.get("is_active"):
+        if rr and not rr.get("is_active") and not has_cdu_actives:
             clicks.append(
                 SpecsSummaryClick(
                     spec_name=str(rr["name"]),

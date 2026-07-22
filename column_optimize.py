@@ -1,5 +1,5 @@
 """
-Simple constrained optimization for Simple Column Assist v1.
+Simple constrained optimization for CDU Assist v1.
 
 Thin layer on top of existing PE intelligence — not a full NLP optimizer.
 

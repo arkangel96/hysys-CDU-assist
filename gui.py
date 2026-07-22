@@ -38,8 +38,14 @@ from trial_map_window import TrialMapWindow
 from intelligence_window import IntelligenceWindow
 from column_api import ColumnController
 from column_engine import ConvergenceAssistant, diagnose, format_connections_block, format_pe_board, score_state
+from cdu_monitor import format_monitor_block
+from cdu_specs import format_specs_page_block, format_specs_summary_block
+from cdu_subcooling import format_subcooling_block
+from cdu_side_ops import format_side_ops_block
+from cdu_rating import format_rating_block
 from column_models import ConvergenceLimits
 from exporter import export_workbook
+from column_spec_catalog import format_add_spec_hysys_steps, list_add_spec_names
 from hysys_api import HysysController, HysysError
 from ui_style import style_table_headers
 
@@ -244,7 +250,7 @@ class StatusChip(QFrame):
 
 
 class SimpleColumnAssist(QMainWindow):
-    """Desktop assist for simple distillation / stripping columns in HYSYS."""
+    """Desktop assist for CDU / atmospheric crude distillation in HYSYS."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -266,7 +272,7 @@ class SimpleColumnAssist(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self) -> None:
-        self.setWindowTitle("Simple Column Assist v1 — New Intelligence")
+        self.setWindowTitle("CDU Assist v1 — New Intelligence")
         self.setMinimumSize(1100, 700)
         self.setStyleSheet(DARK_THEME)
         app_font = QFont("Segoe UI", 8)
@@ -279,9 +285,9 @@ class SimpleColumnAssist(QMainWindow):
 
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 2)
-        logo = QLabel("SIMPLE COLUMN ASSIST v1")
+        logo = QLabel("CDU ASSIST v1")
         logo.setStyleSheet("font-size: 12pt; font-weight: 700; color: #58a6ff;")
-        subtitle = QLabel("New Intelligence · simple distillation & stripping · not CDU/VDU")
+        subtitle = QLabel("New Intelligence · atmospheric crude distillation · Tower Assist")
         subtitle.setStyleSheet("color: #8b949e; font-size: 8pt;")
         self.status = QLabel("● DISCONNECTED")
         self.status.setStyleSheet("color: #f85149; font-weight: 600; font-size: 8pt;")
@@ -538,14 +544,15 @@ class SimpleColumnAssist(QMainWindow):
         self._last_structural_recs: list[str] = []
         self._last_structural_payload: dict | None = None
 
-        # Page: Specs Summary (HYSYS Design → Specs Summary — Active / Estimate)
+        # Page: Specs Summary (HYSYS Design → Specs Summary)
         specs_page = QWidget()
         specs_layout = QVBoxLayout(specs_page)
         specs_layout.setContentsMargins(8, 8, 8, 8)
         specs_layout.setSpacing(6)
         specs_hint = QLabel(
-            "HYSYS Design → Specs Summary. Toggle Active / Estimate like HYSYS, then Apply. "
-            "Active = solver DOF. Estimate = IsUsedAsEstimate. NH₃ FINAL_TARGET should stay Active OFF."
+            "HYSYS Design → Specs Summary (T-100): Specified | Active | Current | "
+            "Fixed/Range | Prim/Alt. Est = Monitor Estimate (COM). "
+            "Toggle Active/Est, then Apply. Keep Reflux Ratio Active OFF on T-100."
         )
         specs_hint.setWordWrap(True)
         specs_hint.setStyleSheet("color: #8b949e; border: none; background: transparent;")
@@ -559,7 +566,7 @@ class SimpleColumnAssist(QMainWindow):
         specs_layout.addWidget(self.specs_clicks_label)
 
         specs_btns = QHBoxLayout()
-        self.apply_specs_button = QPushButton("Apply Active/Estimate → HYSYS")
+        self.apply_specs_button = QPushButton("Apply Active/Est → HYSYS")
         self.apply_specs_button.setObjectName("primaryAction")
         self.apply_recommended_specs_button = QPushButton("Apply Recommended Clicks")
         self.sync_spec_current_button = QPushButton("Sync Selected: Current → Goal")
@@ -574,6 +581,32 @@ class SimpleColumnAssist(QMainWindow):
         specs_btns.addStretch()
         specs_layout.addLayout(specs_btns)
 
+        add_row = QHBoxLayout()
+        add_row.addWidget(QLabel("Add Spec type"))
+        self.add_spec_combo = QComboBox()
+        self.add_spec_combo.addItems(list_add_spec_names())
+        # Prefer CDU-common types near top of combo for convenience — keep HYSYS order
+        idx = self.add_spec_combo.findText("Column Draw Rate")
+        if idx >= 0:
+            self.add_spec_combo.setCurrentIndex(idx)
+        add_row.addWidget(self.add_spec_combo, 1)
+        self.show_add_spec_steps_button = QPushButton("Show HYSYS Add… Steps")
+        self.try_add_spec_button = QPushButton("Try COM Add Spec (approve)")
+        self.try_add_spec_button.setObjectName("primaryAction")
+        add_row.addWidget(self.show_add_spec_steps_button)
+        add_row.addWidget(self.try_add_spec_button)
+        specs_layout.addLayout(add_row)
+        self.add_spec_steps_label = QLabel(
+            "Pick a Column Specification Type (same list as HYSYS Add Specs), "
+            "then Show Steps or Try COM Add with approval. "
+            "On T-100 DOF=0: deactivate one Active first or leave new spec Estimate-only."
+        )
+        self.add_spec_steps_label.setWordWrap(True)
+        self.add_spec_steps_label.setStyleSheet(
+            "color: #8b949e; border: none; background: transparent; font-size: 8pt;"
+        )
+        specs_layout.addWidget(self.add_spec_steps_label)
+
         self.specs_empty_hint = QLabel(
             "No specs loaded yet — click Inspect."
         )
@@ -585,16 +618,18 @@ class SimpleColumnAssist(QMainWindow):
         )
         specs_layout.addWidget(self.specs_empty_hint)
 
-        self.column_specs_table = QTableWidget(0, 6)
+        self.column_specs_table = QTableWidget(0, 8)
         style_table_headers(
             self.column_specs_table,
             (
                 "Specification",
                 "Specified",
                 "Active",
-                "Estimate",
                 "Current",
-                "Residual",
+                "Est",
+                "Fixed/Range",
+                "Prim/Alt",
+                "Family",
             ),
         )
         self.column_specs_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -604,7 +639,7 @@ class SimpleColumnAssist(QMainWindow):
         self.column_specs_table.verticalHeader().setVisible(False)
         header = self.column_specs_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
-        for col in range(1, 6):
+        for col in range(1, 8):
             header.setSectionResizeMode(col, QHeaderView.ResizeToContents)
         self.column_specs_table.setVisible(False)
         specs_layout.addWidget(self.column_specs_table, 1)
@@ -668,6 +703,8 @@ class SimpleColumnAssist(QMainWindow):
         self.sync_spec_current_button.clicked.connect(self.sync_selected_spec_current_to_goal)
         self.refresh_specs_button.clicked.connect(self.inspect_column)
         self.apply_structural_button.clicked.connect(self.apply_structural_with_approval)
+        self.show_add_spec_steps_button.clicked.connect(self.show_add_spec_steps)
+        self.try_add_spec_button.clicked.connect(self.try_add_spec_with_approval)
 
     def _toggle_timer(self, enabled: bool) -> None:
         self.timer.start() if enabled else self.timer.stop()
@@ -766,6 +803,8 @@ class SimpleColumnAssist(QMainWindow):
             self.sync_spec_current_button,
             self.refresh_specs_button,
             self.apply_structural_button,
+            self.show_add_spec_steps_button,
+            self.try_add_spec_button,
         ]
 
     def _set_column_busy(self, busy: bool, message: str = "") -> None:
@@ -857,10 +896,11 @@ class SimpleColumnAssist(QMainWindow):
                 detail += "\n• " + "\n• ".join(diagnosis.details[:8])
             if getattr(state, "bottoms_nh3_mass_frac", None) is not None:
                 detail += f"\n• Bottoms NH3 (stream)={state.bottoms_nh3_mass_frac:.4g}"
+            mu = getattr(state, "molar_flow_unit", "kgmole/h")
             if getattr(state, "overhead_molar_flow_kgmole_h", None) is not None:
-                detail += f"\n• Ovhd={state.overhead_molar_flow_kgmole_h:.4g} kgmole/h"
+                detail += f"\n• Ovhd={state.overhead_molar_flow_kgmole_h:.4g} {mu}"
             if getattr(state, "bottoms_molar_flow_kgmole_h", None) is not None:
-                detail += f"\n• Btms={state.bottoms_molar_flow_kgmole_h:.4g} kgmole/h"
+                detail += f"\n• Btms={state.bottoms_molar_flow_kgmole_h:.4g} {mu}"
             self.column_summary.setText(f"{diagnosis.severity.upper()}: {detail}")
             color = {"info": "#3fb950", "warn": "#f0883e", "critical": "#f85149"}.get(
                 diagnosis.severity, "#8b949e"
@@ -881,7 +921,21 @@ class SimpleColumnAssist(QMainWindow):
                 "border: 1px solid #30363d; border-radius: 2px; font-size: 8pt;"
             )
 
-        self.connections_text.setPlainText(format_connections_block(state))
+        self.connections_text.setPlainText(
+            format_connections_block(state)
+            + "\n\n"
+            + format_monitor_block(state)
+            + "\n\n"
+            + format_specs_page_block(state)
+            + "\n\n"
+            + format_specs_summary_block(state)
+            + "\n\n"
+            + format_subcooling_block(state)
+            + "\n\n"
+            + format_side_ops_block(state)
+            + "\n\n"
+            + format_rating_block(state)
+        )
         self._last_column_state = state
 
         if diagnosis is not None:
@@ -960,22 +1014,37 @@ class SimpleColumnAssist(QMainWindow):
                     Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
                 )
                 active_item.setCheckState(Qt.Checked if spec.is_active else Qt.Unchecked)
+                # Specs Summary "Current" checkbox (HYSYS)
+                current_chk = QTableWidgetItem("")
+                current_chk.setFlags(
+                    Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+                )
+                cur_on = bool(spec.summary_current or spec.use_as_current or spec.is_active)
+                if not spec.is_active and "reflux ratio" in spec.name.lower():
+                    cur_on = bool(spec.summary_current or spec.use_as_current)
+                current_chk.setCheckState(Qt.Checked if cur_on else Qt.Unchecked)
+                # Monitor Estimate (COM) — not on Specs Summary UI but useful to write
                 est_item = QTableWidgetItem("")
                 est_item.setFlags(
                     Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
                 )
                 est_on = spec.use_as_estimate is not False
                 est_item.setCheckState(Qt.Checked if est_on else Qt.Unchecked)
-                cur_item = QTableWidgetItem(_fmt(cur_v))
-                err_item = QTableWidgetItem(residual)
+                fixed_item = QTableWidgetItem(spec.fixed_or_ranged or ("Fixed" if spec.is_active else "—"))
+                prim_item = QTableWidgetItem(
+                    spec.primary_or_alternate or ("Primary" if spec.is_active else "—")
+                )
+                fam_item = QTableWidgetItem(getattr(spec, "mv_family", "") or "—")
                 if spec.is_active:
                     name_item.setForeground(QColor("#3fb950"))
                 self.column_specs_table.setItem(row, 0, name_item)
                 self.column_specs_table.setItem(row, 1, goal_item)
                 self.column_specs_table.setItem(row, 2, active_item)
-                self.column_specs_table.setItem(row, 3, est_item)
-                self.column_specs_table.setItem(row, 4, cur_item)
-                self.column_specs_table.setItem(row, 5, err_item)
+                self.column_specs_table.setItem(row, 3, current_chk)
+                self.column_specs_table.setItem(row, 4, est_item)
+                self.column_specs_table.setItem(row, 5, fixed_item)
+                self.column_specs_table.setItem(row, 6, prim_item)
+                self.column_specs_table.setItem(row, 7, fam_item)
                 self.column_specs_table.setRowHeight(row, 28)
 
         self.column_temp_plot.clear()
@@ -994,7 +1063,7 @@ class SimpleColumnAssist(QMainWindow):
         for row in range(self.column_specs_table.rowCount()):
             name_item = self.column_specs_table.item(row, 0)
             active_item = self.column_specs_table.item(row, 2)
-            est_item = self.column_specs_table.item(row, 3)
+            est_item = self.column_specs_table.item(row, 4)
             if name_item is None or active_item is None:
                 continue
             rows.append(
@@ -1007,6 +1076,90 @@ class SimpleColumnAssist(QMainWindow):
                 }
             )
         return rows
+
+    def show_add_spec_steps(self) -> None:
+        typ = self.add_spec_combo.currentText().strip()
+        col = self.column_combo.currentText().strip() or "T-100"
+        steps = format_add_spec_hysys_steps(typ, column_hint=col)
+        self.add_spec_steps_label.setText(steps)
+        self.add_spec_steps_label.setStyleSheet(
+            "color: #58a6ff; border: none; background: transparent; font-size: 8pt;"
+        )
+        self._column_assist_log(steps)
+
+    def try_add_spec_with_approval(self) -> None:
+        """Approval-gated COM Add Spec — falls back to HYSYS UI steps if COM fails."""
+        typ = self.add_spec_combo.currentText().strip()
+        try:
+            name = self._selected_column()
+        except Exception as exc:
+            self._show_error(exc)
+            return
+
+        state = getattr(self, "_last_column_state", None)
+        dof = getattr(state, "degrees_of_freedom", None) if state else None
+        warn_dof = ""
+        allow_zero = False
+        if dof == 0:
+            warn_dof = (
+                "\n\nWARNING: DOF is already 0. Adding an Active spec over-specifies.\n"
+                "Prefer: deactivate one Active (1-for-1), or leave the new spec Estimate-only.\n"
+            )
+            reply0 = QMessageBox.question(
+                self,
+                "DOF already 0",
+                "Column DOF is 0 (like T-100).\n\n"
+                "Continue and allow COM Add anyway?\n"
+                "(You must keep DOF healthy — Estimate-only or 1-for-1 swap.)"
+                + warn_dof,
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if reply0 != QMessageBox.Yes:
+                self.show_add_spec_steps()
+                return
+            allow_zero = True
+
+        steps = format_add_spec_hysys_steps(typ, column_hint=name)
+        reply = QMessageBox.question(
+            self,
+            "Approve Add Spec?",
+            "Create a new column specification in HYSYS?\n\n"
+            f"Column: {name}\n"
+            f"Type: {typ}\n"
+            f"{warn_dof}\n"
+            "This is approval-gated (not silent). If COM Add is unsupported on your "
+            "HYSYS build, Assist will show the exact Specs → Add… click steps.\n\n"
+            f"{steps}",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        def work() -> None:
+            try:
+                notes = self.column_api.add_specification(
+                    name,
+                    typ,
+                    approved=True,
+                    allow_when_dof_zero=allow_zero,
+                )
+                self._column_assist_log("Add Spec:\n  " + "\n  ".join(notes))
+                self.add_spec_steps_label.setText("Add Spec OK:\n" + "\n".join(notes))
+                self.add_spec_steps_label.setStyleSheet(
+                    "color: #3fb950; border: none; background: transparent; font-size: 8pt;"
+                )
+                self.inspect_column()
+            except Exception as exc:
+                text = str(exc)
+                self.add_spec_steps_label.setText(text)
+                self.add_spec_steps_label.setStyleSheet(
+                    "color: #f0883e; border: none; background: transparent; font-size: 8pt;"
+                )
+                raise
+
+        self._run_column_job("Add Spec (approved)", work)
 
     def apply_structural_with_approval(self) -> None:
         """Mechanical Connections write — QMessageBox confirm required."""
@@ -1346,6 +1499,11 @@ class SimpleColumnAssist(QMainWindow):
             self._show_error(exc)
 
     def _update_plots(self) -> None:
+        units = self.controller.display_units if self.controller.connected else None
+        if units is not None:
+            self.temperature_plot.setTitle(f"Stream Temperatures ({units.temperature})")
+            self.pressure_plot.setTitle(f"Stream Pressures ({units.pressure})")
+            self.flow_plot.setTitle(f"Stream Molar Flows ({units.molar_flow})")
         specs = (
             (self.temperature_plot, [x.temperature for x in self.stream_data], "#f0883e"),
             (self.pressure_plot, [x.pressure for x in self.stream_data], "#58a6ff"),
@@ -1379,7 +1537,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def _show_error(self, error: Exception) -> None:
         self.log(f"ERROR: {error}")
-        QMessageBox.critical(self, "Simple Column Assist v1", str(error))
+        QMessageBox.critical(self, "CDU Assist v1", str(error))
 
 
 # Backward-compatible alias

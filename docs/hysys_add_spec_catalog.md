@@ -1,12 +1,15 @@
-# HYSYS Add Spec catalog (SW Stripper capture)
+# HYSYS Add Spec catalog — CDU Assist
 
-**Source:** Aspen HYSYS dialog *Add Specs – SW Stripper (COL1)* / Column Specification Types  
+**Product:** CDU Assist v1 — New Intelligence  
 **Code:** `column_spec_catalog.py`  
-**Policy:** Catalog + **when to add** intelligence is coded. **COM auto-Add is not executed** until validated — Assist **recommends**; you add in HYSYS if needed.
+**Policy:** Catalog + **when to add** intelligence. **COM auto-Add is not executed** until validated — Assist **recommends**; engineer adds in HYSYS if needed.
+
+**Source dialog:** Aspen HYSYS *Add Specs - T-100 / COL1* / Column Specification Types (capture 2026-07-22)  
+**Reference JSON:** `config/cdu_t100_add_specs_reference.json`
 
 ---
 
-## Full Add Spec list (from your screenshot)
+## Full Add Spec list (HYSYS column types)
 
 1. Column Cold Properties Spec  
 2. Column Component Flow  
@@ -43,15 +46,43 @@
 
 ---
 
-## When to add (PE intelligence — stripper)
+## T-100 Monitor → Add Spec type map
+
+| Monitor name (example) | HYSYS Add Spec type |
+|------------------------|---------------------|
+| Kero/Diesel/AGO_SS Prod Flow, Naphtha Prod Rate | Column Draw Rate |
+| PA_*_Rate(Pa) | Column Pump Around |
+| PA_*_Duty(Pa), Kero Reb Duty | Column Duty (+ PA family) |
+| Liquid Flow | Column Liquid Flow |
+| Vap Prod Flow | Column Vapour Flow |
+| Reflux Ratio (Estimate) | Column Reflux Ratio |
+
+---
+
+## When to add (PE intelligence — atmospheric CDU)
 
 | Situation | Prefer | Action |
 |-----------|--------|--------|
-| Normal SW Stripper | Reflux Ratio + Component Fraction (NH₃) | Use **existing** — don’t Add |
-| State B (dead solve) | Draw Rate / Liquid Flow already on column | **Activate** existing Ovhd/Reflux Rate — don’t Add |
-| Weak RR response, NH₃ missed | Reboil Ratio or Duty | **Recommend Add** (user) then 1-for-1 Active |
-| No composition spec at all | Component Fraction | **Recommend Add** |
-| Petroleum cut/gap/PA/VP | — | **Not for this stripper** |
+| Healthy CDU, DOF = 0 (T-100) | Existing draw / PA / duty / liquid / vap set | Use **existing** — don’t Add |
+| State B (dead / wild solve) | Existing Draw / PA / Duty already on column | **Activate / Estimate** existing — don’t Add first |
+| Yield wrong, quality OK-ish | Draw Rate on governing product | Prefer Active draw GoalValue; Add only if missing |
+| Mid-cut / section traffic weak | Pump Around rate/duty | **Recommend Add** PA only if circuit missing, then 1-for-1 Active |
+| Cut / ASTM / gap miss (FINAL_TARGET locked) | Cut Point / Gap / EP Cut / Cold Props / RVP | Spec may exist as Monitor; **do not** turn locked plant target into free GoalValue spam |
+| Light-end miss | Naphtha Draw / Vap Prod / RR Estimate | Prefer existing; RR last on CDU |
+| Residue / stripper quality | Steam / Kero Reb Duty | Prefer existing duty/steam — don’t relax cut |
+| DOF = 0 already | — | **Never** auto-Add Active; recommend 1-for-1 swap only |
+
+---
+
+## DOF reminder (multi-product)
+
+Atmospheric towers often carry **many** Active specs (draws + PAs + duties + liquid + vap).  
+Before recommending Add:
+
+1. Count DOF.  
+2. Prefer Activate / Estimate / 1-for-1 swap.  
+3. Add only when the needed MV type is **absent**.  
+4. Keep FINAL_TARGETs external/locked.
 
 ---
 
@@ -61,8 +92,10 @@
 from column_spec_catalog import (
     HYSYS_ADD_SPEC_TYPES,
     recommend_add_spec,
-    stripper_priority_add_types,
+    cdu_priority_add_types,
+    match_existing_spec_to_type,
 )
 ```
 
-Diagnose PE board now includes **ADD SPEC intelligence** lines.
+Diagnose PE board may include **ADD SPEC intelligence** lines (recommend only).  
+Intelligence window → **Add Spec Catalog** shows CDU when-to-add + T-100 examples.

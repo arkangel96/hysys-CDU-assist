@@ -1,25 +1,26 @@
-# Case: Simple Column Assist v1 — New Intelligence
+# Case: CDU Assist v1 — New Intelligence
 
-**Product:** Simple Column Assist  
+**Product:** CDU Assist  
 **Version / line:** v1.0 — New Intelligence  
-**GitHub repo:** `arkangel96/simple-column-assist-v1-new-intelligence` (standalone — **not** inside `simple-column-assist`)  
-**Domain:** Aspen HYSYS simple distillation / stripping (not CDU, not VDU)  
+**GitHub repo:** `arkangel96/hysys-CDU-assist` (standalone)  
+**Domain:** Aspen HYSYS CDU / atmospheric crude distillation (not simple column, not VDU)  
 **Document role:** Case description for this product line — keep separate from other tower tools and from RR-only lab notes.
 
 ---
 
 ## 1. What this case is
 
-This repository line is an **external Windows COM assist** for **simple columns** in Aspen HYSYS:
+This repository line is an **external Windows COM assist** for **CDU / atmospheric crude towers** in Aspen HYSYS:
 
-- Typically **two main products** (e.g. overhead vapor + bottoms liquid)
-- Few components (validated on **sour-water stripper**: H₂S / NH₃ / H₂O)
+- Multi-product atmospheric fractionator (side draws, pumparounds, cut points)
 - Engineer workflow: connect → inspect → diagnose → bounded trials → keep/reverse
 - Intelligence goal: judge like a **senior process / simulation engineer**, not a blind GoalValue optimizer
 
-**Display name:** Simple Column Assist v1 — New Intelligence  
+**Display name:** CDU Assist v1 — New Intelligence  
 
 It is **not** an AspenTech product. HYSYS remains the thermodynamics and solver engine.
+
+**Legacy simple-column validation note:** COM adapters, States A–F, and Trial Map were first validated on an SW Stripper (sour-water) case. Stripper-specific numbers below are historical proof of the intelligence shell — retarget for CDU crude cuts / ASTM / TBP as CDU features land.
 
 ---
 
@@ -27,30 +28,39 @@ It is **not** an AspenTech product. HYSYS remains the thermodynamics and solver 
 
 | Out of scope | Why separate |
 |--------------|--------------|
-| **CDU Assist** | Many side draws, pumparounds, cut points / ASTM / TBP |
+| **Simple Column Assist** | 2-product distillation / stripping |
 | **VDU Assist** | Vacuum fractionator family — later tool |
 | Generic “all HYSYS” studio | Wrong click map and wrong PE rules |
 | Auto-save of `.hsc` | Engineer owns Save in HYSYS |
 | Auto-Add Active specs when DOF = 0 | Recommend only |
 | Auto-relax plant FINAL_TARGETs | Locked unless user allows |
 
-Do **not** mix this case documentation with CDU/VDU case folders or with one-off lab scripts that only exercise a single knob for experiments.
+Do **not** mix this case documentation with simple-column / VDU case folders or with one-off lab scripts that only exercise a single knob for experiments.
 
 ---
 
-## 3. Reference HYSYS column (validated)
+## 3. Reference HYSYS column
+
+### 3.1 Product reference (CDU — target)
 
 | Item | Description |
 |------|-------------|
-| Example unit | **SW Stripper** (sour-water stripper) |
-| Style | Full-reflux stripper |
-| Stages | 8 (typical validated setup) |
-| Feed stage | ~3 |
-| Products | Off-gas (ovhd) + stripper bottoms |
-| Plant-style FINAL_TARGET | Bottoms NH₃ ≤ **50 ppmw** (5e‑5 mass frac), locked |
-| Typical healthy Active set | Reflux Ratio + Bottoms product rate (DOF = 0) |
+| Example unit | Atmospheric crude tower (e.g. case `Atmospheric Crude Tower.hsc` when used) |
+| Products | OVHD / naphtha, side draws (kero / diesel / AGO as configured), atmospheric residue |
+| Internals focus | Side draws, pumparounds, optional side strippers / steam, flash / overflash context |
+| Plant-style FINAL_TARGETs | Multi-product ASTM D86 / TBP / cut / gap / cold props — **locked** |
+| Typical Active set | Condenser-appropriate top energy + draw rates + PA duties (DOF = 0); cuts often Monitor |
 
-Other simple columns (stabilizer, depropanizer, etc.) can reuse the **same intelligence shell**; default targets/heuristics must be retargeted — do not assume NH₃ forever.
+### 3.2 Legacy COM validation (not CDU physics)
+
+| Item | Description |
+|------|-------------|
+| Example unit | **SW Stripper** (sour-water) — shell proof only |
+| Style | Full-reflux stripper, ~8 stages, feed ~3 |
+| FINAL_TARGET used | Bottoms NH₃ ≤ **50 ppmw** (5e‑5) |
+| Healthy Active set then | Reflux Ratio + Bottoms product rate |
+
+Default targets/heuristics for Assist code must be **retargeted to §3.1** — do not ship NH₃ as the CDU plant model.
 
 ---
 
@@ -65,11 +75,12 @@ Other simple columns (stabilizer, depropanizer, etc.) can reuse the **same intel
 | Family | Role |
 |--------|------|
 | **A_init** | Estimates, Active/Estimate philosophy, numerical recovery |
-| **B_energy** | Reflux ratio / reflux flow / boilup / duties |
-| **C_split** | Overhead / distillate / bottoms rates |
-| **D_target** | Product FINAL_TARGET — monitor / locked |
-| **E_feed** | Feed context (usually user / log) |
-| **F_structural** | Feed stage, stages, pressure — approval-only |
+| **B_energy** | Top reflux / OVHD energy **and** pumparound duty / circ / return T |
+| **C_split** | Side-draw rates, OVHD / residue rates |
+| **C2_steam** | Stripping steam (main / side strippers) |
+| **D_target** | Multi-product FINAL_TARGET (ASTM/cut/gap) — monitor / locked |
+| **E_feed** | Feed / assay / furnace–overflash context (usually user / log) |
+| **F_structural** | Feed / draw / PA stages, stage count, pressure — approval-only |
 
 ### 4.2 HYSYS awareness (clues)
 - **Modal popups** (e.g. invalid Ovhd draw > feed) → detect, log, use as PE evidence, dismiss OK so multi-run is not stuck  
@@ -86,11 +97,11 @@ Other simple columns (stabilizer, depropanizer, etc.) can reuse the **same intel
 
 | Doc | Purpose |
 |-----|---------|
-| [`SCOPE_SIMPLE_COLUMN_ASSIST.md`](SCOPE_SIMPLE_COLUMN_ASSIST.md) | Product identity & boundaries |
+| [`SCOPE_CDU_ASSIST.md`](SCOPE_CDU_ASSIST.md) | Product identity & boundaries |
 | [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) | Coded vs paper vs planned |
 | [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) | ChemE family iteration map |
 | [`expert_decision_workflow.md`](expert_decision_workflow.md) | Master PE bible (States A–F) |
-| [`column_convergence_playbook.md`](column_convergence_playbook.md) | SW Stripper operational / COM slice |
+| [`column_convergence_playbook.md`](column_convergence_playbook.md) | Operational / COM slice *(legacy SW Stripper)* |
 | [`../new_intelligence/00_COMPLEMENTARY_INTRO.md`](../new_intelligence/00_COMPLEMENTARY_INTRO.md) | Complementary PE OS package (does **not** supersede) |
 
 ---
@@ -111,7 +122,7 @@ Other simple columns (stabilizer, depropanizer, etc.) can reuse the **same intel
 ## 7. How to run (this case)
 
 ```powershell
-# HYSYS case open first (simple column / SW Stripper)
+# HYSYS case open first (CDU / atmospheric crude tower)
 cd <this-repo>
 .\.venv\Scripts\Activate.ps1
 python main.py
@@ -139,10 +150,10 @@ Otherwise report State A/B/C/D/F with evidence — including HYSYS popup and Mes
 
 ## 9. Maintenance rule
 
-- Updates to **this product** stay under Simple Column Assist v1 New Intelligence.  
-- CDU / VDU get **separate** case docs and repos/folders.  
+- Updates to **this product** stay under CDU Assist v1 New Intelligence.  
+- Simple Column / VDU get **separate** case docs and repos/folders.  
 - Do not file unrelated experiment notes into this case file.
 
 ---
 
-*Case description created 2026-07-22 for GitHub tracking of Simple Column Assist v1 — New Intelligence.*
+*Case description created 2026-07-22 for GitHub tracking of CDU Assist v1 — New Intelligence.*

@@ -7,10 +7,17 @@ from column_models import (
     ColumnSnapshot,
     ColumnSpecState,
     ColumnState,
+    ConnectionStreamRow,
     SpecRole,
     StageProfile,
 )
 from hysys_api import HysysController, HysysError
+from hysys_units import scale_si_to_display, _unit_label, _get_value
+from cdu_connections import apply_connection_roles, infer_phase_type
+from cdu_monitor import apply_monitor_spec_roles, classify_monitor_spec, default_unit_for_family
+from cdu_subcooling import read_subcooling_from_com
+from cdu_side_ops import apply_side_ops_read
+from cdu_rating import apply_rating_read
 
 
 def is_sentinel(value: Any) -> bool:
@@ -51,15 +58,15 @@ def _looks_like_molar_rate_spec(name: str, type_name: str = "") -> bool:
 
 
 def _si_kgmole_s_to_h(value: float | None) -> float | None:
+    """Legacy metric-only fallback when HYSYS unit discovery is unavailable."""
     if value is None or is_sentinel(value):
         return None
-    # HYSYS COM GoalValue for molar rates is typically kgmole/s
     if abs(value) < 500:  # heuristic: large worksheet values already in /h
         return value * 3600.0
     return value
 
 
-def _pressure_bar(obj: Any, *members: str) -> float | None:
+def _pressure_in_unit(obj: Any, unit: str, *members: str) -> float | None:
     for member in members:
         try:
             prop = getattr(obj, member, None)
@@ -69,26 +76,29 @@ def _pressure_bar(obj: Any, *members: str) -> float | None:
             continue
         try:
             if hasattr(prop, "GetValue"):
-                for unit in ("bar", "bara", "barg"):
-                    try:
-                        value = float(prop.GetValue(unit))
-                        if not is_sentinel(value):
-                            return value
-                    except Exception:
-                        continue
+                try:
+                    value = float(prop.GetValue(unit))
+                    if not is_sentinel(value):
+                        return value
+                except Exception:
+                    for alt in ("bar", "bara", "barg", "psia", "psig", "kPa"):
+                        try:
+                            value = float(prop.GetValue(alt))
+                            if not is_sentinel(value):
+                                return value
+                        except Exception:
+                            continue
             value = float(prop)
             if is_sentinel(value):
                 continue
-            # Assume Pa if huge
-            if abs(value) > 1e4:
-                return value / 1e5
-            # Assume kPa if mid
-            if abs(value) > 50:
-                return value / 100.0
             return value
         except Exception:
             continue
     return None
+
+
+def _pressure_bar(obj: Any, *members: str) -> float | None:
+    return _pressure_in_unit(obj, "bar", *members)
 
 
 def _map_condenser_type(raw: Any) -> str:
@@ -209,12 +219,23 @@ class ColumnController:
         cfs = self._column_flowsheet(column)
         ts = self._main_tray_section(cfs)
 
+        try:
+            self.hysys.refresh_display_units()
+        except Exception:
+            pass
+        du = getattr(self.hysys, "display_units", None)
         state = ColumnState(
             name=str(column.Name),
             flowsheet_tag=str(_safe_get(cfs, "Name") or ""),
             type_name=str(_safe_get(column, "TypeName") or "distillation"),
             degrees_of_freedom=_safe_get(cfs, "DegreesOfFreedom"),
             reflux_ratio=_number(cfs, "RefluxRatio"),
+            temperature_unit=getattr(du, "temperature", "C") if du else "C",
+            pressure_unit=getattr(du, "pressure", "bar") if du else "bar",
+            molar_flow_unit=getattr(du, "molar_flow", "kgmole/h") if du else "kgmole/h",
+            mass_flow_unit=getattr(du, "mass_flow", "kg/h") if du else "kg/h",
+            volume_flow_unit=getattr(du, "volume_flow", "USGPM") if du else "USGPM",
+            energy_unit=getattr(du, "energy", "Btu/hr") if du else "Btu/hr",
         )
         if isinstance(state.degrees_of_freedom, bool):
             state.degrees_of_freedom = int(state.degrees_of_freedom)
@@ -224,10 +245,11 @@ class ColumnController:
             except Exception:
                 state.degrees_of_freedom = None
 
-        # Connections
+        # Connections — AttachedFeeds / AttachedProducts + stage map for full table
         for attr, target in (
             ("TopVapourProduct", "top_vapour_product"),
             ("BtmLiquidProduct", "bottoms_liquid_product"),
+            ("TopLiquidProduct", "overhead_liquid_product"),
         ):
             stream = _safe_get(column, attr)
             if stream is not None:
@@ -235,25 +257,72 @@ class ColumnController:
                     setattr(state, target, str(stream.Name))
                 except Exception:
                     pass
+        self._last_top_product = state.top_vapour_product
+        self._last_btms_product = state.bottoms_liquid_product
+
+        stage_by_stream = self._build_stage_label_map(column, cfs, ts)
 
         feeds = _safe_get(column, "AttachedFeeds")
         products = _safe_get(column, "AttachedProducts")
         if feeds is not None:
             for item in _items(feeds):
                 name = str(item.Name)
-                type_name = str(_safe_get(item, "TypeName") or "").lower()
-                if "energy" in type_name:
+                type_name = str(_safe_get(item, "TypeName") or "")
+                is_energy = "energy" in type_name.lower()
+                if is_energy:
                     state.energy_streams.append(name)
                 else:
                     state.feed_streams.append(name)
+                stage_label = stage_by_stream.get(name.lower(), "")
+                if not stage_label:
+                    stage_label = self._stage_label_from_attachment(item)
+                vf = self._stream_vapor_fraction(name) if not is_energy else None
+                phase = infer_phase_type(
+                    name=name,
+                    is_energy=is_energy,
+                    type_name=type_name,
+                    vapor_frac=vf,
+                )
+                state.inlet_rows.append(
+                    ConnectionStreamRow(
+                        name=name,
+                        external_name=name,
+                        stage_label=stage_label,
+                        phase_type=phase,
+                        direction="inlet",
+                    )
+                )
         if products is not None:
             for item in _items(products):
                 name = str(item.Name)
-                type_name = str(_safe_get(item, "TypeName") or "").lower()
-                if "energy" in type_name:
-                    state.energy_streams.append(name)
+                type_name = str(_safe_get(item, "TypeName") or "")
+                is_energy = "energy" in type_name.lower()
+                if is_energy:
+                    if name not in state.energy_streams:
+                        state.energy_streams.append(name)
                 else:
                     state.product_streams.append(name)
+                stage_label = stage_by_stream.get(name.lower(), "")
+                if not stage_label:
+                    stage_label = self._stage_label_from_attachment(item)
+                vf = self._stream_vapor_fraction(name) if not is_energy else None
+                water = "waste water" in name.lower() or "wastewater" in name.lower()
+                phase = infer_phase_type(
+                    name=name,
+                    is_energy=is_energy,
+                    type_name=type_name,
+                    vapor_frac=vf,
+                    water_draw=water,
+                )
+                state.outlet_rows.append(
+                    ConnectionStreamRow(
+                        name=name,
+                        external_name=name,
+                        stage_label=stage_label,
+                        phase_type=phase,
+                        direction="outlet",
+                    )
+                )
 
         # Stages / feed location / Connections pressures
         if ts is not None:
@@ -293,31 +362,35 @@ class ColumnController:
                 temperatures=_list_numbers(ts, "Temperature", "TemperatureValue", "StageTemperature"),
                 pressures=_list_numbers(ts, "Pressure", "PressureValue", "StagePressure"),
             )
-            # Pressures from tray section or profile ends
-            state.condenser_pressure_bar = _pressure_bar(
-                ts, "TopPressure", "CondenserPressure", "Pressure"
+            # Pressures in HYSYS worksheet unit (field names *_bar are historical)
+            p_u = state.pressure_unit
+            state.condenser_pressure_bar = _pressure_in_unit(
+                ts, p_u, "TopPressure", "CondenserPressure", "Pressure"
             )
-            state.reboiler_pressure_bar = _pressure_bar(
-                ts, "BottomPressure", "ReboilerPressure"
+            state.reboiler_pressure_bar = _pressure_in_unit(
+                ts, p_u, "BottomPressure", "ReboilerPressure"
             )
-            state.condenser_dp_bar = _pressure_bar(ts, "TopPressureDrop", "CondenserPressureDrop")
-            state.reboiler_dp_bar = _pressure_bar(
-                ts, "BottomPressureDrop", "ReboilerPressureDrop"
+            state.condenser_dp_bar = _pressure_in_unit(
+                ts, p_u, "TopPressureDrop", "CondenserPressureDrop"
+            )
+            state.reboiler_dp_bar = _pressure_in_unit(
+                ts, p_u, "BottomPressureDrop", "ReboilerPressureDrop"
             )
             if state.profile.pressures:
+                # Profile arrays are often raw; prefer stream GetValue when missing
                 if state.condenser_pressure_bar is None:
                     top_p = state.profile.pressures[0]
                     if not is_sentinel(top_p):
-                        # profile often kPa
-                        state.condenser_pressure_bar = (
-                            top_p / 100.0 if top_p > 50 else top_p
-                        )
+                        state.condenser_pressure_bar = float(top_p)
                 if state.reboiler_pressure_bar is None:
                     bot_p = state.profile.pressures[-1]
                     if not is_sentinel(bot_p):
-                        state.reboiler_pressure_bar = (
-                            bot_p / 100.0 if bot_p > 50 else bot_p
-                        )
+                        state.reboiler_pressure_bar = float(bot_p)
+
+        # Role map + prefer Atm Feed / Residue / Off Gas / Naphtha when present
+        apply_connection_roles(state)
+        self._last_top_product = state.top_vapour_product
+        self._last_btms_product = state.bottoms_liquid_product
 
         # Condenser type (Connections)
         for obj in (column, cfs, ts):
@@ -341,6 +414,25 @@ class ColumnController:
             if not has_liquid_dist:
                 state.condenser_type = "Full Reflux (inferred)"
 
+        # Design → Subcooling (condenser)
+        sub = read_subcooling_from_com(column, cfs, ts)
+        state.condenser_subcool_degrees = sub.get("degrees")
+        state.condenser_subcool_to = sub.get("subcool_to")
+        state.condenser_subcool_to_mode = str(sub.get("subcool_to_mode") or "")
+
+        # Design → Side Ops (strippers / PAs / side draws)
+        apply_side_ops_read(
+            state,
+            column,
+            cfs,
+            ts,
+            stream_molar=lambda n: self._stream_flow_display(n),
+            stream_mass=lambda n: self._stream_mass_flow_display(n),
+        )
+
+        # Rating tab (Towers / Vessels / Equipment / Pressure Drop)
+        apply_rating_read(state, column, cfs, ts)
+
         # Monitor iteration / eqm / heat-spec residuals (COM names)
         if cfs is not None:
             try:
@@ -353,9 +445,31 @@ class ColumnController:
             state.monitor_heat_spec_error = _number(cfs, "HeatSpecError")
             state.monitor_step = _number(cfs, "StepSize", "Step")
 
-        # Specs (Monitor / Specs page)
+        # Specs (Design → Specs list + Monitor table — same COM collection)
+        if cfs is not None:
+            for attr in ("DefaultBasis", "SpecBasis", "Basis", "FlowBasis"):
+                raw = _safe_get(cfs, attr)
+                if raw is None:
+                    continue
+                text = str(raw).strip()
+                if text and not text.startswith("<"):
+                    # Map common COM enums
+                    if text in {"0", "Molar"}:
+                        state.default_spec_basis = "Molar"
+                    elif text in {"1", "Mass"}:
+                        state.default_spec_basis = "Mass"
+                    elif text in {"2", "LiquidVol", "Liquid Volume", "StdIdealLiqVol"}:
+                        state.default_spec_basis = text
+                    else:
+                        state.default_spec_basis = text
+                    break
+            if not state.default_spec_basis:
+                state.default_spec_basis = "Molar"  # T-100 screenshot default
+
         specs = _safe_get(cfs, "Specifications")
         if specs is not None:
+            from cdu_specs import _map_fixed_ranged, _map_primary_alternate
+
             for spec in _items(specs):
                 is_active = bool(_bool(spec, "IsActive", "Active") or False)
                 use_est = _bool(spec, "IsUsedAsEstimate", "IsEstimate", "UseAsEstimate", "Estimate")
@@ -366,23 +480,60 @@ class ColumnController:
                     use_cur = is_active
                 goal = _number(spec, "GoalValue")
                 current = _number(spec, "CurrentValue")
-                error = _number(spec, "Error", "ErrorValue", "WeightedError")
+                error = _number(spec, "Error", "ErrorValue", "WeightedError", "WeightedCalculatedError")
                 tol = _number(spec, "Tolerance", "WeightedTolerance", "WeightedToleranceValue")
+                abs_tol = _number(spec, "AbsoluteTolerance", "AbsTolerance")
+                abs_err = _number(spec, "AbsoluteError", "AbsError", "AbsoluteCalculatedError")
+                lower_b = _number(spec, "LowerBound", "LowerLimit", "Lower")
+                upper_b = _number(spec, "UpperBound", "UpperLimit", "Upper")
+                dry = _bool(
+                    spec,
+                    "IsDryFlowBasis",
+                    "DryFlowBasis",
+                    "IsDryBasis",
+                    "DryBasis",
+                )
+                fixed_raw = _safe_get(spec, "FixedOrRanged")
+                if fixed_raw is None:
+                    fixed_raw = _safe_get(spec, "IsFixed")
+                if fixed_raw is None:
+                    fixed_raw = _safe_get(spec, "SpecMode")
+                primary_raw = _safe_get(spec, "PrimaryOrAlternate")
+                if primary_raw is None:
+                    primary_raw = _safe_get(spec, "IsPrimary")
+                if primary_raw is None:
+                    primary_raw = _safe_get(spec, "IsAlternate")
+                    if primary_raw is not None:
+                        # invert alternate flag if that's what we got
+                        try:
+                            primary_raw = not bool(primary_raw)
+                        except Exception:
+                            pass
+                spec_conv = _bool(spec, "IsConverged", "Converged", "SpecConverged")
                 type_name = str(_safe_get(spec, "TypeName") or "")
                 name = str(spec.Name)
-                goal_disp = None
-                cur_disp = None
-                disp_unit = ""
-                if _looks_like_molar_rate_spec(name, type_name):
-                    goal_disp = _si_kgmole_s_to_h(goal)
-                    cur_disp = _si_kgmole_s_to_h(current)
-                    disp_unit = "kgmole/h"
+                family, unit_cands = classify_monitor_spec(name, type_name)
+                goal_disp, cur_disp, disp_unit = self._spec_worksheet_display(
+                    spec, goal, current, family, unit_cands
+                )
+                molar_u = self._molar_flow_unit()
+                if not disp_unit and _looks_like_molar_rate_spec(name, type_name):
+                    goal_disp = self._molar_goal_display(goal)
+                    cur_disp = self._molar_goal_display(current)
+                    disp_unit = molar_u
                 if is_active:
                     role = SpecRole.ACTIVE_SPEC
                 elif goal is None and current is not None:
                     role = SpecRole.INACTIVE_ESTIMATE
                 else:
                     role = SpecRole.CALCULATED
+                fixed_s = _map_fixed_ranged(fixed_raw)
+                prim_s = _map_primary_alternate(primary_raw)
+                # Specs Summary T-100: Active rows show Fixed / Primary
+                if not fixed_s and is_active:
+                    fixed_s = "Fixed"
+                if not prim_s and (is_active or use_cur):
+                    prim_s = "Primary"
                 state.specs.append(
                     ColumnSpecState(
                         name=name,
@@ -397,10 +548,21 @@ class ColumnController:
                         goal_display=goal_disp,
                         current_display=cur_disp,
                         display_unit=disp_unit,
+                        mv_family=family,
                         role=role,
                         summary_current=use_cur,
+                        dry_flow_basis=dry,
+                        fixed_or_ranged=fixed_s,
+                        primary_or_alternate=prim_s,
+                        absolute_tolerance=abs_tol,
+                        absolute_error=abs_err,
+                        spec_converged=spec_conv,
+                        lower_bound=lower_b,
+                        upper_bound=upper_b,
                     )
                 )
+
+        apply_monitor_spec_roles(state, display_units=du)
 
         active_errors = [s.score_error() for s in state.active_specs()]
         state.max_active_spec_error = max(active_errors) if active_errors else 0.0
@@ -423,42 +585,45 @@ class ColumnController:
         if state.top_vapour_product:
             state.overhead_molar_flow = self._stream_flow(state.top_vapour_product)
             state.overhead_temperature = self._stream_temperature(state.top_vapour_product)
+            molar_u = self._molar_flow_unit()
             state.overhead_molar_flow_kgmole_h = self._stream_flow_unit(
-                state.top_vapour_product, "kgmole/h"
+                state.top_vapour_product, molar_u
             )
             if state.condenser_pressure_bar is None:
-                state.condenser_pressure_bar = self._stream_pressure_bar(
+                state.condenser_pressure_bar = self._stream_pressure_display(
                     state.top_vapour_product
                 )
         if state.bottoms_liquid_product:
             state.bottoms_molar_flow = self._stream_flow(state.bottoms_liquid_product)
             state.bottoms_temperature = self._stream_temperature(state.bottoms_liquid_product)
+            molar_u = self._molar_flow_unit()
             state.bottoms_molar_flow_kgmole_h = self._stream_flow_unit(
-                state.bottoms_liquid_product, "kgmole/h"
+                state.bottoms_liquid_product, molar_u
             )
             state.bottoms_nh3_mass_frac = self.read_component_mass_fraction(
                 state.bottoms_liquid_product, ("ammonia", "nh3")
             )
             if state.reboiler_pressure_bar is None:
-                state.reboiler_pressure_bar = self._stream_pressure_bar(
+                state.reboiler_pressure_bar = self._stream_pressure_display(
                     state.bottoms_liquid_product
                 )
 
-        # Prefer stream kgmole/h for rate-spec display when names match products
+        # Prefer stream worksheet flow for rate-spec display when names match products
+        molar_u = self._molar_flow_unit()
         for spec in state.specs:
             lower = spec.name.lower()
-            if "ovhd" in lower or "vap rate" in lower:
+            if "ovhd" in lower or "vap rate" in lower or "overhead" in lower or "distill" in lower:
                 if state.overhead_molar_flow_kgmole_h is not None:
                     spec.current_display = state.overhead_molar_flow_kgmole_h
-                    spec.display_unit = "kgmole/h"
+                    spec.display_unit = molar_u
                     if spec.goal_display is None and spec.goal_value is not None:
-                        spec.goal_display = _si_kgmole_s_to_h(spec.goal_value)
-            if "btms" in lower or "bottoms" in lower:
+                        spec.goal_display = self._molar_goal_display(spec.goal_value)
+            if "btms" in lower or "bottoms" in lower or "residue" in lower:
                 if state.bottoms_molar_flow_kgmole_h is not None:
                     spec.current_display = state.bottoms_molar_flow_kgmole_h
-                    spec.display_unit = "kgmole/h"
+                    spec.display_unit = molar_u
                     if spec.goal_display is None and spec.goal_value is not None:
-                        spec.goal_display = _si_kgmole_s_to_h(spec.goal_value)
+                        spec.goal_display = self._molar_goal_display(spec.goal_value)
 
         state.physical_solution = (
             not is_sentinel(state.condenser_duty)
@@ -466,6 +631,305 @@ class ColumnController:
             and not is_sentinel(state.bottoms_temperature)
         )
         return state
+
+    def _molar_flow_unit(self) -> str:
+        try:
+            return self.hysys.display_units.molar_flow
+        except Exception:
+            return "kgmole/h"
+
+    def _pressure_unit(self) -> str:
+        try:
+            return self.hysys.display_units.pressure
+        except Exception:
+            return "bar"
+
+    def _temperature_unit(self) -> str:
+        try:
+            return self.hysys.display_units.temperature
+        except Exception:
+            return "C"
+
+    def _spec_worksheet_display(
+        self,
+        spec: Any,
+        goal: float | None,
+        current: float | None,
+        family: str,
+        unit_cands: tuple[str, ...],
+    ) -> tuple[float | None, float | None, str]:
+        """
+        Copy Monitor worksheet units from HYSYS spec RealVariables when possible.
+        Returns (goal_display, current_display, unit_label).
+        """
+        du = getattr(self.hysys, "display_units", None)
+        preferred = default_unit_for_family(family, du)
+        candidates = list(unit_cands)
+        if preferred and preferred not in candidates:
+            candidates.insert(0, preferred)
+
+        goal_prop = None
+        cur_prop = None
+        for attr in ("Goal", "GoalValue", "SpecifiedValue"):
+            prop = _safe_get(spec, attr)
+            if prop is not None and (hasattr(prop, "GetValue") or _unit_label(prop)):
+                goal_prop = prop
+                break
+        for attr in ("Current", "CurrentValue"):
+            prop = _safe_get(spec, attr)
+            if prop is not None and (hasattr(prop, "GetValue") or _unit_label(prop)):
+                cur_prop = prop
+                break
+
+        unit = ""
+        for prop in (goal_prop, cur_prop, spec):
+            label = _unit_label(prop)
+            if label:
+                unit = label
+                break
+        if not unit:
+            for cand in candidates:
+                for prop in (goal_prop, cur_prop):
+                    if prop is not None and _get_value(prop, cand) is not None:
+                        unit = cand
+                        break
+                if unit:
+                    break
+        if not unit:
+            unit = preferred
+
+        def _disp(prop: Any, raw: float | None) -> float | None:
+            if raw is None or is_sentinel(raw):
+                return None
+            if prop is not None and unit:
+                got = _get_value(prop, unit)
+                if got is not None and not is_sentinel(got):
+                    return got
+                scaled = scale_si_to_display(prop, float(raw), unit)
+                if scaled is not None:
+                    return scaled
+            # Reflux / dimensionless — raw is fine
+            if family == "reflux":
+                return float(raw)
+            # If magnitude already looks like Monitor worksheet (USGPM/Btu), keep raw
+            return float(raw)
+
+        goal_disp = _disp(goal_prop, goal)
+        cur_disp = _disp(cur_prop, current)
+        return goal_disp, cur_disp, unit or ""
+
+    def _molar_goal_display(self, goal_si: float | None) -> float | None:
+        """Scale COM GoalValue to HYSYS worksheet molar unit via stream GetValue ratio."""
+        if goal_si is None or is_sentinel(goal_si):
+            return None
+        molar_u = self._molar_flow_unit()
+        for stream_name in (
+            getattr(self, "_last_top_product", None),
+            getattr(self, "_last_btms_product", None),
+        ):
+            if not stream_name:
+                continue
+            try:
+                stream = self.hysys.flowsheet.MaterialStreams.Item(stream_name)
+                flow = getattr(stream, "MolarFlow", None)
+                scaled = scale_si_to_display(flow, float(goal_si), molar_u)
+                if scaled is not None:
+                    return scaled
+            except Exception:
+                continue
+        # Probe any material stream for a conversion ratio
+        try:
+            streams = self.hysys.flowsheet.MaterialStreams
+            stream = streams.Item(0) if int(streams.Count) > 0 else None
+            if stream is None:
+                stream = streams.Item(1)
+            flow = getattr(stream, "MolarFlow", None)
+            scaled = scale_si_to_display(flow, float(goal_si), molar_u)
+            if scaled is not None:
+                return scaled
+        except Exception:
+            pass
+        if molar_u.lower().replace(" ", "") in {"kgmole/h", "kmole/h"}:
+            return _si_kgmole_s_to_h(goal_si)
+        return float(goal_si)
+
+    def _stream_pressure_display(self, name: str) -> float | None:
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(name)
+            return _pressure_in_unit(
+                stream, self._pressure_unit(), "Pressure", "PressureValue"
+            )
+        except Exception:
+            return None
+
+    def _stage_label_from_attachment(self, item: Any) -> str:
+        for attr in (
+            "StageName",
+            "IFaceStageName",
+            "FeedStageName",
+            "DrawStageName",
+            "Stage",
+            "Name",
+        ):
+            raw = _safe_get(item, attr)
+            if raw is None:
+                continue
+            text = str(raw).strip()
+            if not text or text.lower() == str(getattr(item, "Name", "")).lower():
+                if attr == "Name":
+                    continue
+                if not text:
+                    continue
+            # Prefer labels that look like HYSYS stage tags
+            if any(
+                t in text
+                for t in ("_Main", "Condenser", "_SS", "Reb", "TS", "Stage")
+            ) or text[:1].isdigit():
+                return text
+        stage_num = _safe_get(item, "IFaceStageNumber")
+        if stage_num is None:
+            stage_num = _safe_get(item, "StageNumber")
+        if stage_num is None:
+            stage_num = _safe_get(item, "FeedStage")
+        if stage_num is not None:
+            try:
+                return f"{int(stage_num)}_Main TS"
+            except Exception:
+                pass
+        return ""
+
+    def _build_stage_label_map(
+        self, column: Any, cfs: Any, ts: Any
+    ) -> dict[str, str]:
+        """Map stream name (lower) -> Connections stage label."""
+        mapping: dict[str, str] = {}
+
+        def _remember(stream_name: Any, label: str) -> None:
+            if not stream_name or not label:
+                return
+            key = str(stream_name).strip().lower()
+            if key and key not in mapping:
+                mapping[key] = label
+
+        def _probe_collection(coll: Any) -> None:
+            if coll is None:
+                return
+            for item in _items(coll):
+                label = self._stage_label_from_attachment(item)
+                if not label:
+                    stage = _safe_get(item, "IFaceStageNumber")
+                    if stage is None:
+                        stage = _safe_get(item, "StageNumber")
+                    name_hint = str(_safe_get(item, "Name") or _safe_get(item, "StageName") or "")
+                    if stage is not None and not name_hint:
+                        try:
+                            label = f"{int(stage)}_Main TS"
+                        except Exception:
+                            label = ""
+                    elif name_hint:
+                        label = name_hint
+                for attr in (
+                    "StreamName",
+                    "FeedName",
+                    "ProductName",
+                    "AttachedStream",
+                    "Stream",
+                    "Name",
+                ):
+                    raw = _safe_get(item, attr)
+                    if raw is None:
+                        continue
+                    try:
+                        sname = str(getattr(raw, "Name", raw))
+                    except Exception:
+                        sname = str(raw)
+                    if sname and sname.lower() not in {"name", "none"}:
+                        _remember(sname, label)
+                        break
+
+        if ts is not None:
+            for attr in ("FeedStages", "ProductStages", "DrawStages", "Feeds", "Products"):
+                _probe_collection(_safe_get(ts, attr))
+        if cfs is not None:
+            ops = _safe_get(cfs, "Operations")
+            if ops is not None:
+                for op in _items(ops):
+                    op_name = str(_safe_get(op, "Name") or "")
+                    op_type = str(_safe_get(op, "TypeName") or "").lower()
+                    # Side stripper / condenser stage tags from unit names
+                    stage_guess = ""
+                    if "condenser" in op_name.lower() or "condenser" in op_type:
+                        stage_guess = "Condenser"
+                    elif "_ss" in op_name.lower() or "stripper" in op_type:
+                        stage_guess = op_name
+                    elif "reb" in op_name.lower():
+                        stage_guess = op_name
+                    for attr in (
+                        "FeedStages",
+                        "ProductStages",
+                        "AttachedFeeds",
+                        "AttachedProducts",
+                        "Feeds",
+                        "Products",
+                    ):
+                        coll = _safe_get(op, attr)
+                        if coll is None:
+                            continue
+                        for item in _items(coll):
+                            label = self._stage_label_from_attachment(item) or stage_guess
+                            sname = str(_safe_get(item, "Name") or "")
+                            if not sname:
+                                try:
+                                    stream = _safe_get(item, "Stream", "AttachedStream")
+                                    if stream is not None:
+                                        sname = str(stream.Name)
+                                except Exception:
+                                    pass
+                            _remember(sname, label)
+
+        # Known COM named product slots → Condenser / bottom
+        for attr, label in (
+            ("TopVapourProduct", "Condenser"),
+            ("TopLiquidProduct", "Condenser"),
+            ("TopWaterProduct", "Condenser"),
+            ("BtmLiquidProduct", ""),
+        ):
+            stream = _safe_get(column, attr)
+            if stream is None:
+                continue
+            try:
+                sname = str(stream.Name)
+            except Exception:
+                continue
+            if label:
+                _remember(sname, label)
+            elif attr == "BtmLiquidProduct":
+                # Will be refined after stage numbering / steam stage known
+                pass
+
+        return mapping
+
+    def _stream_vapor_fraction(self, name: str) -> float | None:
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(name)
+            for attr in ("VapourFraction", "VaporFraction", "MasterVapourFraction"):
+                prop = getattr(stream, attr, None)
+                if prop is None:
+                    continue
+                try:
+                    if hasattr(prop, "GetValue"):
+                        value = float(prop.GetValue())
+                    elif hasattr(prop, "Value"):
+                        value = float(prop.Value)
+                    else:
+                        value = float(prop)
+                    if not is_sentinel(value):
+                        return value
+                except Exception:
+                    continue
+        except Exception:
+            return None
+        return None
 
     def _stream_pressure_bar(self, name: str) -> float | None:
         try:
@@ -540,6 +1004,40 @@ class ColumnController:
         except Exception:
             return None
         return _number(stream, "MolarFlowValue", "MolarFlow")
+
+    def _stream_flow_display(self, name: str) -> float | None:
+        """Molar flow in HYSYS worksheet unit (no Assist conversion)."""
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(name)
+        except Exception:
+            return None
+        unit = self._molar_flow_unit()
+        flow = getattr(stream, "MolarFlow", None)
+        if flow is not None and unit:
+            got = _get_value(flow, unit)
+            if got is not None and not is_sentinel(got):
+                return got
+        raw = _number(stream, "MolarFlowValue", "MolarFlow")
+        if raw is None or is_sentinel(raw):
+            return None
+        return float(raw)
+
+    def _stream_mass_flow_display(self, name: str) -> float | None:
+        try:
+            stream = self.hysys.flowsheet.MaterialStreams.Item(name)
+        except Exception:
+            return None
+        unit = getattr(self.hysys, "display_units", None)
+        mass_u = getattr(unit, "mass_flow", "lb/hr") if unit else "lb/hr"
+        flow = getattr(stream, "MassFlow", None)
+        if flow is not None:
+            got = _get_value(flow, mass_u)
+            if got is not None and not is_sentinel(got):
+                return got
+        raw = _number(stream, "MassFlowValue", "MassFlow")
+        if raw is None or is_sentinel(raw):
+            return None
+        return float(raw)
 
     def _stream_temperature(self, name: str) -> float | None:
         try:
@@ -661,6 +1159,133 @@ class ColumnController:
                         f"Could not sync Goal from Current on '{spec_name}': {exc}"
                     ) from exc
         raise HysysError(f"Specification not found: {spec_name}")
+
+    def add_specification(
+        self,
+        column_name: str,
+        hysys_type_name: str,
+        *,
+        approved: bool = False,
+        new_name: str | None = None,
+        allow_when_dof_zero: bool = False,
+    ) -> list[str]:
+        """
+        Try to create a column specification via COM (HYSYS Add Specs dialog types).
+
+        Approval-only — never silent. Prefer HYSYS UI Add… if COM Add is unavailable
+        on this HYSYS version (steps via format_add_spec_hysys_steps).
+        """
+        from column_spec_catalog import format_add_spec_hysys_steps, list_add_spec_names
+
+        if not approved:
+            raise HysysError(
+                "Add Spec blocked — set approved=True after engineer confirmation."
+            )
+        names = list_add_spec_names()
+        if hysys_type_name not in names:
+            raise HysysError(
+                f"Unknown Add Spec type '{hysys_type_name}'. "
+                f"Must match HYSYS Column Specification Types exactly."
+            )
+
+        column = self._column(column_name)
+        cfs = self._column_flowsheet(column)
+        notes: list[str] = []
+
+        dof = _safe_get(cfs, "DegreesOfFreedom")
+        try:
+            dof_i = int(dof) if dof is not None else None
+        except Exception:
+            dof_i = None
+        if dof_i == 0 and not allow_when_dof_zero:
+            steps = format_add_spec_hysys_steps(hysys_type_name, column_hint=column_name)
+            raise HysysError(
+                "DOF is already 0 — adding an Active spec will over-specify. "
+                "Either deactivate one Active first (1-for-1), or confirm "
+                "allow_when_dof_zero after you plan to leave the new spec Estimate-only.\n\n"
+                + steps
+            )
+
+        before = {str(s.Name) for s in _items(cfs.Specifications)}
+        specs = _safe_get(cfs, "Specifications")
+        if specs is None:
+            raise HysysError("No Specifications collection on ColumnFlowsheet.")
+
+        errors: list[str] = []
+        created = False
+
+        # Common COM patterns across HYSYS versions
+        attempts: list[tuple[str, Any]] = [
+            ("Specifications.Add(type)", lambda: specs.Add(hysys_type_name)),
+            ("Specifications.Add(type, name)", lambda: specs.Add(hysys_type_name, new_name or hysys_type_name)),
+            ("Specifications.Create(type)", lambda: specs.Create(hysys_type_name)),
+            ("Specifications.Append(type)", lambda: specs.Append(hysys_type_name)),
+        ]
+        # Available types collection → Add
+        for coll_name in ("AvailableSpecTypes", "SpecTypes", "SpecificationTypes"):
+            coll = _safe_get(cfs, coll_name)
+            if coll is None:
+                coll = _safe_get(specs, coll_name)
+            if coll is None:
+                continue
+
+            def _add_from_available(c=coll) -> Any:
+                # Try Item by name then Add
+                try:
+                    item = c.Item(hysys_type_name)
+                except Exception:
+                    item = None
+                if item is not None and hasattr(specs, "Add"):
+                    try:
+                        return specs.Add(item)
+                    except Exception:
+                        pass
+                if hasattr(c, "Add"):
+                    return c.Add(hysys_type_name)
+                raise RuntimeError(f"{coll_name} present but no Add path")
+
+            attempts.append((f"{coll_name}+Add", _add_from_available))
+
+        for label, fn in attempts:
+            try:
+                fn()
+                notes.append(f"COM path ok: {label}")
+                created = True
+                break
+            except Exception as exc:
+                errors.append(f"{label}: {exc}")
+
+        after = {str(s.Name) for s in _items(cfs.Specifications)}
+        added = sorted(after - before)
+        if added:
+            notes.append(f"New spec object(s): {', '.join(added)}")
+            if new_name and added:
+                # Best-effort rename first new item
+                for spec in _items(cfs.Specifications):
+                    if str(spec.Name) == added[0] and str(spec.Name) != new_name:
+                        try:
+                            spec.Name = new_name
+                            notes.append(f"Renamed -> {new_name}")
+                        except Exception as exc:
+                            notes.append(f"Rename skipped: {exc}")
+                        break
+            created = True
+
+        if not created and not added:
+            steps = format_add_spec_hysys_steps(hysys_type_name, column_hint=column_name)
+            raise HysysError(
+                "COM could not Add Spec on this HYSYS build (Add Specs is UI-first).\n"
+                "Use the HYSYS dialog steps below, then Inspect.\n\n"
+                + steps
+                + "\n\nCOM attempts:\n  - "
+                + "\n  - ".join(errors[:8])
+            )
+
+        notes.append(
+            "Fill Specification Value / stage attach in HYSYS Specs detail; "
+            "keep DOF=0 (Estimate-only or 1-for-1 Active swap)."
+        )
+        return notes
 
     def apply_specs_summary(
         self,

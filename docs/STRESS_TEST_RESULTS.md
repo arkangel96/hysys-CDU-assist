@@ -1,5 +1,7 @@
 # Intelligence Stress Test Results
 
+> **Legacy simple-column validation:** Live HYSYS **SW Stripper** multi-parameter tests (CDU Assist product line identity). Case restored; not auto-saved.
+
 Live HYSYS SW Stripper — multi-parameter tests. Case restored; not auto-saved.
 
 | Case | Action | State | Family | Propose | Trial | Key result |

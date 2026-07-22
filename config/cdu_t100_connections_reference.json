@@ -1,0 +1,149 @@
+{
+  "reference": "T-100 Design → Connections (screenshot 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "fluid_package": "Basis-1 / PengRobinson",
+  "status": "Converged",
+  "stage_numbering": "Top Down",
+  "pressures": {
+    "dP_top": 9.0,
+    "dP_top_unit": "psi",
+    "P_top": 19.70,
+    "P_top_unit": "psia",
+    "dP_bot": null,
+    "P_bot": 32.70,
+    "P_bot_unit": "psia"
+  },
+  "inlets": [
+    {
+      "name": "Main Steam",
+      "stage_label": "29_Main TS",
+      "phase_type": "",
+      "role": "stripping_steam",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Q-Trim",
+      "stage_label": "28_Main TS",
+      "phase_type": "Q",
+      "role": "energy_in",
+      "transfer_basis": "None Req'd"
+    },
+    {
+      "name": "Atm Feed",
+      "stage_label": "28_Main TS",
+      "phase_type": "",
+      "role": "crude_feed",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Kero_SS_Energy",
+      "stage_label": "Kero_SS_Reb",
+      "phase_type": "Q",
+      "role": "energy_in",
+      "transfer_basis": "None Req'd",
+      "external": "<< Stream >>"
+    },
+    {
+      "name": "Diesel Steam",
+      "stage_label": "3_Diesel_SS",
+      "phase_type": "",
+      "role": "stripping_steam",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "AGO Steam",
+      "stage_label": "3_AGO_SS",
+      "phase_type": "",
+      "role": "stripping_steam",
+      "transfer_basis": "T-P Flash"
+    }
+  ],
+  "outlets": [
+    {
+      "name": "Residue",
+      "stage_label": "29_Main TS",
+      "phase_type": "L",
+      "role": "residue",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Atmos Cond",
+      "stage_label": "Condenser",
+      "phase_type": "Q",
+      "role": "condenser_duty",
+      "transfer_basis": "None Req'd"
+    },
+    {
+      "name": "Off Gas",
+      "stage_label": "Condenser",
+      "phase_type": "V",
+      "role": "offgas",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Waste Water",
+      "stage_label": "Condenser",
+      "phase_type": "W",
+      "role": "waste_water",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Naphtha",
+      "stage_label": "Condenser",
+      "phase_type": "L",
+      "role": "naphtha",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Kerosene",
+      "stage_label": "Kero_SS_Reb",
+      "phase_type": "L",
+      "role": "side_product",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "Diesel",
+      "stage_label": "3_Diesel_SS",
+      "phase_type": "L",
+      "role": "side_product",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "AGO",
+      "stage_label": "3_AGO_SS",
+      "phase_type": "L",
+      "role": "side_product",
+      "transfer_basis": "T-P Flash"
+    },
+    {
+      "name": "PA_1_Q",
+      "stage_label": "",
+      "phase_type": "Q",
+      "role": "pa_energy",
+      "transfer_basis": ""
+    },
+    {
+      "name": "PA_2_Q",
+      "stage_label": "",
+      "phase_type": "Q",
+      "role": "pa_energy",
+      "transfer_basis": ""
+    },
+    {
+      "name": "PA_3_Q",
+      "stage_label": "",
+      "phase_type": "Q",
+      "role": "pa_energy",
+      "transfer_basis": ""
+    }
+  ],
+  "intelligence_notes": [
+    "Primary crude feed = Atm Feed @ 28_Main TS (flash zone)",
+    "Bottoms product = Residue @ 29_Main TS",
+    "Overhead = Off Gas (V) + Waste Water (W) + Naphtha (L) + Atmos Cond (Q)",
+    "Side products from side strippers: Kerosene / Diesel / AGO",
+    "Prefer draw / PA / steam families over top RR",
+    "Units: copy from HYSYS case (psia / psi here) — no Assist conversion"
+  ]
+}

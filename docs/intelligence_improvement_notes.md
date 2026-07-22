@@ -1,23 +1,37 @@
-# Intelligence Improvement Notes — Simple Column Assist v1
+# Intelligence Improvement Notes — CDU Assist v1
 
 **Document type:** Expert review notes + living backlog / commentary  
 **Status:** Superseded as *coded checklist* by [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) (2026-07-22)  
-**Scope:** Simple distillation / stripping only — see [`SCOPE_SIMPLE_COLUMN_ASSIST.md`](SCOPE_SIMPLE_COLUMN_ASSIST.md)  
+**Scope:** CDU / atmospheric crude distillation — see [`SCOPE_CDU_ASSIST.md`](SCOPE_CDU_ASSIST.md)  
 **Canonical home of rules:** [`expert_decision_workflow.md`](expert_decision_workflow.md) **§28**  
 **Operational slice:** [`column_convergence_playbook.md`](column_convergence_playbook.md)  
 **Coded vs paper truth:** [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md)
 
-**Date:** 2026-07-21 (narrative) · inventory sync 2026-07-22  
-**Author perspective:** Senior process / HYSYS simulation engineer review of Simple Column Assist
+**Date:** 2026-07-21 (narrative) · inventory sync 2026-07-22 · **CDU intelligence retarget 2026-07-22**  
+**Author perspective:** Senior process / HYSYS simulation engineer review of CDU Assist
 
 > **Use the inventory file** to see what is CODED / PARTIAL / DOCS / PLANNED.  
-> This note keeps the original gap narrative for context. Sections 3–4 below are partly historical — several “gaps” are now coded (see inventory §4–§5).
+> This note keeps the original gap narrative for context. Sections 3–4 below are partly historical — several “gaps” are now coded (see inventory §4–§5).  
+> **CDU docs v1.1** (`new_intelligence/` D1–D5, MV map, Add Spec when-to-add) define the target PE brain; code still largely carries the stripper shell.
 
 ---
 
+## 0. CDU intelligence backlog (2026-07-22)
+
+| Priority | Gap | Owner |
+|----------|-----|-------|
+| P0 | Multi-product FINAL_TARGET table (ASTM/cut/gap) replace NH₃ default | `column_models` / engine |
+| P0 | Side-draw + PA + steam strategy IDs in chooser | MV map → `column_engine` |
+| P1 | State E = all governing products + PA operability | workflow §28.5 |
+| P1 | CDU when-to-add in `column_spec_catalog` (code) | Add Spec catalog |
+| P2 | Atmospheric reference-case validation protocol | CASE §3.1 |
+| P3 | Learning schema fields (assay, slate, PA config) | `new_intelligence` D4 |
+
+**Do not:** GoalValue spam, auto-relax FINAL_TARGETs, auto Specs.Add, silent structural writes.
+
 ## 1. Purpose of this note
 
-Capture an honest assessment of the **decision intelligence** of Simple Column Assist, and the improvements required before it can behave like a high-level simulation process engineer.
+Capture an honest assessment of the **decision intelligence** of CDU Assist, and the improvements required before it can behave like a high-level simulation process engineer.
 
 **Integration status:** Content below is mirrored into:
 
@@ -190,22 +204,24 @@ Layer 4 (much later): Structural moves, 2×2 matrices, hydraulics
 
 ---
 
-## 7. Recommended definition of success (future Assist)
+## 7. Recommended definition of success (State E — CDU)
 
 Assist may claim **State E (acceptable)** only when **all** are true:
 
-1. HYSYS numerically healthy (no sentinel duties/flows on key products)  
-2. Every hard **FINAL_TARGET** met on the **product stream** (within tolerance)  
+1. HYSYS numerically healthy (no sentinel duties/flows on key products / PAs)  
+2. Every hard **FINAL_TARGET** met on governing **products** (ASTM/cut/gap/props within tolerance)  
 3. Preferred or approved Active spec set is consistent and DOF = 0  
-4. Material split and duties are within configured engineering bounds  
-5. Temperature (and pressure) profiles pass basic physical checks  
+4. Yields / material balance and PA return duties within configured bounds  
+5. Temperature (and pressure) profiles pass basic physical checks (draw trays, flash, PA returns)  
 6. Audit trail explains each Active/Goal change and why  
 
 Otherwise: report **State B / C / D / F** with evidence — not a fake win.
 
 ---
 
-## 8. Link to live SW Stripper lesson (context)
+## 8. Link to live SW Stripper lesson (legacy COM shell)
+
+> Historical stripper validation — proves shell policies, not CDU cuts.
 
 | Lesson | Implication for intelligence |
 |--------|------------------------------|

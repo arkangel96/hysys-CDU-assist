@@ -1,0 +1,40 @@
+{
+  "reference": "T-100 Design → Specs Summary (screenshot 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "status": "Converged",
+  "degrees_of_freedom": 0,
+  "table_columns": [
+    "Name",
+    "Specified Value",
+    "Active",
+    "Current",
+    "Fixed/Range",
+    "Prim/Alt",
+    "Lower",
+    "Upper"
+  ],
+  "note": "Specs Summary has Active+Current (not Estimate). Estimate lives on Monitor/Specs detail.",
+  "rows": [
+    {"name": "Kero_SS Prod Flow", "specified": 271.3, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Diesel_SS Prod Flow", "specified": 561.5, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "AGO_SS Prod Flow", "specified": 131.3, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_1_Rate(Pa)", "specified": 1458, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_1_Duty(Pa)", "specified": -5.5e7, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_2_Rate(Pa)", "specified": 875.0, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_2_Duty(Pa)", "specified": -3.5e7, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_3_Rate(Pa)", "specified": 875.0, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "PA_3_Duty(Pa)", "specified": -3.5e7, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Naphtha Prod Rate", "specified": 670.8, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Liquid Flow", "specified": 102.1, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Kero Reb Duty", "specified": 7.5e6, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Vap Prod Flow", "specified": 0.0, "active": true, "current": true, "fixed_range": "Fixed", "prim_alt": "Primary"},
+    {"name": "Reflux Ratio", "specified": 1.0, "active": false, "current": false, "fixed_range": "Fixed", "prim_alt": "Primary"}
+  ],
+  "intelligence_notes": [
+    "13 Active Fixed Primary + Reflux Ratio inactive (not Current)",
+    "Lower/Upper empty because all Fixed (not Ranged)",
+    "Do not Activate Reflux Ratio while draws/PAs close DOF",
+    "Assist Specs Summary table mirrors these columns; Est column is Monitor COM overlay"
+  ]
+}

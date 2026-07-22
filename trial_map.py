@@ -70,15 +70,52 @@ STRATEGY_CATALOG: list[StrategyDef] = [
     ),
     StrategyDef(
         "bottoms_rate_nudge",
-        "Nudge bottoms rate",
+        "Nudge bottoms / residue rate",
         "C_split",
-        "Bounded move of active bottoms rate — split / dry-bottoms recovery.",
+        "Bounded move of active bottoms/residue rate — split / dry-section recovery.",
+    ),
+    StrategyDef(
+        "side_draw_nudge",
+        "Nudge side-draw rate",
+        "C_split",
+        "Bounded move of an active side-draw GoalValue (kero/diesel/AGO etc.).",
+    ),
+    StrategyDef(
+        "pa_duty_nudge",
+        "Nudge pumparound duty",
+        "B_energy",
+        "Bounded move of active PA duty — section traffic / mid-cut sharpness.",
+    ),
+    StrategyDef(
+        "pa_circ_nudge",
+        "Nudge pumparound circulation",
+        "B_energy",
+        "Bounded move of active PA circulation rate.",
+    ),
+    StrategyDef(
+        "pa_return_t_nudge",
+        "Nudge pumparound return T",
+        "B_energy",
+        "Bounded move of active PA return temperature GoalValue.",
+    ),
+    StrategyDef(
+        "steam_nudge",
+        "Nudge stripping steam",
+        "C2_steam",
+        "Bounded move of active stripping-steam rate/duty (main or side stripper).",
     ),
     StrategyDef(
         "nh3_goal_nudge",
-        "Nudge NH3 bottoms goal (blocked if locked)",
+        "Nudge NH3 bottoms goal (legacy / blocked if locked)",
         "D_target",
-        "FINAL_TARGET purity GoalValue — blocked while locked; monitor only.",
+        "Legacy stripper FINAL_TARGET purity GoalValue — blocked while locked; monitor only.",
+        last_resort=True,
+    ),
+    StrategyDef(
+        "astm_cut_goal_nudge",
+        "Nudge ASTM/cut GoalValue (blocked if locked)",
+        "D_target",
+        "Petroleum FINAL_TARGET (ASTM/cut/gap) — blocked while locked; monitor only.",
         last_resort=True,
     ),
     StrategyDef(
@@ -217,6 +254,14 @@ def classify_strategy(action: TrialAction) -> str:
         name = str(payload.get("spec_name", "")).lower()
         prev = payload.get("previous")
         goal = payload.get("goal")
+        if "steam" in name and ("strip" in name or "rate" in name or "flow" in name or "duty" in name):
+            return "steam_nudge"
+        if "pump around" in name or "pumparound" in name or "pa duty" in name or "pa circ" in name or "pa return" in name:
+            if "return" in name or ("temp" in name and "pa" in name):
+                return "pa_return_t_nudge"
+            if "circ" in name or ("flow" in name and "duty" not in name):
+                return "pa_circ_nudge"
+            return "pa_duty_nudge"
         if "reflux" in name and "ratio" in name and prev is not None and goal is not None:
             return "reflux_nudge_down" if float(goal) < float(prev) else "reflux_nudge_up"
         if "reflux" in name and "ratio" not in name:
@@ -225,8 +270,12 @@ def classify_strategy(action: TrialAction) -> str:
             return "boilup_nudge"
         if "ovhd" in name or "distill" in name or "overhead" in name:
             return "ovhd_rate_nudge"
-        if "btms" in name or "bottoms" in name:
+        if "btms" in name or "bottoms" in name or "residue" in name:
             return "bottoms_rate_nudge"
+        if "draw" in name:
+            return "side_draw_nudge"
+        if "cut" in name or "gap" in name or "astm" in name or "d86" in name or "tbp" in name:
+            return "astm_cut_goal_nudge"
         if "nh3" in name or "ammonia" in name or "mass frac" in name or "frac" in name:
             return "nh3_goal_nudge"
         return str(payload.get("strategy_id", "reflux_nudge_up"))

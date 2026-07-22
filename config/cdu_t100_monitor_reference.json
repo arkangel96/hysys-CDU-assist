@@ -1,0 +1,147 @@
+{
+  "reference": "T-100 Design → Monitor (screenshot 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "fluid_package": "Basis-1 / PengRobinson",
+  "status": "Converged",
+  "degrees_of_freedom": 0,
+  "units_note": "Copy from HYSYS Monitor — USGPM / Btu/hr / lbmole/hr; no Assist conversion",
+  "specifications": [
+    {
+      "name": "Kero_SS Prod Flow",
+      "specified": 271.3,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "side_draw"
+    },
+    {
+      "name": "Diesel_SS Prod Flow",
+      "specified": 561.5,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "side_draw"
+    },
+    {
+      "name": "AGO_SS Prod Flow",
+      "specified": 131.3,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "side_draw"
+    },
+    {
+      "name": "PA_1_Rate(Pa)",
+      "specified": 1458,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_rate"
+    },
+    {
+      "name": "PA_1_Duty(Pa)",
+      "specified": -5.5e7,
+      "unit": "Btu/hr",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_duty"
+    },
+    {
+      "name": "PA_2_Rate(Pa)",
+      "specified": 875.0,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_rate"
+    },
+    {
+      "name": "PA_2_Duty(Pa)",
+      "specified": -3.5e7,
+      "unit": "Btu/hr",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_duty"
+    },
+    {
+      "name": "PA_3_Rate(Pa)",
+      "specified": 875.0,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_rate"
+    },
+    {
+      "name": "PA_3_Duty(Pa)",
+      "specified": -3.5e7,
+      "unit": "Btu/hr",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "pa_duty"
+    },
+    {
+      "name": "Naphtha Prod Rate",
+      "specified": 670.8,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "top_product"
+    },
+    {
+      "name": "Liquid Flow",
+      "specified": 102.1,
+      "unit": "USGPM",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "liquid_flow"
+    },
+    {
+      "name": "Kero Reb Duty",
+      "specified": 7.5e6,
+      "unit": "Btu/hr",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "ss_reb_duty"
+    },
+    {
+      "name": "Vap Prod Flow",
+      "specified": 0.0,
+      "unit": "lbmole/hr",
+      "active": true,
+      "estimate": true,
+      "current": true,
+      "mv_family": "vapor_prod"
+    },
+    {
+      "name": "Reflux Ratio",
+      "specified": 1.0,
+      "unit": "",
+      "active": false,
+      "estimate": true,
+      "current": false,
+      "current_value": 0.7061,
+      "mv_family": "reflux",
+      "note": "Inactive Estimate — calculated RR ~0.706; do not prefer as primary MV"
+    }
+  ],
+  "intelligence_notes": [
+    "DOF=0 with 13 Active specs + RR Estimate",
+    "Primary operating MVs: side-stripper prod flows (Kero/Diesel/AGO), PA rate+duty pairs, Naphtha Prod Rate",
+    "Kero Reb Duty is side-stripper energy — Family B / ss_reb",
+    "Vap Prod Flow Active at 0 — overhead vapor held off (Off Gas ~0 molar)",
+    "Reflux Ratio is Estimate only — prefer draw/PA/steam families over nudging RR",
+    "Units: USGPM / Btu/hr / lbmole/hr — copy from HYSYS"
+  ]
+}

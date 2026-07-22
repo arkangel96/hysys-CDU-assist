@@ -1,0 +1,17 @@
+{
+  "reference": "T-100 Design → Subcooling (screenshot 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "status": "Converged",
+  "condenser_subcooling": {
+    "degrees_of_subcool": null,
+    "subcool_to": null,
+    "subcool_to_mode": "<empty>"
+  },
+  "intelligence_notes": [
+    "Both Subcooling fields empty on T-100 — condenser subcool not used as a DOF",
+    "Naphtha cold props / overhead system handled via other specs or downstream equipment",
+    "Assist READ only — no auto-write to Subcooling page",
+    "If subcool is set later: Degrees of Subcool OR Subcool To (HYSYS mutual basis)"
+  ]
+}

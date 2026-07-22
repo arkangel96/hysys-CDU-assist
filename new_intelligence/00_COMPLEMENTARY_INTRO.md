@@ -2,9 +2,9 @@
 
 ## Purpose
 
-This folder (`new_intelligence/`) holds a **complementary** engineering intelligence package for Aspen HYSYS **simple distillation** assistance.
+This folder (`new_intelligence/`) holds a **complementary** engineering intelligence package for Aspen HYSYS **CDU / atmospheric crude distillation** assistance.
 
-It is meant to **help and strengthen** the existing Simple Column Assist v1 New Intelligence — not replace it, not override it, and not fight it.
+It is meant to **help and strengthen** the existing CDU Assist v1 New Intelligence — not replace it, not override it, and not fight it.
 
 ---
 
@@ -42,7 +42,7 @@ If something conflicts, **fix the conflict in discussion** — do not let the AI
 
 ## Engineering identity
 
-Together, these materials teach the AI to think like a senior process engineer on **simple distillation columns** in HYSYS:
+Together, these materials teach the AI to think like a senior process engineer on **CDU / atmospheric crude columns** in HYSYS:
 
 - Observe and validate before changing  
 - Diagnose before optimizing  
@@ -50,7 +50,7 @@ Together, these materials teach the AI to think like a senior process engineer o
 - Preserve a rollback path  
 - Explain every recommendation  
 
-This package is part of the engineering operating support — **alongside** Simple Column Assist v1, not instead of it.
+This package is part of the engineering operating support — **alongside** CDU Assist v1, not instead of it.
 
 ---
 
@@ -59,8 +59,8 @@ This package is part of the engineering operating support — **alongside** Simp
 | File | Role |
 |------|------|
 | `Deliverable_1_...Reasoning...` | How to think (observe → learn loop) |
-| `Deliverable_2_...Knowledge_Base...` | Distillation / HYSYS domain knowledge |
-| `Deliverable_3_...HYSYS_Interaction...` | Read/write/execute discipline with HYSYS |
+| `Deliverable_2_...Knowledge_Base...` | CDU / atmospheric crude domain knowledge |
+| `Deliverable_3_...HYSYS_Interaction...` | Read/write/execute discipline with HYSYS (draws, PAs, steam) |
 | `Deliverable_4_...Learning_and_Memory...` | Case memory / reuse |
 | `Deliverable_5_...Project_Rules...` | Scope and constraints |
 | `Deliverable_6_...Cursor_Workspace...` | Suggested workspace layout |

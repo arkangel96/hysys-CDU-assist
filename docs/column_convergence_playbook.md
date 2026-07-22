@@ -1,5 +1,7 @@
 # Column Convergence Playbook — Expert Process Engineer Flow
 
+> **Legacy simple-column validation:** This playbook is still an **SW Stripper** operational slice. Product line is **CDU Assist v1** — treat stripper examples as historical COM / trial proof, not CDU process guidance.
+
 **Document role:** Operational playbook for **SW Stripper / Studio v0.1** — maps PE
 decisions to **what HYSYS exposes** and **what Automation Studio can read or write**.
 

@@ -1,0 +1,113 @@
+{
+  "reference": "T-100 Rating tab (screenshots 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "fluid_package": "Basis-1 / PengRobinson",
+  "status": "Converged",
+  "units_note": "Copy from HYSYS — ft / ft3 / psia / psi; no Assist conversion",
+  "towers": [
+    {
+      "section_name": "Main TS",
+      "uniform_section": true,
+      "internal_type": "Sieve",
+      "diameter_ft": 4.921,
+      "tray_packed_space_ft": 1.640,
+      "tray_packed_volume_ft3": 31.20,
+      "heat_model": "None",
+      "rating_calculations": false,
+      "hold_up_ft3": 3.120,
+      "weeping_factor": 1.0,
+      "sizing_analysis_tag": "Internals-1@Main"
+    },
+    {
+      "section_name": "Kero_SS",
+      "uniform_section": true,
+      "internal_type": "Sieve",
+      "diameter_ft": 4.921,
+      "tray_packed_space_ft": 1.640,
+      "tray_packed_volume_ft3": 31.20,
+      "heat_model": "None",
+      "rating_calculations": false,
+      "hold_up_ft3": 3.120,
+      "weeping_factor": 1.0,
+      "sizing_analysis_tag": "Internals-1@Kero_"
+    },
+    {
+      "section_name": "Diesel_SS",
+      "uniform_section": true,
+      "internal_type": "Sieve",
+      "diameter_ft": 4.921,
+      "tray_packed_space_ft": 1.640,
+      "tray_packed_volume_ft3": 31.20,
+      "heat_model": "None",
+      "rating_calculations": false,
+      "hold_up_ft3": 3.120,
+      "weeping_factor": 1.0,
+      "sizing_analysis_tag": "Internals-1@Diese"
+    },
+    {
+      "section_name": "AGO_SS",
+      "uniform_section": true,
+      "internal_type": "Sieve",
+      "diameter_ft": 4.921,
+      "tray_packed_space_ft": 1.640,
+      "tray_packed_volume_ft3": 31.20,
+      "heat_model": "None",
+      "rating_calculations": false,
+      "hold_up_ft3": 3.120,
+      "weeping_factor": 1.0,
+      "sizing_analysis_tag": "Internals-1@AGO_"
+    }
+  ],
+  "vessels": [
+    {
+      "vessel_name": "Condenser",
+      "diameter_ft": null,
+      "length_ft": null,
+      "volume_ft3": null,
+      "orientation": "Horizontal",
+      "include_for_costing": true
+    },
+    {
+      "vessel_name": "Kero_SS_Reb",
+      "diameter_ft": null,
+      "length_ft": null,
+      "volume_ft3": null,
+      "orientation": "Horizontal",
+      "include_for_costing": true
+    }
+  ],
+  "equipment": [
+    "PA_1_Cooler @COL1",
+    "PA_2_Cooler @COL1",
+    "PA_3_Cooler @COL1"
+  ],
+  "pressure_drop": {
+    "condenser": { "pressure_psia": 19.70, "pressure_drop_psi": 9.0 },
+    "main_ts": {
+      "stage_1_pressure_psia": 28.70,
+      "stage_dp_psi": 0.1429,
+      "stage_29_pressure_psia": 32.70,
+      "stage_29_dp_psi": null
+    },
+    "kero_ss": {
+      "pressure_psia": 29.84,
+      "pressure_drop_psi": 0.0,
+      "stages": 3
+    },
+    "solver": {
+      "pressure_tolerance": 1.0e-4,
+      "pressure_drop_tolerance": 1.0e-4,
+      "damping_factor": 1.0,
+      "max_press_iterations": 100
+    }
+  },
+  "intelligence_notes": [
+    "All four tower sections share identical sieve tray sizing on T-100",
+    "Rating Calculations unchecked — sizing for costing/volume only, not hydraulic rating",
+    "Vessel dimensions empty; orientation Horizontal; Include for Costing checked",
+    "PA coolers listed under Rating → Equipment (PA_1/2/3_Cooler)",
+    "Pressure profile: condenser 19.70 psia + 9 psi dP; main TS ~0.1429 psi/tray; Kero_SS flat 29.84 psia",
+    "Assist READ only — no auto-write to Rating pages"
+  ]
+}

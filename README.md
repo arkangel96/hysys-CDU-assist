@@ -1,17 +1,17 @@
-# Simple Column Assist v1 — New Intelligence
+# CDU Assist v1 — New Intelligence
 
-External desktop assist for **simple distillation and stripping columns** in
+External desktop assist for **CDU / atmospheric crude distillation** in
 Aspen HYSYS (Windows COM). Not an AspenTech product.
 
 | | |
 |---|---|
-| **Product** | Simple Column Assist |
+| **Product** | CDU Assist |
 | **Version** | **1.0** (v1) |
 | **Line** | New Intelligence — States A–F, FINAL_TARGET lock, PE board, Trial Map |
-| **Scope** | Simple 2-product columns (e.g. sour-water stripper) |
-| **Not for** | CDU / VDU — separate tools in the Tower Assist family |
+| **Scope** | CDU / atmospheric crude towers |
+| **Not for** | Simple column / VDU — separate tools in the Tower Assist family |
 
-Full boundary notes: [`docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`](docs/SCOPE_SIMPLE_COLUMN_ASSIST.md)  
+Full boundary notes: [`docs/SCOPE_CDU_ASSIST.md`](docs/SCOPE_CDU_ASSIST.md)  
 Intelligence map (coded vs planned): [`docs/INTELLIGENCE_INVENTORY_V1.md`](docs/INTELLIGENCE_INVENTORY_V1.md)  
 Multi-variable iteration (not RR-only): [`docs/MULTI_VARIABLE_ITERATION_MAP.md`](docs/MULTI_VARIABLE_ITERATION_MAP.md)  
 Complementary PE package: [`new_intelligence/00_COMPLEMENTARY_INTRO.md`](new_intelligence/00_COMPLEMENTARY_INTRO.md)
@@ -49,4 +49,4 @@ Click **Connect**. Use **Open Case** to select a `.hsc` file if needed.
 
 - AspenTech COM members vary by release; the adapter tries common variants.
 - The application never saves the HYSYS case automatically.
-- See `ARCHITECTURE.md` and `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.
+- See `ARCHITECTURE.md` and `docs/SCOPE_CDU_ASSIST.md`.

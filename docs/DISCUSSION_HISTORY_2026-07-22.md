@@ -1,18 +1,18 @@
-# Discussion History — Simple Column Assist v1 New Intelligence
+# Discussion History — CDU Assist v1 New Intelligence
 
 **Session date:** 2026-07-22  
 **Channel:** Cursor Agent interface (chat above Assist + HYSYS COM)  
-**Repo:** `arkangel96/simple-column-assist-v1-new-intelligence`  
+**Repo:** `arkangel96/hysys-CDU-assist`  
 **Purpose:** Preserve PE / product decisions from this working session so later work does not lose context.
 
 ---
 
 ## 1. Product framing
 
-- This line is **Simple Column Assist v1 — New Intelligence** for Aspen HYSYS **simple distillation / stripping** only.
-- **Not** CDU, **Not** VDU, **Not** full Aspen ecosystem / hydraulics / TEA.
-- Validated reference: **SW Stripper** (Full Reflux, ~8 stages, feed ~3, locked bottoms NH₃ ≤ 50 ppmw).
-- Lives in its **own GitHub repo** — do not mix into base `simple-column-assist` or RR-only lab notes.
+- This line is **CDU Assist v1 — New Intelligence** for Aspen HYSYS **CDU / atmospheric crude distillation**.
+- **Not** simple column, **Not** VDU, **Not** full Aspen ecosystem / hydraulics / TEA.
+- **Legacy simple-column validation:** **SW Stripper** (Full Reflux, ~8 stages, feed ~3, locked bottoms NH₃ ≤ 50 ppmw) — historical COM / States proof only.
+- Lives in its **own GitHub repo** — do not mix into simple-column tools or RR-only lab notes.
 
 ---
 
@@ -116,10 +116,10 @@ Assist UI was too large/sparse vs Aspen desktop density → compacted fonts/padd
 
 ## 8. Repo / push notes from this session
 
-- New standalone repo: `simple-column-assist-v1-new-intelligence`  
-- Case description: `docs/CASE_SIMPLE_COLUMN_V1_NEW_INTELLIGENCE.md`  
+- New standalone repo: `hysys-CDU-assist` (earlier session name: `simple-column-assist-v1-new-intelligence`)  
+- Case description: `docs/CASE_CDU_V1_NEW_INTELLIGENCE.md`  
 - This discussion log: `docs/DISCUSSION_HISTORY_2026-07-22.md`  
-- Intentionally **not** mixed: RR-only lab scripts, large `.hsc` binaries, old `simple-column-assist` repo content after revert of misplaced case commit  
+- Intentionally **not** mixed: RR-only lab scripts, large `.hsc` binaries, old simple-column repo content after revert of misplaced case commit  
 
 ---
 

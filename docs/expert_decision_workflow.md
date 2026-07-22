@@ -1,19 +1,21 @@
-# Expert Decision Workflow for Automating Aspen HYSYS Distillation Columns
+# Expert Decision Workflow for Aspen HYSYS CDU / Distillation Columns
 
-**Document status:** Engineering specification – Version 0.1.1  
-**Primary purpose:** Define the reasoning, decision hierarchy, iteration logic, recovery logic, and HYSYS interaction requirements for an external program that automates rigorous distillation-column convergence and product-specification attainment.
+**Document status:** Engineering specification – Version 0.2.0 (CDU Assist)  
+**Primary purpose:** Define the reasoning, decision hierarchy, iteration logic, recovery logic, and HYSYS interaction requirements for an external program that assists rigorous **atmospheric crude (CDU)** and related distillation-column convergence and multi-product specification attainment.
 
-**Related Studio docs:**
+**Related CDU Assist docs:**
 
 | Document | Role |
 |----------|------|
 | **This file** | Master PE reasoning specification (intelligence) |
-| [`column_convergence_playbook.md`](column_convergence_playbook.md) | SW Stripper / Studio v0.1 operational slice + COM transferability |
+| [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) | CDU variable families (draws / PA / steam / top energy) |
+| [`column_convergence_playbook.md`](column_convergence_playbook.md) | **Legacy** SW Stripper COM slice — not CDU process guidance |
 | [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) | Integrated backlog: gaps, P0–P3 roadmap, anti-complexity layers |
 | [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) | **Coded vs paper vs planned** — read before adding new intelligence |
-| `trial_map.py` / `column_engine.py` | Current executable subset — must be aligned to this workflow over time |
+| `new_intelligence/` | Complementary PE OS (D1–D6) — CDU v1.1 |
+| `trial_map.py` / `column_engine.py` | Current executable subset — align to this workflow over time |
 
-**v0.1.1:** Integrated senior-PE intelligence review (layered implementation, Assist gaps, success definition for State E).
+**v0.2.0:** Retargeted product scope to **CDU Assist**; side draws / pumparounds / petroleum targets are in-scope. Legacy stripper lessons remain in Appendix B as COM-shell proof only.
 
 ---
 
@@ -42,30 +44,25 @@ This document is intended to become the reasoning specification behind a Python,
 
 ## 2. Scope
 
-The initial scope is a conventional steady-state rigorous HYSYS column with:
+**Product line:** CDU Assist — atmospheric crude distillation in Aspen HYSYS.
 
-- One or more feed streams
-- An overhead product
-- A bottoms product
-- A total or partial condenser, where applicable
-- A reboiler, where applicable
-- Equilibrium stages or stages with specified efficiency
-- Optional side draws, side strippers, pump-arounds, or stripping media in later extensions
-- Product requirements expressed as composition, recovery, flow, temperature, vapor pressure, endpoint, or another calculated property
+The primary scope is a conventional steady-state rigorous HYSYS **atmospheric crude tower** with:
 
-The methodology is applicable to:
+- One or more crude feed streams (assay / hypocomponents)
+- Overhead / naphtha (and related light products as configured)
+- Multiple **side draws** (e.g. kerosene, diesel/LGO, AGO)
+- **Pumparounds** (duty / circulation / return T)
+- Optional side strippers and stripping steam
+- Condenser as configured; furnace / flash-zone context
+- Atmospheric residue bottoms
+- Product requirements as **ASTM D86 / TBP / cut / gap / cold properties**, composition, recovery, flow, or other calculated properties
 
-- Distillation columns
-- Stabilizers
-- Strippers
-- Deethanizers / Depropanizers / Debutanizers / Demethanizers
-- Splitters / Fractionators
-- Absorbers and reboiled absorbers, with adjusted variable priorities
-- Petroleum fractionation columns, with additional assay and property-target logic
+Methodology also informs simpler distillation columns, but **this product does not own** Simple Column Assist or VDU Assist.
 
-The first implementation should avoid trying to automate every possible column configuration. It should begin with a constrained class of columns and expand after the reasoning engine has been validated.
+**Assist first class (product):** Atmospheric CDU — see MV map + `new_intelligence/` D1–D3.  
+**Legacy COM validation class:** SW Stripper — see playbook (shell proof only).
 
-**Studio first class:** SW Stripper (full-reflux stripper) — see playbook.
+Side draws, side strippers, pump-arounds, and stripping media are **in scope** for CDU Assist (not “later extensions”).
 
 ---
 
@@ -278,7 +275,9 @@ normalization_scale: 0.005
 
 This separation is essential because a final process requirement may temporarily be inactive inside HYSYS during baseline convergence — and because **product quality targets must not be auto-relaxed** to force numerical “success.”
 
-**SW Stripper example:** bottoms NH₃ mass fraction `5e-5` (50 ppmw) is a typical plant **FINAL_TARGET**. The old stress value `1e-7` (0.1 ppm) is unrealistically tight for SWS and is not used as the default.
+**CDU example (preferred):** multi-product FINAL_TARGET set, e.g. kerosene ASTM D86 95% ≤ limit, diesel gap to kero ≥ minimum, residue TBP constraint — each locked unless the engineer allows change.
+
+**Legacy SW Stripper example (COM shell only):** bottoms NH₃ mass fraction `5e-5` (50 ppmw) was used as a single FINAL_TARGET during early Assist validation. Do **not** treat NH₃ as the CDU default target model.
 
 ---
 
@@ -388,15 +387,21 @@ Actions: ↑ reboiler duty / boilup / boilup ratio; rebalance draws; stripping m
 
 ### 9.3 Incorrect overall material split
 
-Symptoms: purity OK but recovery wrong; wrong yields; reflux changes purity but not recovery.
+Symptoms: purity/cut OK-ish but recovery/yield wrong; wrong product slate; reflux changes quality but not yield.
 
-Actions: change D or B rate; recovery/flow specs; pair split with reflux/boilup; check feed; check mutual consistency of flow targets.
+Actions: change D/B or **side-draw rates**; recovery/flow specs; pair split with reflux/PA/boilup; check feed; check mutual consistency of flow targets.
 
-### 9.4 Both ends off specification
+### 9.3b Mid-section / cut deficiency (CDU)
 
-Possible: both reflux and boilup insufficient; bad split; inadequate stages; bad feed stage; unfavorable P/feed condition; coupled/contradictory specs; bad thermo.
+Symptoms: neighboring products overlap (gap collapse); draw T wrong; PA return T odd; mid-profile flat or pinched; top reflux changes do little to mid-cut ASTM.
 
-Test two independent MVs and build a local sensitivity matrix.
+Actions: nudge **governing side-draw** and/or **pumparound duty/circ/return T** before increasing top RR; check overflash / flash-zone context; steam if residue/stripper-limited.
+
+### 9.4 Multiple products off specification
+
+Possible: coupled draw + PA + top energy insufficiency; bad overall split; inadequate stages; bad feed/draw/PA stages; unfavorable P/feed; contradictory multi-product FINAL_TARGETs; bad thermo/assay.
+
+Test **one family at a time** (draw vs PA vs top energy vs steam) and build a local sensitivity picture across products — not a single purity score.
 
 ### 9.5 Weak response to operating changes
 
@@ -416,11 +421,15 @@ Measured HYSYS response takes priority over textbook directionality (subject to 
 
 ### 10.1 Category 1 – Direct operating variables (preferred first)
 
-**Rectification-side:** reflux flow, RR, condenser duty, distillate rate, top T target, OH component target (as HYSYS MV — not as relaxing external FINAL_TARGET), OH vapor/liquid draw.
+**Top / light ends:** reflux flow, RR, condenser duty, OVHD / naphtha draw rate, top T target (as HYSYS MV — not relaxing external FINAL_TARGET).
 
-**Stripping-side:** reboiler duty, boilup, boilup ratio, bottoms rate, bottom T target, bottom component target (same caveat), stripping steam/gas.
+**Side draws / yields:** kerosene / diesel / AGO (etc.) **draw rates**; residue / bottoms rate; D/F or yield specs.
 
-**Overall split:** distillate/bottoms flow, D/F, component recovery, product yield.
+**Section energy (CDU):** **pumparound** duty, circulation, return T; related heater/cooler ΔT / duty specs.
+
+**Stripping:** stripping steam / gas rates; reboiler duty / boilup where configured.
+
+**Do not** default mid-cut problems to top RR only — see MV map families B/C/C2.
 
 ### 10.2 Category 2 – Operating-condition variables
 
@@ -808,22 +817,25 @@ Next revision should map this reasoning to exact HYSYS interfaces for the instal
 
 ---
 
-## 26. Planned Next Sections (Version 0.2)
+## 26. Planned Next Sections / Code Layers (Version 0.2+)
 
-- Exact HYSYS UI and object-model mapping
-- Column specification taxonomy
-- Variable-by-variable decision tables
-- Decision trees for OH / bottoms / recovery / duty
+**Docs ready (use these):** `new_intelligence/` D1–D5, [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md), CDU Add Spec when-to-add.
+
+Still to deepen or code:
+
+- Exact HYSYS UI and object-model mapping for **atmospheric CDU**
+- Column specification taxonomy with multi-product DOF examples
+- Variable-by-variable decision tables (draw vs PA vs top vs steam)
+- Decision trees for light ends / mid-cuts / residue / PA traffic
 - HYSYS solver-message classification
-- Step-size and trust-region tables
-- Feed-stage / stage-count / pressure workflows
-- Side-draw, side-stripper, pump-around logic
-- Petroleum-property target logic
-- YAML/JSON knowledge-base schema
-- Python/C# class design
-- Test-case and validation protocol
+- Step-size and trust-region tables for petroleum properties
+- Feed-stage / draw-stage / PA-stage / stage-count / pressure workflows (approval-only)
+- Executable side-draw, side-stripper, pump-around strategy IDs
+- Petroleum-property FINAL_TARGET table (ASTM/TBP/cut/gap)
+- YAML/JSON knowledge-base schema aligned to D2 machine summary
+- Test-case and validation protocol on atmospheric crude case
 - Failure-mode and safeguards matrix
-- Interactive PE judgment board UI fields
+- Interactive PE judgment board UI fields for multi-product residuals
 
 ---
 
@@ -837,7 +849,7 @@ Because exact automation object names and accessible properties vary by HYSYS re
 
 ## Appendix A — Studio v1 transferability (current COM)
 
-Map of this workflow to what **Simple Column Assist v1** can do today.  
+Map of this workflow to what **CDU Assist v1** can do today.  
 Canonical coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md).  
 Full COM detail: [`column_convergence_playbook.md`](column_convergence_playbook.md).
 
@@ -850,32 +862,36 @@ Full COM detail: [`column_convergence_playbook.md`](column_convergence_playbook.
 | Stage T/P profiles | Main TS | AUTO read |
 | Cond Q / Reb Q | Energy streams | AUTO read |
 | Feed composition / T / P / F | Stream writers | AUTO (Stream tab) |
-| External FINAL_TARGET layer (NH₃ 50 ppmw) | `FinalTarget` + stream check | AUTO (SWS default) |
+| External FINAL_TARGET layer | `FinalTarget` + stream/prop check | AUTO shell; **CDU multi-product PLANNED** (legacy NH₃ default) |
 | States A–E classification | `classify_engineering_state` | AUTO (State F PARTIAL) |
 | Response classes after trial | `classify_response` | AUTO (score-heavy PARTIAL) |
 | Refresh estimates | `refresh_estimates` COM | AUTO |
+| Side-draw / PA / steam GoalValue families | MV map IDs | **PLANNED** (docs ready) |
 | Solver damping | HYSYS UI | MANUAL |
 | Hydraulics flooding | Not mapped | MANUAL / future |
-| Structural (stages, feed tray) | Not in Assist | PERMISSION / later |
+| Structural (stages, feed/draw/PA tray) | `column_connections` READ; write approval-only | PERMISSION |
 | Interactive PE board | Intelligence window + Trial Map | PARTIAL (Assist Loop can still batch) |
 
 **Non-negotiable Assist policy (from this workflow):**
 
 ```text
-FINAL_TARGET (e.g. NH3 bottoms)  → locked unless user explicitly allows
-Category-1 MVs (e.g. RR / energy) → preferred Assist experiments
-Weak response / State F          → stop and report; do not relax product targets
+FINAL_TARGET (multi-product ASTM/cut/gap — or legacy NH3) → locked unless user allows
+Category-1 MVs (draws / PA / top energy / steam) → preferred Assist experiments
+Weak response / State F → stop and report; do not relax product targets
+Never auto-save .hsc; never auto Specs.Add when DOF = 0
 ```
 ---
 
-## Appendix B — Alignment with SW Stripper stress-test lessons
+## Appendix B — Alignment with legacy SW Stripper stress-test lessons
+
+> **COM-shell proof only.** These lessons validated Assist States / FINAL_TARGET lock / keep-reverse. They are **not** CDU cut-point guidance.
 
 | Lesson from live test | Workflow clause |
 |-----------------------|-----------------|
 | RR 2 → ~6.4 fixed energy deficiency | Category-1 MV; State C targeting |
 | NH₃ GoalValue relax forced “converged” | Violates §5.7 / §15 / §24.16 — wrong |
 | RR matched then more RR barely moved NH₃ | §9.5 weak response → switch / State F |
-| Duties -32767 | State B numerical recovery before purity chasing |
+| Duties -32767 | State B numerical recovery before quality chasing |
 | PE wants see-every-iteration judgment | Interactive pause in §4 / §22 |
 | Active swap RR+Ovhd recovered physical solve | §15 spec roles; State B baseline |
 | External stream NH₃ met while NH₃ inactive | FINAL_TARGET vs HYSYS Active (§5.7) |

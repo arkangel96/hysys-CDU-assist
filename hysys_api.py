@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from models import OperationData, StreamData
+from hysys_units import HysysDisplayUnits, discover_display_units
 
 
 class HysysError(RuntimeError):
@@ -19,6 +20,7 @@ class HysysController:
         self.flowsheet: Any = None
         self.connected = False
         self.component_names: list[str] = []
+        self.display_units = HysysDisplayUnits()
 
     def connect(self, case_path: str | None = None) -> None:
         try:
@@ -59,9 +61,18 @@ class HysysController:
             self.flowsheet = self.case.Flowsheet
             self.connected = True
             self.component_names = self.get_component_names()
+            self.refresh_display_units()
         except Exception:
             self.disconnect()
             raise
+
+    def refresh_display_units(self) -> HysysDisplayUnits:
+        """Copy Temperature/Pressure/Flow units from the open HYSYS case."""
+        if self.flowsheet is None:
+            self.display_units = HysysDisplayUnits()
+            return self.display_units
+        self.display_units = discover_display_units(self.flowsheet)
+        return self.display_units
 
     @staticmethod
     def _active_case(app: Any) -> Any:
@@ -83,6 +94,7 @@ class HysysController:
         self.case = None
         self.app = None
         self.component_names = []
+        self.display_units = HysysDisplayUnits()
 
     def _require_connection(self) -> None:
         if not self.connected or self.flowsheet is None:
@@ -138,7 +150,8 @@ class HysysController:
                 continue
         return None
 
-    # Worksheet-style display units (match HYSYS Conditions page, not internal SI).
+    # Worksheet display units — filled from HYSYS on connect (see display_units).
+    # Kept as class defaults for fallback before connect.
     DISPLAY_UNITS = {
         "Temperature": "C",
         "Pressure": "bar",
@@ -152,6 +165,9 @@ class HysysController:
         "Mass Flow": "MassFlow",
     }
 
+    def _active_display_units(self) -> dict[str, str]:
+        return self.display_units.as_display_map()
+
     @classmethod
     def _get_in_unit(cls, stream: Any, property_object: str, unit: str) -> float | None:
         try:
@@ -163,17 +179,22 @@ class HysysController:
 
     def get_stream_data(self, stream: Any) -> StreamData:
         name = str(getattr(stream, "Name", "Unknown"))
+        units = self._active_display_units()
+        t_u = units["Temperature"]
+        p_u = units["Pressure"]
+        n_u = units["Molar Flow"]
+        m_u = units["Mass Flow"]
         return StreamData(
             name=name,
-            temperature=self._get_in_unit(stream, "Temperature", "C"),
-            pressure=self._get_in_unit(stream, "Pressure", "bar"),
-            molar_flow=self._get_in_unit(stream, "MolarFlow", "kgmole/h"),
-            mass_flow=self._get_in_unit(stream, "MassFlow", "kg/h"),
+            temperature=self._get_in_unit(stream, "Temperature", t_u),
+            pressure=self._get_in_unit(stream, "Pressure", p_u),
+            molar_flow=self._get_in_unit(stream, "MolarFlow", n_u),
+            mass_flow=self._get_in_unit(stream, "MassFlow", m_u),
             composition=self.get_stream_composition(stream),
-            temperature_unit="C",
-            pressure_unit="bar",
-            molar_flow_unit="kgmole/h",
-            mass_flow_unit="kg/h",
+            temperature_unit=t_u,
+            pressure_unit=p_u,
+            molar_flow_unit=n_u,
+            mass_flow_unit=m_u,
         )
 
     def get_stream_composition(self, stream: Any) -> dict[str, float]:
@@ -200,7 +221,7 @@ class HysysController:
     def set_stream_value(self, stream_name: str, property_name: str, value: float) -> None:
         self._require_connection()
         prop_name = self.PROPERTY_OBJECTS.get(property_name)
-        unit = self.DISPLAY_UNITS.get(property_name)
+        unit = self._active_display_units().get(property_name)
         if prop_name is None or unit is None:
             raise HysysError(f"Unsupported stream property: {property_name}")
         try:

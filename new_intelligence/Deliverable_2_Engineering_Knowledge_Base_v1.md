@@ -1,115 +1,227 @@
 # Deliverable 2 -- Engineering Knowledge Base (EKB)
 
-## Version 1.0
+## Version 1.1 — Atmospheric CDU
 
 ### Scope
 
 This document defines the engineering knowledge required by an AI
-assistant supporting **simple distillation columns in Aspen HYSYS**. It
-focuses on domain knowledge rather than reasoning strategy.
+assistant supporting **CDU / atmospheric crude distillation columns in
+Aspen HYSYS**. It focuses on domain knowledge rather than reasoning
+strategy.
 
-# 1. Distillation Fundamentals
+**Legacy note:** Earlier v1.0 content targeted simple 2-product
+distillation. That framing is retired here.
+
+---
+
+# 1. Atmospheric CDU Fundamentals
 
 ## Objective
 
-Separate components based on volatility while meeting product
-specifications with stable operation and acceptable energy usage.
+Fractionate crude oil into a **multi-product slate** (typically OVHD /
+naphtha, kerosene, diesel/LGO, AGO/HVGO side draw if present, and
+atmospheric residue) while meeting **cut / ASTM / TBP / property**
+targets with stable vapor-liquid traffic, operable pumparounds, and
+acceptable furnace / condenser energy.
 
-Key concepts: - Vapor-liquid equilibrium (VLE) - Relative volatility -
-Material balance - Energy balance - Stage efficiency (conceptual) -
-Reflux and boil-up - Pressure effects
+Key concepts:
 
-# 2. Core HYSYS Objects
+- Crude assay / oil characterization / hypocomponents (not pure
+  components)
+- Flash zone / overflash
+- Side draws and (where used) side strippers
+- Pumparounds (heat removal + internal reflux shaping)
+- Cut points, gaps / overlaps, ASTM D86 / TBP
+- Stripping steam (main column and/or side strippers)
+- Material balance across **all** products + residue
+- Energy balance: furnace / flash + PAs + condenser + reboiler/steam
 
-The AI shall understand: - Material Stream - Energy Stream -
-Distillation Column - Condenser - Reboiler - Feed - Product Streams -
-Design Specs - Adjust Operations - Spreadsheet objects
+---
+
+# 2. Core HYSYS Objects (CDU)
+
+The AI shall understand:
+
+- Material / Energy streams
+- Oil Manager / Assay / Blend / hypocomponent set
+- Atmospheric Column (or Column SubFlowsheet)
+- Condenser (Partial / Total / Full Reflux as configured)
+- Furnace / feed heater / flash zone context
+- Side-draw product streams
+- Pumparound circuits (duty, circulation, return T)
+- Side strippers + stripping steam (if present)
+- Column design specs (rate, cut point, gap, draw, PA, cold props, …)
+- Spreadsheet / Adjust (use carefully; prefer transparent specs)
+
+---
 
 # 3. Critical Engineering Variables
 
-  Variable           Primary Effect                 Secondary Effect
-  ------------------ ------------------------------ ---------------------------------
-  Reflux Ratio       Improves separation            Increases duties
-  Distillate Rate    Changes overhead recovery      Affects purity
-  Bottoms Rate       Changes bottoms recovery       Affects purity
-  Feed Stage         Internal composition profile   Energy usage
-  Number of Stages   Separation capability          Capital cost
-  Pressure           Relative volatility            Condenser/Reboiler temperatures
-  Feed Condition     Internal traffic               Separation efficiency
+| Variable | Primary effect | Secondary effect |
+|----------|----------------|------------------|
+| Top reflux / OVHD rate | Light-end split, OVHD quality | Condenser duty, top traffic |
+| Side-draw rates | Product yields / cut location | Neighboring product contamination |
+| Pumparound duty / circ / return T | Internal reflux & section traffic | Separation sharpness, condenser load |
+| Stripping steam rates | Residue / draw stripping | Condenser water / energy |
+| Flash-zone / furnace duty (context) | Overflash, vaporization | Flooding, residual quality |
+| Column pressure profile | Relative volatility, utility T | Condenser / PA temperatures |
+| Feed stage / draw stage / PA stage | Profile shape | Remixing, energy |
+| Number of stages (structural) | Separation capacity | Capital / convergence difficulty |
+| Locked product FINAL_TARGETs | Plant quality intent | Must not be auto-relaxed |
+
+---
 
 # 4. Engineering Relationships
 
-## Reflux
+## Side draws
 
-Higher reflux generally: - Improves purity - Improves recovery -
-Increases condenser duty - Increases reboiler duty - Increases flooding
-tendency
+- Increasing a draw rate moves more mass into that product and usually
+  **shifts the cut** (heavier or lighter contamination depending on
+  location and traffic).
+- Draw changes without PA / reflux compensation often break neighboring
+  ASTM specs (gap collapse or overlap).
 
-## Feed Stage
+## Pumparounds
 
-Incorrect feed stage may: - Increase energy - Reduce purity - Increase
-remixing - Reduce efficiency
+- PA duty removes heat mid-column → increases liquid reflux below the
+  PA → sharpens separation in that section; too much PA can starve
+  vapor / flood return hydraulics.
+- Prefer diagnosing **section traffic** (T profile, draw T, PA ΔT)
+  before chasing a single purity knob.
+
+## Overflash / flash zone
+
+- Insufficient overflash → poor fractionation above flash, dirty
+  residue / AGO; excessive overflash → energy waste and flooding risk.
+- Treat furnace / feed vaporization as **context** (often user-owned)
+  unless Assist has an approved MV.
+
+## Top energy vs mid-column energy
+
+- Top reflux alone cannot fix a mid-cut problem caused by wrong PA or
+  draw. Do **not** default to “always increase RR.”
 
 ## Pressure
 
-Higher pressure generally: - Reduces relative volatility - Makes
-difficult separations harder - Changes utility requirements
+- Higher pressure generally reduces relative volatility and shifts
+  utility temperatures; change only with PE approval.
 
-# 5. Common Performance Indicators
+---
 
-The AI shall monitor: - Product purity - Component recovery - Reflux
-ratio - Reboiler duty - Condenser duty - Flooding - Temperature
-profile - Pressure profile - Solver convergence
+# 5. Common Performance Indicators (CDU)
+
+Monitor:
+
+- Solver convergence + HYSYS Messages / popups
+- **Each product** ASTM D86 / TBP / cut / gap / cold properties as
+  specified
+- Product yields vs material balance (feed ≈ Σ products + losses)
+- Temperature profile (esp. draw trays, flash zone, PA returns)
+- PA duties, circulation, return temperatures
+- Condenser / furnace / steam duties
+- Hydraulic indicators (flooding, ΔP) when available
+- Degrees of freedom and Active vs Estimate specs
+
+---
 
 # 6. Typical Failure Modes
 
-Numerical: - Poor initialization - Overspecification - Tight tolerances
+**Numerical**
 
-Engineering: - Low reflux - Wrong feed stage - Too few stages -
-Unrealistic specifications - Unsuitable property package
+- Bad estimates / dry sections / wild duties
+- Overspecification (DOF < 0) or underspecification (DOF > 0)
+- Extreme GoalValues (draw > available traffic)
 
-# 7. Variable Priority
+**Process / CDU**
 
-Preferred adjustment order: 1. Initialization 2. Operating variables 3.
-Specifications 4. Feed stage 5. Number of stages 6. Property package
-(only if justified)
+- Wrong draw rates (yield vs quality fight)
+- Insufficient or excessive PA duty
+- Overflash too low / too high
+- Neighboring cuts overlapping (gap negative)
+- Locked FINAL_TARGET conflict with Active GoalValue set
+- Steam too low → wet / off-spec residue or stripper products
+
+**Thermodynamic**
+
+- Poor assay / characterization
+- Unsuitable property package for petroleum
+
+**Hydraulic**
+
+- Flooding in PA or packed/tray sections
+- Excessive pressure drop
+
+---
+
+# 7. Variable Priority (CDU)
+
+Preferred adjustment order:
+
+1. Initialization / Estimates / Active↔Estimate consistency (numerical)
+2. Operating MVs: draw rates, PA duty/circ, top reflux/OVHD (one family)
+3. Steam rates (if operable and not locked)
+4. Review FINAL_TARGET set (monitor / locked — no auto-relax)
+5. Feed / draw / PA stage (approval-only structural)
+6. Stage count / pressure / property package (escalate)
+
+---
 
 # 8. Engineering Constraints
 
-Never violate: - Physical feasibility - Equipment limitations -
-Hydraulic limits - Product requirements - Safety constraints
+Never violate:
+
+- Physical feasibility (nonphysical T, P, duties, dry impossible draws)
+- Locked plant FINAL_TARGETs
+- Equipment / hydraulic limits
+- Safety constraints
+- One major MV family per Assist trial
+
+---
 
 # 9. Knowledge Gaps
 
-When confidence is low, the AI should: - Explain uncertainty - Request
-additional data - Avoid unsupported recommendations
+When confidence is low, the AI should:
+
+- Explain uncertainty
+- Request assay / target sheet / which product is governing
+- Avoid unsupported recommendations
+- Escalate structural or characterization changes
+
+---
 
 # Machine Summary
 
-``` yaml
+```yaml
 domain:
-  simple_distillation
+  cdu_atmospheric
 
 objects:
   - streams
-  - column
+  - oil_assay_hypocomponents
+  - atmospheric_column
   - condenser
-  - reboiler
+  - furnace_flash_zone
+  - side_draws
+  - pumparounds
+  - side_strippers
+  - stripping_steam
   - design_specs
-  - adjust
 
 primary_variables:
-  - reflux_ratio
-  - distillate_rate
-  - bottoms_rate
-  - feed_stage
-  - stages
-  - pressure
+  - top_reflux_or_ovhd_rate
+  - side_draw_rates
+  - pumparound_duty_circ_return_t
+  - stripping_steam
+  - flash_overflash_context
+  - pressure_profile
+  - feed_draw_pa_stages
+  - stage_count
 
 performance_metrics:
-  - purity
-  - recovery
-  - energy
+  - astm_tbp_cut_gap
+  - product_yields
+  - energy_pa_condenser_furnace
   - hydraulics
   - convergence
+  - multi_product_final_targets
 ```

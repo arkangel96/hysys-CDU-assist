@@ -1,0 +1,57 @@
+{
+  "reference": "T-100 Design → Specs page (screenshot 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "status": "Converged",
+  "degrees_of_freedom": 0,
+  "default_basis": "Molar",
+  "page_layout": {
+    "left": "Column Specifications list + View… / Add… / Delete",
+    "left_extra": [
+      "Update Specs from Dynamics",
+      "Default Basis = Molar",
+      "Degrees of Freedom = 0",
+      "Switch To Alternate Specs"
+    ],
+    "right": "Specification Details for selected row"
+  },
+  "detail_pane_fields": [
+    "Spec Name",
+    "Converged?",
+    "Active",
+    "Use As Estimate",
+    "Current",
+    "Dry Flow Basis",
+    "Fixed/Ranged Spec",
+    "Primary/Alternate Spec",
+    "Specification Value",
+    "Current Calculated Value",
+    "Weighted Tolerance",
+    "Weighted Calculated Error",
+    "Absolute Tolerance",
+    "Absolute Calculated Error"
+  ],
+  "specifications_list": [
+    "Kero_SS Prod Flow",
+    "Diesel_SS Prod Flow",
+    "AGO_SS Prod Flow",
+    "PA_1_Rate(Pa)",
+    "PA_1_Duty(Pa)",
+    "PA_2_Rate(Pa)",
+    "PA_2_Duty(Pa)",
+    "PA_3_Rate(Pa)",
+    "PA_3_Duty(Pa)",
+    "Naphtha Prod Rate",
+    "Liquid Flow",
+    "Kero Reb Duty",
+    "Vap Prod Flow",
+    "Reflux Ratio"
+  ],
+  "intelligence_notes": [
+    "Specs page list matches Monitor Active set (14 rows)",
+    "Add… opens Column Specification Types catalog (already learned)",
+    "Assist READs detail fields via COM; writes Active/Goal/Estimate via Specs Summary path",
+    "Empty yellow detail cells in screenshot = no row properly selected or new-spec draft named T-100 — select a list row to see values",
+    "Default Basis Molar on T-100; product rates still shown as USGPM on Monitor (worksheet units)"
+  ]
+}

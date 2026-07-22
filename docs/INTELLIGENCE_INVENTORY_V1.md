@@ -1,8 +1,8 @@
-# Intelligence Inventory — Simple Column Assist v1 (New Intelligence)
+# Intelligence Inventory — CDU Assist v1 (New Intelligence)
 
 **Purpose:** Organize what intelligence already exists **before** adding anything new.  
-**Product:** Simple Column Assist v1 — New Intelligence  
-**Scope:** Simple distillation / stripping only (not CDU/VDU)  
+**Product:** CDU Assist v1 — New Intelligence  
+**Scope:** CDU / atmospheric crude distillation (not simple column / VDU)  
 **Date:** 2026-07-22  
 **Rule:** Do not add a new PE rule until it has a row here (status + owner doc + code hook).
 
@@ -18,7 +18,7 @@
 | **PLANNED** | Agreed next layer — do not implement until inventory is stable |
 
 **Anti-complexity:** Full PE judgment lives in docs. Code grows in thin layers.  
-One new intelligence item = one inventory row + one validation on SW Stripper.
+One new intelligence item = one inventory row + one validation on the **atmospheric CDU reference case** (legacy SW Stripper shell tests do not prove CDU State E).
 
 ---
 
@@ -27,10 +27,14 @@ One new intelligence item = one inventory row + one validation on SW Stripper.
 | Document | Role | Do not use for |
 |----------|------|----------------|
 | [`expert_decision_workflow.md`](expert_decision_workflow.md) | Master PE bible (States A–F, MV hierarchy, recovery, §28) | Day-to-day click recipes |
-| [`column_convergence_playbook.md`](column_convergence_playbook.md) | SW Stripper operational slice + COM transferability | Whole-industry rules |
+| [`column_convergence_playbook.md`](column_convergence_playbook.md) | **Legacy** SW Stripper COM / trial slice | CDU process guidance (use MV map + `new_intelligence/`) |
 | [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) | Living backlog / commentary | Current coded truth (use **this** inventory) |
-| [`hysys_add_spec_catalog.md`](hysys_add_spec_catalog.md) | Add Spec catalog + when-to-add policy | Auto-Add execution |
-| [`SCOPE_SIMPLE_COLUMN_ASSIST.md`](SCOPE_SIMPLE_COLUMN_ASSIST.md) | Product identity & boundaries | Engine detail |
+| [`hysys_add_spec_catalog.md`](hysys_add_spec_catalog.md) | Add Spec catalog + CDU when-to-add policy | Auto-Add execution |
+| [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) | CDU variable families (draws / PA / steam) | RR-only thinking |
+| [`CDU_INTEL_COMPLEMENTARY.md`](CDU_INTEL_COMPLEMENTARY.md) | Thin link to `cdu_intel/` + what is coded | Full D1–D10 auto-merge |
+| [`../cdu_intel/`](../cdu_intel/CDU_Engineering_Intelligence_Package_Master_Architecture_v1.md) | Complementary CDU domain PE (reference) | Superseding Assist / Inventory |
+| [`../new_intelligence/`](../new_intelligence/00_COMPLEMENTARY_INTRO.md) | Complementary PE OS (D1–D6) | Superseding Inventory |
+| [`SCOPE_CDU_ASSIST.md`](SCOPE_CDU_ASSIST.md) | Product identity & boundaries | Engine detail |
 | **This file** | **Coded vs paper vs planned snapshot** | Replacing the PE bible |
 
 ---
@@ -67,19 +71,19 @@ One new intelligence item = one inventory row + one validation on SW Stripper.
 | Engineering States A–E | `column_engine.classify_engineering_state` | **State F not returned by classifier** (see gaps) |
 | Diagnosis codes + summary | `column_engine.diagnose` | |
 | External FINAL_TARGET object | `column_models.FinalTarget` | Separate from HYSYS Active |
-| Default SWS NH₃ = 50 ppmw (5e‑5) | `default_sw_stripper_targets` | Locked, hard |
-| Never auto-relax locked FINAL_TARGET | `propose_action`, keep logic | |
-| Stream NH₃ mass frac check | `column_api` → `bottoms_nh3_mass_frac` | Prefer stream over spec Current |
-| Worksheet-style rate display (kgmole/h) | `ColumnSpecState.goal_display` etc. | |
-| Physical-solution / sentinel checks | `physical_solution`, duties, T | |
-| Bottoms-flow operability gate | `operable()`, `min_bottoms_flow_kgmole_h` | Rejects fake green / dry bottoms |
+| Default SWS NH₃ = 50 ppmw (5e‑5) | `default_sw_stripper_targets` | **Legacy shell** — not CDU FINAL_TARGET |
+| Never auto-relax locked FINAL_TARGET | `propose_action`, keep logic | Binding for CDU |
+| Stream NH₃ mass frac check | `column_api` → `bottoms_nh3_mass_frac` | **Legacy stripper** path |
+| Worksheet-style rate display (kgmole/h) | `ColumnSpecState.goal_display` etc. | Reusable |
+| Physical-solution / sentinel checks | `physical_solution`, duties, T | Reusable |
+| Bottoms-flow operability gate | `operable()`, `min_bottoms_flow_kgmole_h` | Reusable idea; extend to multi-draw/PA |
 | State D stop (operability fail) | `propose_action` → `operability_review` | Manual PE review |
-| Category-1 RR nudge (State C) | `propose_action` | NH₃ miss → increase RR (SWS heuristic) |
-| State B → refresh estimates first | `propose_action` / `run_one_trial` | |
-| Baseline 1-for-1 swap NH₃→Ovhd | `baseline_swap` | **SWS Full Reflux heuristic** — not general policy |
+| Category-1 RR nudge (State C) | `propose_action` | **Legacy SWS** NH₃→RR — replace with CDU family chooser |
+| State B → refresh estimates first | `propose_action` / `run_one_trial` | Reusable |
+| Baseline 1-for-1 swap NH₃→Ovhd | `baseline_swap` | **SWS Full Reflux heuristic** — not CDU policy |
 | Response classes after trial | `classify_response` | Still score-heavy (PARTIAL) |
-| Keep/reverse with restore | `ConvergenceAssistant.run_one_trial` | Also blocks NH₃ worsening when locked |
-| Thrashing stop (3 consecutive reverses) | `assist()` | Treated as State F *evidence*, not classified F |
+| Keep/reverse with restore | `ConvergenceAssistant.run_one_trial` | Extend to multi-product FINAL_TARGETs |
+| Thrashing stop (3 consecutive reverses) | `assist()` | Treated as State F *evidence* |
 | Score function (residuals + soft physics) | `score_state` | Support metric — not plant truth |
 
 ### 4.3 PE orientation UI
@@ -94,16 +98,16 @@ One new intelligence item = one inventory row + one validation on SW Stripper.
 | Trial Map path + strategy board | `trial_map.py`, `trial_map_window.py` | |
 | Strategy catalog (stripper IDs) | `STRATEGY_CATALOG` | RR / estimates / NH₃ / swap / DOF |
 
-### 4.4 Validated live lessons (encoded as policy examples)
+### 4.4 Validated live lessons (shell — legacy stripper)
 
-| Lesson | Encoded as |
-|--------|------------|
-| Dead bottoms / sentinel duties | State B first — not purity chase |
-| Full Reflux + high Ovhd Active → tiny bottoms | State D + Specs Summary click hints |
-| NH₃ stress 0.1 ppm was wrong | Default FINAL_TARGET 50 ppmw |
-| Units: COM SI vs worksheet kgmole/h | Display conversion |
-| Spec Current vs stream NH₃ can disagree | Stream preferred for FINAL_TARGET |
-| Active swap recovered State B | `baseline_swap` path (SWS-specific) |
+| Lesson | Encoded as | CDU note |
+|--------|------------|----------|
+| Dead bottoms / sentinel duties | State B first — not purity chase | Keep |
+| Full Reflux + high Ovhd Active → tiny bottoms | State D + Specs Summary hints | Pattern reusable; not CDU default condenser |
+| NH₃ stress 0.1 ppm was wrong | Default FINAL_TARGET 50 ppmw | **Legacy only** — replace with ASTM/cut set |
+| Units: COM SI vs worksheet | Display conversion | Keep |
+| Spec Current vs stream disagree | Stream preferred | Keep principle for product props |
+| Active swap recovered State B | `baseline_swap` | Retarget beyond NH₃→Ovhd |
 
 ---
 
@@ -116,9 +120,10 @@ One new intelligence item = one inventory row + one validation on SW Stripper.
 | **Keep/reverse judgment** | Score + physical + NH₃ worsen block | Not primarily product/operability narrative |
 | **Spec-role engine** | One NH₃↔Ovhd swap recipe | Condenser-aware Active policy table |
 | **Operability** | Bottoms flow gate | MB (F≈D+B), duty signs, T-profile gate for State E |
-| **FINAL_TARGET layer** | NH₃ bottoms only | Generic multi-target (e.g. H₂S); overhead targets |
+| **FINAL_TARGET layer** | Single bottoms composition (NH₃ legacy) | **Multi-product** ASTM / TBP / cut / gap FINAL_TARGETs |
+| **CDU families** | A/B/C shell (RR / D / B rates) | Side-draw, PA duty/circ, steam strategies |
 | **Interactive default** | PE board / one-trial API exist | Assist Loop can still batch without forced pause |
-| **Appendix A in workflow** | Historical | Still says FINAL_TARGET “TODO” — **stale** |
+| **Appendix A in workflow** | Historical | Sync with CDU map |
 
 ---
 
@@ -129,11 +134,28 @@ Keep in markdown until a thin layer is justified:
 - Full MV ranking score \(R_j\)
 - Formal bracketing / continuation methods
 - Two-variable / 2×2 targeting
-- Structural escalation (stages, feed stage, pressure) as Assist actions
+- Structural escalation (stages, feed/draw/PA stage, pressure) as Assist actions
 - Hydraulic flooding / rating validation
 - Solver damping / max iterations as AUTO (still MANUAL in playbook)
-- Generic multi-column templates beyond SW Stripper
-- CDU / VDU logic (out of product scope)
+- Full multi-product State E gate (all cuts + PA operability)
+- Atmospheric CDU playbook (replace legacy stripper playbook for process guidance)
+
+---
+
+## 6b. CDU PLANNED (next coded layers)
+
+| Item | Owner docs | Status |
+|------|------------|--------|
+| Multi-product FINAL_TARGET table | `new_intelligence` D1–D3, CASE | **PLANNED** |
+| `side_draw_nudge` family | MV map | **CODED** (name-match Active GoalValue) |
+| `pa_duty_nudge` / circ / return T | MV map | **CODED** (name-match Active GoalValue) |
+| `steam_nudge` | MV map | **CODED** (name-match Active GoalValue) |
+| CDU when-to-add in `column_spec_catalog` | Add Spec catalog | **CODED** (`product_line="cdu"`) |
+| D1 complementary PE-board labels + soft family hint | `cdu_reasoning.py` / `CDU_INTEL_COMPLEMENTARY.md` | **CODED** (thin; no second state machine) |
+| D6 neighbor-product reminder + D8 soft acceptance cues | `cdu_reasoning.py` | **CODED** (advisory PE board / trial footnote) |
+| D3 interaction tip by family | `cdu_reasoning.py` | **CODED** (advisory) |
+| Multi-product FINAL_TARGET JSON config | `cdu_targets.py` / `config/cdu_final_targets*.json` | **CODED** (opt-in; example disabled) |
+| Atmospheric reference case validation | SCOPE / CASE | **PLANNED** |
 
 ---
 
@@ -183,13 +205,13 @@ P14 Thin intelligence layers
 | 4 | Condenser-aware Active policy (beyond NH₃→Ovhd) | PARTIAL — still SWS swap recipe |
 | 4b | Connections structural intelligence (feed/stages/P) approval-only | **CODED** — `column_connections.py` |
 | 4c | Simple optimize (min RR / RebQ / CondQ / stages) | **CODED** — `column_optimize.py` |
-| 5 | Optional second FINAL_TARGET (H₂S) via table | PLANNED |
+| 5 | Multi-product FINAL_TARGET (ASTM/cut/gap) + CDU family chooser | **PARTIAL** — chooser/strategies CODED; empty CDU target table until case config |
 | 6 | Learning/memory system from `new_intelligence/` | HELD |
 | 7 | Workspace folder reorg (Deliverable 6) | HELD |
 
 See [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) and `new_intelligence/00_COMPLEMENTARY_INTRO.md`.
 
-**Explicitly not next:** GoalValue spam, auto-relax purity, auto Specs.Add, **silent** structural automation, CDU logic.
+**Explicitly not next:** GoalValue spam, auto-relax product targets, auto Specs.Add, **silent** structural automation.
 
 ---
 
@@ -216,7 +238,7 @@ When closing or adding intelligence:
 2. Tick playbook gap list only if truly coded.  
 3. Change policy in `expert_decision_workflow.md` §28 if the PE rule changes.  
 4. Keep `intelligence_improvement_notes.md` as commentary — not the coded checklist.  
-5. Validate on SW Stripper before claiming State E success.
+5. Validate on the **atmospheric CDU reference case** before claiming State E success (legacy SW Stripper proves COM shell only).
 
 ---
 

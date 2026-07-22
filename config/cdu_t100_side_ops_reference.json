@@ -1,0 +1,143 @@
+{
+  "reference": "T-100 Design → Side Ops (screenshots 2026-07-22)",
+  "column_name": "T-100",
+  "flowsheet_tag": "COL1",
+  "fluid_package": "Basis-1 / PengRobinson",
+  "status": "Converged",
+  "flow_basis": "Molar",
+  "side_strippers": [
+    {
+      "name": "Kero_SS",
+      "num_stages": 3,
+      "liq_draw_stage": "9_Main TS",
+      "vap_return_stage": "8_Main TS",
+      "outlet_flow": 722.0,
+      "outlet_flow_unit": "lbmole/hr",
+      "reboiler_duty": 7499900,
+      "reboiler_duty_unit": "Btu/hr"
+    },
+    {
+      "name": "Diesel_SS",
+      "num_stages": 3,
+      "liq_draw_stage": "17_Main TS",
+      "vap_return_stage": "16_Main TS",
+      "outlet_flow": 1139,
+      "outlet_flow_unit": "lbmole/hr",
+      "reboiler_duty": null
+    },
+    {
+      "name": "AGO_SS",
+      "num_stages": 3,
+      "liq_draw_stage": "22_Main TS",
+      "vap_return_stage": "21_Main TS",
+      "outlet_flow": 202.2,
+      "outlet_flow_unit": "lbmole/hr",
+      "reboiler_duty": null
+    }
+  ],
+  "side_rectifiers": [],
+  "pump_arounds": [
+    {
+      "name": "PA_1",
+      "draw_stage": "2_Main TS",
+      "return_stage": "1_Main TS",
+      "flow": 4812,
+      "flow_unit": "lbmole/hr",
+      "duty": -55000000,
+      "duty_unit": "Btu/hr",
+      "draw_temperature": 315.7,
+      "return_temperature": 138.0,
+      "temperature_unit": "F",
+      "export": false
+    },
+    {
+      "name": "PA_2",
+      "draw_stage": "17_Main TS",
+      "return_stage": "16_Main TS",
+      "flow": 1830,
+      "flow_unit": "lbmole/hr",
+      "duty": -35000000,
+      "duty_unit": "Btu/hr",
+      "draw_temperature": 512.1,
+      "return_temperature": 365.2,
+      "temperature_unit": "F",
+      "export": false
+    },
+    {
+      "name": "PA_3",
+      "draw_stage": "22_Main TS",
+      "return_stage": "21_Main TS",
+      "flow": 1430,
+      "flow_unit": "lbmole/hr",
+      "duty": -35000000,
+      "duty_unit": "Btu/hr",
+      "draw_temperature": 615.5,
+      "return_temperature": 484.1,
+      "temperature_unit": "F",
+      "export": false
+    }
+  ],
+  "side_draws": [
+    {
+      "stream_name": "Off Gas @COL1",
+      "draw_stage": "Condenser",
+      "phase_type": "V",
+      "mole_flow": 9.005e-5,
+      "mass_flow": 4.657e-3,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    },
+    {
+      "stream_name": "Naphtha @COL1",
+      "draw_stage": "Condenser",
+      "phase_type": "L",
+      "mole_flow": 2769,
+      "mass_flow": 245800,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    },
+    {
+      "stream_name": "Waste Water @COL1",
+      "draw_stage": "Condenser",
+      "phase_type": "W",
+      "mole_flow": 700.0,
+      "mass_flow": 12610,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    },
+    {
+      "stream_name": "Residue @COL1",
+      "draw_stage": "29_Main TS",
+      "phase_type": "L",
+      "mole_flow": 1420,
+      "mass_flow": 619600,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    },
+    {
+      "stream_name": "Kerosene @COL1",
+      "draw_stage": "Kero_SS_Reb",
+      "phase_type": "L",
+      "mole_flow": 722.0,
+      "mass_flow": 113900,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    },
+    {
+      "stream_name": "Diesel @COL1",
+      "draw_stage": "3_Diesel_SS",
+      "phase_type": "L",
+      "mole_flow": 1139,
+      "mass_flow": 246100,
+      "mole_flow_unit": "lbmole/hr",
+      "mass_flow_unit": "lb/hr"
+    }
+  ],
+  "intelligence_notes": [
+    "Side Rectifiers table empty on T-100",
+    "Kero_SS only side stripper with explicit Reboiler Duty on Side Ops page; Diesel/AGO duty empty (steam strip)",
+    "Side Draws screenshot shows 6 rows — AGO product may appear when scrolled or via Connections @ 3_AGO_SS",
+    "Monitor PA rates in USGPM; Side Ops PA table shows molar lbmole/hr — both from HYSYS, no Assist conversion",
+    "Assist READ only — no auto Add/Delete Side Ops"
+  ]
+}
