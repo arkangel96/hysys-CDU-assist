@@ -625,13 +625,24 @@ class ColumnController:
                     if spec.goal_display is None and spec.goal_value is not None:
                         spec.goal_display = self._molar_goal_display(spec.goal_value)
 
-        state.physical_solution = (
-            not is_sentinel(state.reboiler_duty)
-            and not is_sentinel(state.bottoms_temperature)
-        )
-        if len(state.product_streams) <= 2:
+        # Atmospheric CDU: steam-stripped / side-stripper energy — no main Reb Q required.
+        # Physical = residue T + residue (or side-product) flows look real; duties optional.
+        btms_t_ok = not is_sentinel(state.bottoms_temperature)
+        flow_ok = False
+        if state.bottoms_molar_flow_kgmole_h is not None:
+            flow_ok = abs(float(state.bottoms_molar_flow_kgmole_h)) > 1e-9
+        elif state.bottoms_molar_flow is not None and not is_sentinel(state.bottoms_molar_flow):
+            flow_ok = abs(float(state.bottoms_molar_flow)) > 1e-9
+        if not flow_ok and (state.cdu_topology or state.side_products):
+            flow_ok = True
+        state.physical_solution = btms_t_ok and flow_ok
+        if state.condenser_duty is not None:
             state.physical_solution = state.physical_solution and not is_sentinel(
                 state.condenser_duty
+            )
+        if state.reboiler_duty is not None:
+            state.physical_solution = state.physical_solution and not is_sentinel(
+                state.reboiler_duty
             )
         return state
 

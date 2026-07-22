@@ -6,10 +6,11 @@ from __future__ import annotations
 
 from column_api import ColumnController
 from column_engine import ConvergenceAssistant, propose_action
-from column_models import ConvergenceLimits, FinalTarget, default_sw_stripper_targets
+from column_models import ConvergenceLimits, FinalTarget, default_cdu_targets
+
 from hysys_api import HysysController
 
-COLUMN = "SW Stripper"
+COLUMN = "T-100"
 BTMS_SI = 12500.0 / 3600.0
 RR_GOOD = 2.5
 
@@ -77,7 +78,7 @@ def main() -> int:
     snap = api.snapshot(COLUMN)
 
     rows: list[dict] = []
-    plant_targets = default_sw_stripper_targets()
+    plant_targets = default_cdu_targets()
     # Harder plant gate for split stress (this case design Btms ~12500)
     strict_limits = ConvergenceLimits(min_bottoms_flow_kgmole_h=5000.0)
     # Harder product target to force State C without touching RR first
@@ -313,7 +314,7 @@ def main() -> int:
     md_path = "docs/STRESS_TEST_RESULTS.md"
     with open(md_path, "w", encoding="utf-8") as fh:
         fh.write("# Intelligence Stress Test Results\n\n")
-        fh.write("Live HYSYS SW Stripper — multi-parameter tests. Case restored; not auto-saved.\n\n")
+        fh.write("Live HYSYS T-100 CDU — multi-parameter tests. Case restored; not auto-saved.\n\n")
         fh.write("| Case | Action | State | Family | Propose | Trial | Key result |\n")
         fh.write("|------|--------|-------|--------|---------|-------|------------|\n")
         for r in rows:

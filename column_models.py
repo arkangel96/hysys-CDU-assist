@@ -71,41 +71,13 @@ class FinalTarget:
 
 
 def default_cdu_targets() -> list[FinalTarget]:
-    """Placeholder FINAL_TARGETs for CDU — configure per case after COM discovery.
-
-    Cut / ASTM / TBP targets are case-specific. Until Phase 1 discovery, return
-    an empty list so Assist does not invent stripper NH3 purity targets.
-    """
-    return []
-
-
-def default_sw_stripper_targets() -> list[FinalTarget]:
-    """Legacy simple-column / SW Stripper FINAL_TARGET set (COM shell validation)."""
-    return [
-        FinalTarget(
-            id="NH3_BOTTOMS",
-            description="Bottoms NH3 mass fraction (FINAL_TARGET) — typical SWS ~30-100 ppmw",
-            spec_name_contains="nh3",
-            component_name_contains=("ammonia", "nh3"),
-            stream="bottoms",
-            relationship="less_or_equal",
-            # 50 ppmw = 5e-5 mass frac (plant-typical; NOT 0.1 ppm / 1e-7 stress value)
-            target_value=5e-5,
-            tolerance=0.0,
-            locked=True,
-            hard=True,
-            property_type="composition",
-        )
-    ]
-
-
-def default_cdu_targets() -> list[FinalTarget]:
     """
     Atmospheric CDU multi-product FINAL_TARGETs.
 
     Loads enabled rows from config/cdu_final_targets.json when present.
-    Otherwise empty — Assist still classifies States A–F on DOF / physics /
+    Otherwise empty — Assist classifies States A–F on DOF / physics /
     operability; quality State C/E gates activate when targets are provided.
+    Never invents NH3 / stripper purity targets.
     """
     try:
         from cdu_targets import load_cdu_final_targets
@@ -116,9 +88,7 @@ def default_cdu_targets() -> list[FinalTarget]:
 
 
 def default_final_targets(*, product_line: str = "cdu") -> list[FinalTarget]:
-    """Product-line FINAL_TARGET factory — CDU Assist default is atmospheric CDU."""
-    if product_line in {"sw_stripper", "simple_column", "legacy_stripper"}:
-        return default_sw_stripper_targets()
+    """CDU Assist FINAL_TARGET factory — atmospheric crude only."""
     return default_cdu_targets()
 
 
@@ -417,6 +387,8 @@ class Diagnosis:
     hysys_message_clues: list[str] = field(default_factory=list)
     # Design → Connections structural proposals (Family F — approval-only)
     structural_recommendations: list[str] = field(default_factory=list)
+    # Optional expert-engine overlay (merged CDU modules) — never block core chooser
+    expert_context: Any | None = None
 
 
 @dataclass(slots=True)

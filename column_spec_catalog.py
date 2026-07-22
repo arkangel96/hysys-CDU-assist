@@ -879,6 +879,7 @@ def recommend_specs_summary_clicks(
     ovhd = find("ovhd") or find("vap rate")
     btms = find("btms") or find("bottoms")
     nh3 = find("nh3") or find("ammonia")
+    quality = nh3 or find("cut point") or find("astm")
     if rr is None:
         rr = find("reflux ratio")
 

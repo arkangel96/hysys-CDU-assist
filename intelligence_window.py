@@ -42,7 +42,7 @@ LAYER 1
 
 LAYER 2+ (2026-07-22 multi-variable integration)
 [x] States A–F (State F with flat/exhausted-family evidence)
-[x] FINAL_TARGET lock — plant targets locked (legacy NH3 shell; CDU multi-product next)
+[x] FINAL_TARGET lock — plant targets from cdu_final_targets.json (empty until configured)
 [x] Keep/reverse on FINAL_TARGET + operability (not score alone)
 [x] Multi-family chooser: A_init / B_energy / C_split / C2_steam (+ PA/draw strategies)
 [x] HYSYS popup clues: detect + log + feed into PE board; auto-OK so multi-run continues
@@ -94,7 +94,7 @@ class IntelligenceWindow(QMainWindow):
     def __init__(self, assistant: ConvergenceAssistant, parent=None) -> None:
         super().__init__(parent)
         self.assistant = assistant
-        self.column_name = "SW Stripper"
+        self.column_name = "T-100"
         self.setWindowTitle("PE Intelligence — CDU Assist v1")
         self.resize(1100, 720)
 

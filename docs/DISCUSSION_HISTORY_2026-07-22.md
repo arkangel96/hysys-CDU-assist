@@ -134,4 +134,56 @@ Assist UI was too large/sparse vs Aspen desktop density → compacted fonts/padd
 
 ---
 
-*End of session discussion capture — 2026-07-22*
+## 10. Afternoon session — T-100 HYSYS learn + live stress (same day)
+
+**Channel:** Cursor Agent + live Aspen HYSYS (T-100 / COL1)  
+**Case:** Atmospheric Crude Tower / T-100
+
+### HYSYS pages learned → Assist READ
+
+| Page | Outcome |
+|------|---------|
+| Design → Subcooling | Empty on T-100; READ wired |
+| Side Ops (Strippers / Rectifiers / PAs / Side Draws) | T-100 shape modeled + PE board |
+| Rating (Towers / Vessels / Equipment / Pressure Drop) | T-100 shape modeled + PE board |
+| Units | Copy from HYSYS case — no Assist conversion |
+
+### SWS / simple-column cleanup
+
+- User clarified: **CDU only** — do not drive logic from SW Stripper.
+- Removed `default_sw_stripper_targets` from runtime path; FINAL_TARGET factory is CDU-only.
+- Fixed false **State B**: atmospheric CDU often has **no main RebQ** — physical gate no longer requires it.
+- GUI / PE defaults → `T-100` (not SW Stripper).
+- Live re-diagnose after fix: `physical=True`, **State E**.
+
+### Live HYSYS tests
+
+- Smoke: Connect / Inspect / Diagnose OK (venv + pywin32).
+- Fixed Diagnose crash (`quality` NameError) and merge bugs (`expert_context`, `structural_recommendations`, `locked_active`).
+- GUI class renamed to `CduAssist` (`main.py` import).
+
+### Stress test (`stress_test_cdu_t100.py`) — completed exit 0
+
+| Case | State | Propose | Assist trials |
+|------|--------|---------|----------------|
+| 0 Baseline | E | none | 0 |
+| 1 PA_1_Duty ×0.7 | E | none | 0 |
+| 2 Kero draw ×0.5 | E | none | 0 |
+| 3 RR Active ON (PA_1_Rate OFF) | B | refresh_estimates | 0 |
+| 9 Restore | E | none | 0 |
+
+- **0 Assist keep/reverse trials** (PA/Kero stayed healthy → no propose).
+- Case **restored** (not auto-saved).
+- HYSYS popup observed by user: *Column T-100 - Flash failed when testing for two liquid phases.*
+- Dialog watcher exists on `run_column`; this flash message not yet specially classified (`flash_failed` tag pending).
+
+### Decisions carried forward
+
+1. Iteration surface = Monitor / Specs Summary / Side Ops MVs (draw/PA/steam) — not Rating day-to-day.
+2. Prefer draw/PA over top RR on T-100.
+3. Popups are PE clues — strengthen flash/two-liquid tagging next session.
+4. Push target: `https://github.com/arkangel96/hysys-CDU-assist`
+
+---
+
+*End of session discussion capture — 2026-07-22 (afternoon)*

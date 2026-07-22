@@ -249,7 +249,7 @@ class StatusChip(QFrame):
         )
 
 
-class SimpleColumnAssist(QMainWindow):
+class CduAssist(QMainWindow):
     """Desktop assist for CDU / atmospheric crude distillation in HYSYS."""
 
     def __init__(self) -> None:
@@ -1315,7 +1315,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def open_trial_map(self) -> None:
         def work() -> None:
-            name = self.column_combo.currentText().strip() or "SW Stripper"
+            name = self.column_combo.currentText().strip() or "T-100"
             if self.trial_map_window is None or not isinstance(self.trial_map_window, TrialMapWindow):
                 self.trial_map_window = TrialMapWindow(self.assistant)
             self.trial_map_window.refresh(name)
@@ -1329,7 +1329,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def open_intelligence(self) -> None:
         def work() -> None:
-            name = self.column_combo.currentText().strip() or "SW Stripper"
+            name = self.column_combo.currentText().strip() or "T-100"
             if self.intelligence_window is None:
                 self.intelligence_window = IntelligenceWindow(self.assistant)
             self.intelligence_window.refresh(name)
@@ -1540,7 +1540,7 @@ class SimpleColumnAssist(QMainWindow):
         QMessageBox.critical(self, "CDU Assist v1", str(error))
 
 
-# Backward-compatible alias
+# Backward-compatible aliases (old entry points)
 HysysStudio = CduAssist
-SimpleColumnAssist = CduAssist  # backward-compatible alias
+SimpleColumnAssist = CduAssist
 

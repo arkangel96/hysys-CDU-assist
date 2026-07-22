@@ -145,14 +145,15 @@ def evaluate_final_targets(
 def operable(state: ColumnState, limits: ConvergenceLimits) -> bool:
     if not state.physical_solution:
         return False
-    # CDU multi-product: residue/draw rates may substitute for stripper-style btms flow
-    if state.product_streams and len(state.product_streams) > 2:
+    # CDU multi-product: residue / side-draw rates substitute for 2-product bottoms-only checks
+    if state.cdu_topology or (state.product_streams and len(state.product_streams) > 2):
         draw_specs = [
             s
             for s in state.specs
             if s.is_active
             and (
                 "prod rate" in s.name.lower()
+                or "prod flow" in s.name.lower()
                 or "draw" in s.name.lower()
                 or "_ss" in s.name.lower()
             )
@@ -181,8 +182,10 @@ def operable(state: ColumnState, limits: ConvergenceLimits) -> bool:
         if duty is not None and not is_sentinel(duty) and abs(duty) > limits.max_duty_abs:
             return False
 
+    # Profile temperatures are in HYSYS worksheet unit (often F for T-100).
+    # Skip C-named limits when CDU topology uses imperial worksheet temps.
     temps = state.profile.temperatures
-    if temps:
+    if temps and not state.cdu_topology:
         if max(temps) > limits.max_temperature_c or min(temps) < limits.min_temperature_c:
             return False
         if limits.require_profile_for_state_e and (max(temps) - min(temps)) < 0.05:
@@ -977,19 +980,26 @@ def propose_action(
     if strategy == "none_converged":
         return None
 
-    expert = diagnosis.expert_context
-    if expert is None:
-        expert = build_expert_context(
-            state,
-            diagnosis.engineering_state,
-            limits,
-            diagnosis.final_target_status,
-            history=history,
-            case_config=load_case_config(),
-        )
-    expert_action = propose_from_expert(state, expert, limits)
-    if expert_action is not None:
-        return expert_action
+    # Optional expert overlay from merged cdu_expert_engine (soft — never crash chooser)
+    try:
+        from cdu_case_config import load_case_config
+        from cdu_expert_engine import build_expert_context, propose_from_expert
+
+        expert = getattr(diagnosis, "expert_context", None)
+        if expert is None:
+            expert = build_expert_context(
+                state,
+                diagnosis.engineering_state,
+                limits,
+                diagnosis.final_target_status,
+                history=None,
+                case_config=load_case_config(),
+            )
+        expert_action = propose_from_expert(state, expert, limits)
+        if expert_action is not None:
+            return expert_action
+    except Exception:
+        pass
 
     if strategy == "fix_dof":
         clue_text = " ".join(diagnosis.hysys_dialog_clues).lower()
@@ -1279,7 +1289,7 @@ def propose_action(
                     return action
         return unique[0]
 
-    # Baseline swap if NH3 locked active (State B follow-on / last resort init)
+    # Baseline swap if NH3 locked active (legacy path — rare on CDU)
     if (
         limits.allow_baseline_spec_swap
         and state.degrees_of_freedom == 0
@@ -1288,9 +1298,10 @@ def propose_action(
         nh3 = next((s for s in state.active_specs() if "nh3" in s.name.lower()), None)
         ovhd = next((s for s in state.specs if "ovhd" in s.name.lower()), None)
         if (
-            locked_active is not None
+            nh3 is not None
             and ovhd is not None
             and not ovhd.is_active
+            and _is_locked_final_spec(nh3.name, targets, limits)
         ):
             goal = ovhd.current_value
             if goal is None or is_sentinel(goal):
@@ -1303,7 +1314,7 @@ def propose_action(
                         f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor) [A_init]."
                     ),
                     payload={
-                        "deactivate": locked_active.name,
+                        "deactivate": nh3.name,
                         "activate": ovhd.name,
                         "activate_goal": float(goal),
                         "strategy_id": "spec_swap_last_resort",

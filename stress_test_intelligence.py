@@ -11,7 +11,7 @@ from column_engine import ConvergenceAssistant, propose_action
 from column_models import ConvergenceLimits
 from hysys_api import HysysController
 
-COLUMN = "SW Stripper"
+COLUMN = "T-100"
 BTMS_SI = 12500.0 / 3600.0
 RR_GOOD = 2.5
 
