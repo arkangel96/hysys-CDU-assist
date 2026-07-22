@@ -74,17 +74,21 @@ def default_cdu_targets() -> list[FinalTarget]:
     """
     Atmospheric CDU multi-product FINAL_TARGETs.
 
-    Loads enabled rows from config/cdu_final_targets.json when present.
-    Otherwise empty — Assist classifies States A–F on DOF / physics /
-    operability; quality State C/E gates activate when targets are provided.
+    Merges config/cdu_final_targets.json with configured quality targets
+    from config/cdu_t100_case.json. Empty only if both absent.
     Never invents NH3 / stripper purity targets.
     """
     try:
-        from cdu_targets import load_cdu_final_targets
+        from cdu_quality_engine import merge_final_targets
 
-        return load_cdu_final_targets()
+        return merge_final_targets()
     except Exception:
-        return []
+        try:
+            from cdu_targets import load_cdu_final_targets
+
+            return load_cdu_final_targets()
+        except Exception:
+            return []
 
 
 def default_final_targets(*, product_line: str = "cdu") -> list[FinalTarget]:

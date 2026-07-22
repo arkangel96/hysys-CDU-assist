@@ -68,10 +68,13 @@ def _read_property(
     prop: str,
 ) -> tuple[float | None, str]:
     """Best-effort COM read — D86/flash often need case-specific setup."""
+    prop_l = prop.lower()
+    petroleum = prop_l in {"d86_95", "d86", "flash_point", "rvp", "tbp_95"}
     if columns is None or not stream or stream == "TBD":
+        if petroleum:
+            return None, "not_configured_com_path"
         return None, "unavailable"
 
-    prop_l = prop.lower()
     try:
         if prop_l in {"mass_flow", "flow", "molar_flow"}:
             val = columns._stream_flow_unit(stream, "kg/h")  # noqa: SLF001
@@ -84,7 +87,7 @@ def _read_property(
             if val is not None and not is_sentinel(val):
                 return float(val), "com_stream_temperature"
         # Petroleum properties (D86, flash) — scaffold until assay/COM path confirmed
-        if prop_l in {"d86_95", "d86", "flash_point", "rvp", "tbp_95"}:
+        if petroleum:
             return None, "not_configured_com_path"
     except Exception:
         return None, "read_error"
@@ -226,21 +229,104 @@ def quality_targets_to_final_targets(case: CduCaseConfig) -> list:
             rel = "greater_or_equal"
         elif t.constraint == "target":
             rel = "equal"
+        prop = t.property.lower()
+        property_type = "other"
+        if "d86" in prop or "astm" in prop:
+            property_type = "astm_d86"
+        elif "flash" in prop:
+            property_type = "cold_prop"
+        elif "tbp" in prop:
+            property_type = "tbp"
+        elif "gap" in prop:
+            property_type = "gap"
+        elif "flow" in prop:
+            property_type = "other"
+        # Needle must not match Prod Flow / rate specs (avoid false measured = draw rate)
+        needle = f"{prop}_{t.product.lower()}" if "d86" in prop or "flash" in prop else prop
         out.append(
             FinalTarget(
                 id=t.target_id,
                 description=f"{t.product} {t.property}",
-                spec_name_contains=t.property.lower(),
+                spec_name_contains=needle,
                 component_name_contains=tuple(),
-                stream=t.stream.lower(),
+                stream=t.stream,
                 relationship=rel,
                 target_value=float(t.target_value),
                 tolerance=t.tolerance,
                 locked=True,
                 hard=t.hard,
+                property_type=property_type,
             )
         )
     return out
+
+
+def quality_trial_delta(
+    before: ProductQualityState,
+    after: ProductQualityState,
+) -> tuple[bool, bool, bool]:
+    """
+    Compare hard quality readings across a trial.
+
+    Returns (any_improved, any_worsened, has_comparable).
+    Only readings with numeric value+target on both sides count.
+    """
+    before_by = {r.target_id: r for r in before.readings}
+    after_by = {r.target_id: r for r in after.readings}
+    improved = False
+    worsened = False
+    comparable = False
+    for tid, b in before_by.items():
+        a = after_by.get(tid)
+        if a is None or not b.hard:
+            continue
+        if b.value is None or a.value is None or b.target_value is None:
+            continue
+        if b.status in {
+            QualityStatus.NOT_CONFIGURED,
+            QualityStatus.UNAVAILABLE,
+            QualityStatus.UNRELIABLE,
+        }:
+            continue
+        if a.status in {
+            QualityStatus.NOT_CONFIGURED,
+            QualityStatus.UNAVAILABLE,
+            QualityStatus.UNRELIABLE,
+        }:
+            continue
+        comparable = True
+        bv, av, tgt = float(b.value), float(a.value), float(b.target_value)
+        if b.constraint == "maximum":
+            if av < bv - 1e-12:
+                improved = True
+            if av > bv * 1.02 + 1e-12 and av > tgt:
+                worsened = True
+        elif b.constraint == "minimum":
+            if av > bv + 1e-12:
+                improved = True
+            if av < bv * 0.98 - 1e-12 and av < tgt:
+                worsened = True
+        else:
+            db, da = abs(bv - tgt), abs(av - tgt)
+            if da < db - 1e-12:
+                improved = True
+            if da > db * 1.05 + 1e-12:
+                worsened = True
+    return improved, worsened, comparable
+
+
+def merge_final_targets(case: CduCaseConfig | None = None) -> list:
+    """FINAL_TARGET JSON wins on id collision; quality config fills gaps."""
+    from cdu_case_config import load_case_config
+    from cdu_targets import load_cdu_final_targets
+
+    case = case or load_case_config()
+    by_id: dict = {}
+    for t in quality_targets_to_final_targets(case):
+        by_id[t.id] = t
+    for t in load_cdu_final_targets():
+        by_id[t.id] = t
+    return list(by_id.values())
 
 
 def format_quality_board(pqs: ProductQualityState) -> str:
@@ -267,5 +353,9 @@ def format_quality_board(pqs: ProductQualityState) -> str:
     if pqs.configured_count == 0:
         lines.append(
             "  → Edit config/cdu_t100_case.json: set target_value for each product"
+        )
+    else:
+        lines.append(
+            "  → Quality targets configured; D86/flash COM still PARTIAL until assay path live"
         )
     return "\n".join(lines)

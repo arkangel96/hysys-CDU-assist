@@ -132,12 +132,21 @@ def evaluate_final_targets(
     status: dict[str, dict] = {}
     for target in targets:
         value = _final_target_value(state, target)
+        available = value is not None and not is_sentinel(value)
+        # Unavailable petroleum props must not force State C — gate only when measured
+        if available:
+            met = _final_target_met(value, target)
+        else:
+            met = True
         status[target.id] = {
             "description": target.description,
             "target": target.target_value,
             "measured": value,
-            "met": _final_target_met(value, target),
+            "met": met,
             "locked": target.locked,
+            "available": available,
+            "hard": target.hard,
+            "property_type": target.property_type,
         }
     return status
 
@@ -210,10 +219,16 @@ def classify_engineering_state(
     target_status = target_status or evaluate_final_targets(state, targets)
     hard_by_id = {t.id: t for t in targets}
     hard_miss = any(
-        (not info["met"]) and hard_by_id[tid].hard for tid, info in target_status.items()
+        (not info["met"])
+        and hard_by_id[tid].hard
+        and info.get("available", True)
+        for tid, info in target_status.items()
+        if tid in hard_by_id
     )
     hard_ok = all(
-        info["met"] or not hard_by_id[tid].hard for tid, info in target_status.items()
+        info["met"] or not hard_by_id[tid].hard or not info.get("available", True)
+        for tid, info in target_status.items()
+        if tid in hard_by_id
     )
 
     if infeasible_evidence and (hard_miss or not state.appears_converged):
@@ -412,8 +427,12 @@ def _product_delta(
     for target in targets:
         if not target.locked:
             continue
-        b = before_t.get(target.id, {}).get("measured")
-        a = after_t.get(target.id, {}).get("measured")
+        b_info = before_t.get(target.id, {})
+        a_info = after_t.get(target.id, {})
+        if not b_info.get("available") or not a_info.get("available"):
+            continue
+        b = b_info.get("measured")
+        a = a_info.get("measured")
         if b is None or a is None or is_sentinel(b) or is_sentinel(a):
             continue
         b = float(b)
@@ -434,11 +453,30 @@ def _product_delta(
             if abs(b) > 1e-30:
                 rel += (a - b) / abs(b)
         else:
-            if abs(a - target.target_value) < abs(b - target.target_value):
+            db = abs(b - target.target_value)
+            da = abs(a - target.target_value)
+            if da < db * (1.0 - 1e-12):
                 improved = True
-            if abs(a - target.target_value) > abs(b - target.target_value) * 1.05:
+            if da > db * 1.05:
                 worsened = True
-    return (rel / n if n else 0.0, improved, worsened)
+            if db > 1e-30:
+                rel += (db - da) / db
+    if n:
+        rel /= n
+    return rel, improved, worsened
+
+
+def _hard_targets_have_measurements(
+    state: ColumnState, targets: list[FinalTarget]
+) -> bool:
+    status = evaluate_final_targets(state, targets)
+    for t in targets:
+        if not t.hard:
+            continue
+        info = status.get(t.id, {})
+        if info.get("available"):
+            return True
+    return False
 
 
 def should_keep_trial(
@@ -448,8 +486,10 @@ def should_keep_trial(
     after_score: float,
     limits: ConvergenceLimits,
     targets: list[FinalTarget],
+    before_quality: object | None = None,
+    after_quality: object | None = None,
 ) -> bool:
-    """Plant judgment: FINAL_TARGET + operability first; residual score second."""
+    """Plant judgment: quality / FINAL_TARGET + operability first; residual score second."""
     if not after.physical_solution:
         return False
 
@@ -458,20 +498,43 @@ def should_keep_trial(
     if before_op and not after_op:
         return False
 
+    # L1 product-quality narrative (when COM/readings comparable)
+    if before_quality is not None and after_quality is not None:
+        try:
+            from cdu_quality_engine import ProductQualityState, quality_trial_delta
+
+            if isinstance(before_quality, ProductQualityState) and isinstance(
+                after_quality, ProductQualityState
+            ):
+                q_imp, q_wors, q_cmp = quality_trial_delta(before_quality, after_quality)
+                if q_cmp:
+                    if q_wors:
+                        return False
+                    if before_quality.has_hard_miss():
+                        return bool(q_imp and after_op)
+                    if after_quality.has_hard_miss() and not q_imp:
+                        return False
+                    if q_imp and after_op:
+                        return True
+        except Exception:
+            pass
+
     _rel, product_improved, product_worsened = _product_delta(before, after, targets)
     if product_worsened:
         return False
 
     residual_improved = after_score < before_score * 0.98
     hard_miss_before = any(
-        not info["met"]
+        (not info["met"]) and info.get("available", True) and info.get("hard", True)
         for info in evaluate_final_targets(before, targets).values()
     )
+    measured_hard = _hard_targets_have_measurements(before, targets)
 
     if hard_miss_before:
         if product_improved and after_op:
             return True
-        if after_op and residual_improved and not product_worsened:
+        # Residual alone must not keep when hard product measurements exist
+        if after_op and residual_improved and not product_worsened and not measured_hard:
             return True
         return False
 
@@ -519,11 +582,12 @@ def diagnose(
 
     for tid, info in target_status.items():
         measured = info["measured"]
+        avail = info.get("available", measured is not None)
         details.append(
             f"FINAL_TARGET {tid}: measured={measured} target={info['target']} "
-            f"met={info['met']} locked={info['locked']}"
+            f"met={info['met']} locked={info['locked']} available={avail}"
         )
-        if not info["met"]:
+        if not info["met"] and avail:
             codes.append(DiagnosisCode.FINAL_TARGET_MISS)
 
     if state.physical_solution and not operable(state, limits):
@@ -881,6 +945,20 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
             targets_count=len(diagnosis.final_target_status),
         )
     )
+    # Product quality L1 board (build-up intelligence)
+    try:
+        from cdu_case_config import load_case_config
+        from cdu_quality_engine import build_product_quality_state, format_quality_board
+
+        case = load_case_config()
+        pqs = build_product_quality_state(state, case, columns=None)
+        lines.append(format_quality_board(pqs))
+        lines.append(
+            f"  Build-up: interactive_only={case.interactive_only} "
+            f"primary_tree={case.primary_symptom_tree}"
+        )
+    except Exception:
+        pass
     lines.extend(
         [
         f"  DOF={state.degrees_of_freedom} physical={state.physical_solution} "
@@ -984,17 +1062,26 @@ def propose_action(
     try:
         from cdu_case_config import load_case_config
         from cdu_expert_engine import build_expert_context, propose_from_expert
+        from cdu_quality_engine import build_product_quality_state
+        from cdu_spec_philosophy import audit_spec_philosophy
 
+        case = load_case_config()
         expert = getattr(diagnosis, "expert_context", None)
         if expert is None:
+            pqs = build_product_quality_state(state, case, columns=None)
+            spec_report = audit_spec_philosophy(state, case)
             expert = build_expert_context(
                 state,
                 diagnosis.engineering_state,
                 limits,
                 diagnosis.final_target_status,
                 history=None,
-                case_config=load_case_config(),
+                case_config=case,
+                product_quality=pqs,
+                spec_report=spec_report,
+                mv_preference=case.mv_preference,
             )
+            diagnosis.expert_context = expert
         expert_action = propose_from_expert(state, expert, limits)
         if expert_action is not None:
             return expert_action
@@ -1401,11 +1488,19 @@ class ConvergenceAssistant:
         columns: ColumnController,
         limits: ConvergenceLimits | None = None,
         targets: list[FinalTarget] | None = None,
-        case_config: CduCaseConfig | None = None,
+        case_config: object | None = None,
     ) -> None:
+        from cdu_case_config import CduCaseConfig, load_case_config
+        from cdu_quality_engine import merge_final_targets
+
         self.columns = columns
         self.limits = limits or ConvergenceLimits()
-        self.targets = targets if targets is not None else default_final_targets()
+        self.case_config: CduCaseConfig = (
+            case_config if isinstance(case_config, CduCaseConfig) else load_case_config()
+        )
+        self.targets = (
+            targets if targets is not None else merge_final_targets(self.case_config)
+        )
         self.history: list[TrialResult] = []
         self._estimates_refreshed = False
         self._flat_product_streak = 0
@@ -1425,14 +1520,18 @@ class ConvergenceAssistant:
             return True
         return False
 
+    def _quality_state(self, state: ColumnState):
+        from cdu_quality_engine import build_product_quality_state
+
+        return build_product_quality_state(state, self.case_config, columns=self.columns)
+
     def _diagnose(self, state: ColumnState) -> Diagnosis:
         return diagnose(
             state,
             self.limits,
             self.targets,
-            self.history,
-            columns=self.columns,
-            case_config=self.case_config,
+            infeasible_evidence=self._infeasible_evidence(),
+            exhausted_families=self._skipped_families,
         )
 
     def inspect(self, column_name: str) -> ColumnState:
@@ -1588,7 +1687,14 @@ class ConvergenceAssistant:
                     unphysical = True
 
             keep = (not unphysical) and should_keep_trial(
-                before, after, before_score, after_score, self.limits, self.targets
+                before,
+                after,
+                before_score,
+                after_score,
+                self.limits,
+                self.targets,
+                before_quality=self._quality_state(before),
+                after_quality=self._quality_state(after),
             )
             if action.kind in {"refresh_estimates", "baseline_swap"}:
                 if after.physical_solution and not before.physical_solution:
@@ -1685,9 +1791,15 @@ class ConvergenceAssistant:
         max_iterations: int | None = None,
         dry_run: bool = False,
     ) -> list[TrialResult]:
-        """Run the controlled trial loop until State E, State F, blocked, or iteration limit."""
+        """Run the controlled trial loop until State E, State F, blocked, or iteration limit.
+
+        When case ``interactive_only`` is True (build-up default), run at most one
+        trial so the PE reviews keep/reverse before further moves.
+        """
         results: list[TrialResult] = []
         limit = max_iterations or self.limits.max_iterations
+        if getattr(self.case_config, "interactive_only", True):
+            limit = min(limit, 1)
         for _ in range(limit):
             state, diagnosis = self.diagnose_column(column_name)
             if diagnosis.engineering_state == EngineeringState.E_ACCEPTABLE:
@@ -1729,6 +1841,9 @@ class ConvergenceAssistant:
             if dry_run:
                 break
             if trial.action.kind in {"none", "manual_dof", "stop"}:
+                break
+            if getattr(self.case_config, "interactive_only", True):
+                # PE must approve next move — do not batch Assist Loop
                 break
             if not trial.kept and trial.action.kind in {
                 "set_goal",

@@ -13,6 +13,8 @@ Aspen HYSYS (Windows COM). Not an AspenTech product.
 
 Full boundary notes: [`docs/SCOPE_CDU_ASSIST.md`](docs/SCOPE_CDU_ASSIST.md)  
 Intelligence map (coded vs planned): [`docs/INTELLIGENCE_INVENTORY_V1.md`](docs/INTELLIGENCE_INVENTORY_V1.md)  
+Build-up direction (clone PE + interactive): [`docs/INTELLIGENCE_BUILDUP_STRATEGY.md`](docs/INTELLIGENCE_BUILDUP_STRATEGY.md)  
+Default AI role (senior HYSYS CDU PE): [`.cursor/rules/cdu-hysys-senior-pe.mdc`](.cursor/rules/cdu-hysys-senior-pe.mdc)  
 Multi-variable iteration (not RR-only): [`docs/MULTI_VARIABLE_ITERATION_MAP.md`](docs/MULTI_VARIABLE_ITERATION_MAP.md)  
 Complementary PE package: [`new_intelligence/00_COMPLEMENTARY_INTRO.md`](new_intelligence/00_COMPLEMENTARY_INTRO.md)
 

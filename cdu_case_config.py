@@ -41,6 +41,7 @@ class CduCaseConfig:
     column_name: str = "T-100"
     objective: str = ""
     interactive_only: bool = True
+    primary_symptom_tree: str = "diesel_too_heavy"
     quality_targets: list[QualityTarget] = field(default_factory=list)
     spec_roles: list[SpecRoleEntry] = field(default_factory=list)
     mv_preference: dict[str, list[str]] = field(default_factory=dict)
@@ -85,6 +86,9 @@ def load_case_config(path: Path | str | None = None) -> CduCaseConfig:
         column_name=str(data.get("column_name", "T-100")),
         objective=str(data.get("objective", "")),
         interactive_only=bool(data.get("interactive_only", True)),
+        primary_symptom_tree=str(
+            data.get("primary_symptom_tree", "diesel_too_heavy") or "diesel_too_heavy"
+        ),
         quality_targets=[_parse_quality_target(r) for r in data.get("quality_targets", [])],
         spec_roles=[
             SpecRoleEntry(
@@ -111,6 +115,7 @@ def default_t100_config() -> CduCaseConfig:
         column_name="T-100",
         objective="Configure config/cdu_t100_case.json with your targets",
         interactive_only=True,
+        primary_symptom_tree="diesel_too_heavy",
         quality_targets=[
             QualityTarget(
                 target_id="DIESEL_D86_95",

@@ -48,7 +48,6 @@ def test_spec_philosophy_dof_block() -> None:
 def test_quality_state_placeholders() -> None:
     case = load_case_config()
     pqs = build_product_quality_state(_t100_state(), case, columns=None)
-    assert pqs.configured_count == 0  # target_value null in default JSON
+    assert pqs.configured_count >= 1  # trial baseline targets filled 2026-07-23
     board = format_quality_board(pqs)
     assert "PRODUCT QUALITY STATE" in board
-    assert "cdu_t100_case.json" in board

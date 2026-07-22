@@ -20,9 +20,11 @@
 
 | Priority | Gap | Owner |
 |----------|-----|-------|
-| P0 | Multi-product FINAL_TARGET table (ASTM/cut/gap) replace NH₃ default | `column_models` / engine |
+| P0 | Multi-product FINAL_TARGET table (ASTM/cut/gap) replace NH₃ default | **DONE** config 2026-07-23 — COM read still open |
 | P0 | Side-draw + PA + steam strategy IDs in chooser | MV map → `column_engine` |
+| P0 | Quality-first keep/reverse + interactive Assist | **DONE** 2026-07-23 — `INTELLIGENCE_BUILDUP_STRATEGY.md` |
 | P1 | State E = all governing products + PA operability | workflow §28.5 |
+| P1 | Live D86 / flash COM for diesel_too_heavy tree | `cdu_quality_engine` |
 | P1 | CDU when-to-add in `column_spec_catalog` (code) | Add Spec catalog |
 | P2 | Atmospheric reference-case validation protocol | CASE §3.1 |
 | P3 | Learning schema fields (assay, slate, PA config) | `new_intelligence` D4 |

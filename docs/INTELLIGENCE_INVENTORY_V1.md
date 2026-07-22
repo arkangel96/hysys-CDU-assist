@@ -117,12 +117,12 @@ One new intelligence item = one inventory row + one validation on the **atmosphe
 |------|------------|----------------|
 | **State F** | Stop messages / 3× reverse / locked-MV stop | `classify_engineering_state` never returns `F_INFEASIBLE` |
 | **Response / sensitivity** | Classes exist; weak-response % on score | No \(S=\Delta y/\Delta u\) on FINAL_TARGET |
-| **Keep/reverse judgment** | Score + physical + NH₃ worsen block | Not primarily product/operability narrative |
+| **Keep/reverse judgment** | Quality delta + FINAL_TARGET available-flag + residual second | Live D86/flash COM still PARTIAL |
 | **Spec-role engine** | One NH₃↔Ovhd swap recipe | Condenser-aware Active policy table |
 | **Operability** | Bottoms flow gate | MB (F≈D+B), duty signs, T-profile gate for State E |
-| **FINAL_TARGET layer** | Single bottoms composition (NH₃ legacy) | **Multi-product** ASTM / TBP / cut / gap FINAL_TARGETs |
-| **CDU families** | A/B/C shell (RR / D / B rates) | Side-draw, PA duty/circ, steam strategies |
-| **Interactive default** | PE board / one-trial API exist | Assist Loop can still batch without forced pause |
+| **FINAL_TARGET layer** | Multi-product JSON + case quality merge (2026-07-23) | Petroleum property COM reads |
+| **CDU families** | A/B/C shell + draw/PA/steam name-match | Full sensitivity memory |
+| **Interactive default** | Assist Loop capped to 1 trial when `interactive_only` | GUI pause/approve UX polish |
 | **Appendix A in workflow** | Historical | Sync with CDU map |
 
 ---
@@ -146,7 +146,7 @@ Keep in markdown until a thin layer is justified:
 
 | Item | Owner docs | Status |
 |------|------------|--------|
-| Multi-product FINAL_TARGET table | `new_intelligence` D1–D3, CASE | **PLANNED** |
+| Multi-product FINAL_TARGET table | `new_intelligence` D1–D3, CASE | **CODED** (opt-in JSON + case quality merge; COM measure PARTIAL) |
 | `side_draw_nudge` family | MV map | **CODED** (name-match Active GoalValue) |
 | `pa_duty_nudge` / circ / return T | MV map | **CODED** (name-match Active GoalValue) |
 | `steam_nudge` | MV map | **CODED** (name-match Active GoalValue) |
@@ -154,8 +154,23 @@ Keep in markdown until a thin layer is justified:
 | D1 complementary PE-board labels + soft family hint | `cdu_reasoning.py` / `CDU_INTEL_COMPLEMENTARY.md` | **CODED** (thin; no second state machine) |
 | D6 neighbor-product reminder + D8 soft acceptance cues | `cdu_reasoning.py` | **CODED** (advisory PE board / trial footnote) |
 | D3 interaction tip by family | `cdu_reasoning.py` | **CODED** (advisory) |
-| Multi-product FINAL_TARGET JSON config | `cdu_targets.py` / `config/cdu_final_targets*.json` | **CODED** (opt-in; example disabled) |
-| Atmospheric reference case validation | SCOPE / CASE | **PLANNED** |
+| Multi-product FINAL_TARGET JSON config | `cdu_targets.py` / `config/cdu_final_targets*.json` | **CODED** (enabled trial baseline 2026-07-23) |
+| Quality-first keep/reverse | `should_keep_trial` + `quality_trial_delta` | **CODED** (2026-07-23 build-up) |
+| First symptom tree `diesel_too_heavy` | `docs/symptoms/DIESEL_TOO_HEAVY.md` | **CODED** (routing); live D86 COM **PARTIAL** |
+| Interactive-only Assist Loop (1 trial) | `ConvergenceAssistant.assist` | **CODED** (case `interactive_only`) |
+| Build-up strategy lock | `docs/INTELLIGENCE_BUILDUP_STRATEGY.md` | **CODED** (docs policy) |
+| Atmospheric reference case validation | SCOPE / CASE | **PARTIAL** — smoke + buildup unit tests 2026-07-23 |
+
+### Inventory add (2026-07-23) — build-up slice
+
+| ID | Rule | Status |
+|----|------|--------|
+| `CDU-BUILDUP-DIR` | Clone PE judgment + interactive-first | **DOCS** strategy locked |
+| `CDU-AI-PE-ROLE` | Cursor default = senior HYSYS CDU PE (alwaysApply) | **DOCS** `.cursor/rules/cdu-hysys-senior-pe.mdc` |
+| `CDU-SYM-DIESEL-HEAVY` | Diesel too heavy → draw down first | **CODED** |
+| `CDU-FT-MULTI` | Multi-product FINAL_TARGET numbers on T-100 | **CODED** (config); measure **PARTIAL** |
+| `CDU-KEEP-QUALITY` | Keep/reverse quality before residual score | **CODED** |
+| `CDU-INTERACTIVE-1` | Assist Loop max 1 trial when interactive_only | **CODED** |
 
 ---
 
@@ -205,7 +220,8 @@ P14 Thin intelligence layers
 | 4 | Condenser-aware Active policy (beyond NH₃→Ovhd) | PARTIAL — still SWS swap recipe |
 | 4b | Connections structural intelligence (feed/stages/P) approval-only | **CODED** — `column_connections.py` |
 | 4c | Simple optimize (min RR / RebQ / CondQ / stages) | **CODED** — `column_optimize.py` |
-| 5 | Multi-product FINAL_TARGET (ASTM/cut/gap) + CDU family chooser | **PARTIAL** — chooser/strategies CODED; empty CDU target table until case config |
+| 5 | Multi-product FINAL_TARGET (ASTM/cut/gap) + CDU family chooser | **CODED** (config 2026-07-23) — COM property read still PARTIAL |
+| 5b | Quality-first keep/reverse + interactive Assist | **CODED** 2026-07-23 — see `INTELLIGENCE_BUILDUP_STRATEGY.md` |
 | 6 | Learning/memory system from `new_intelligence/` | HELD |
 | 7 | Workspace folder reorg (Deliverable 6) | HELD |
 
