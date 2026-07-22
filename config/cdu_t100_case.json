@@ -1,9 +1,13 @@
 {
   "case_id": "t100_baseline",
   "column_name": "T-100",
-  "objective": "Tower-only energy: optimize largest PA heat removal first (PA_1 duty), then PA_2/PA_3; hold product slate; interactive",
+  "objective": "Primary: hold naphtha + kerosene product flows; secondary: minimize PA heat (PA_1 first). Diesel/AGO follow. Interactive tower-only.",
   "interactive_only": true,
   "primary_symptom_tree": "diesel_too_heavy",
+  "primary_product_flows": [
+    "Naphtha Prod Rate",
+    "Kero_SS Prod Flow"
+  ],
   "primary_energy_mv": "PA_1_Duty(Pa)",
   "energy_optimize_order": [
     "PA_1_Duty(Pa)",

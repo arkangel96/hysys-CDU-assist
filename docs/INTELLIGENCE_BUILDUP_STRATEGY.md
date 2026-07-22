@@ -4,6 +4,17 @@
 **Product:** CDU Assist v1 — New Intelligence  
 **Gate:** [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md)
 
+## Tower production + energy (locked 2026-07-23)
+
+**Primary (do not relax while optimizing energy):** naphtha **and** kerosene product flows  
+(`Naphtha Prod Rate`, `Kero_SS Prod Flow`) — plant nomination style; both fixed.  
+
+**Secondary:** PA heat — **PA_1** first (largest |duty|), then PA_2, PA_3.  
+
+**Follow:** diesel / AGO rates (may stay Active for DOF, but not the optimization objective).  
+
+**Trial rule:** nudge only `PA_*_Duty`; keep only if DOF=0, converged, physical, and primary naphtha+kero rate errors stay tiny.
+
 ## Tower energy focus (locked 2026-07-23)
 
 **Scope:** atmospheric tower only (not PreFlash / furnace).  
