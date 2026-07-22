@@ -2,8 +2,9 @@
 
 **Product:** Simple Column Assist  
 **Version / line:** v1.0 — New Intelligence  
+**GitHub repo:** `arkangel96/simple-column-assist-v1-new-intelligence` (standalone — **not** inside `simple-column-assist`)  
 **Domain:** Aspen HYSYS simple distillation / stripping (not CDU, not VDU)  
-**Document role:** Dedicated case description for this product line — keep separate from other tower tools and from ad-hoc parameter experiments.
+**Document role:** Case description for this product line — keep separate from other tower tools and from RR-only lab notes.
 
 ---
 

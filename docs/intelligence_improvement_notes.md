@@ -1,28 +1,31 @@
-# Intelligence Improvement Notes — Simple Column Assist
+# Intelligence Improvement Notes — Simple Column Assist v1
 
-**Document type:** Expert review notes + living backlog  
-**Status:** **Integrated** into master workflow (2026-07-21)  
+**Document type:** Expert review notes + living backlog / commentary  
+**Status:** Superseded as *coded checklist* by [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) (2026-07-22)  
 **Scope:** Simple distillation / stripping only — see [`SCOPE_SIMPLE_COLUMN_ASSIST.md`](SCOPE_SIMPLE_COLUMN_ASSIST.md)  
 **Canonical home of rules:** [`expert_decision_workflow.md`](expert_decision_workflow.md) **§28**  
-**Operational slice:** [`column_convergence_playbook.md`](column_convergence_playbook.md) **§18** + principles P11–P14  
+**Operational slice:** [`column_convergence_playbook.md`](column_convergence_playbook.md)  
+**Coded vs paper truth:** [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md)
 
-**Date:** 2026-07-21  
+**Date:** 2026-07-21 (narrative) · inventory sync 2026-07-22  
 **Author perspective:** Senior process / HYSYS simulation engineer review of Simple Column Assist
+
+> **Use the inventory file** to see what is CODED / PARTIAL / DOCS / PLANNED.  
+> This note keeps the original gap narrative for context. Sections 3–4 below are partly historical — several “gaps” are now coded (see inventory §4–§5).
 
 ---
 
 ## 1. Purpose of this note
 
-Capture an honest assessment of the **decision intelligence** of HYSYS Automation Studio’s Column Assist, and the improvements required before it can behave like a high-level simulation process engineer.
+Capture an honest assessment of the **decision intelligence** of Simple Column Assist, and the improvements required before it can behave like a high-level simulation process engineer.
 
 **Integration status:** Content below is mirrored into:
 
 - `expert_decision_workflow.md` §28 (implementation guidance, P0–P3, State E definition, anti-complexity)
 - `column_convergence_playbook.md` principles P11–P14, gap list, §18 intelligence layers
+- **`INTELLIGENCE_INVENTORY_V1.md`** — current coded/paper snapshot (preferred before adding new intelligence)
 
-This file remains the **detailed backlog / commentary**. Prefer editing §28 when changing policy; keep this file in sync.
-
-This note does **not** replace the master workflow or playbook.
+This file remains the **detailed backlog / commentary**. Prefer editing the inventory + §28 when changing status or policy.
 
 ---
 

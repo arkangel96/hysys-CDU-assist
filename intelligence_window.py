@@ -1,5 +1,5 @@
 """
-Separate PE Intelligence window for Simple Column Assist.
+Separate PE Intelligence window for Simple Column Assist v1 — New Intelligence.
 """
 from __future__ import annotations
 
@@ -28,35 +28,49 @@ from ui_style import style_table_headers
 
 
 CODED_CHECKLIST = """
-SIMPLE COLUMN ASSIST — what's coded (Layer 2)
+SIMPLE COLUMN ASSIST v1 — New Intelligence (what's coded)
 ---------------------------------
+Canonical inventory: docs/INTELLIGENCE_INVENTORY_V1.md
 Scope: simple distillation / stripping only (NOT CDU/VDU).
-See docs/SCOPE_SIMPLE_COLUMN_ASSIST.md
 
+LAYER 1
 [x] Read Specs table (Active, Goal, Current, Error)
 [x] Set Active / GoalValue / 1-for-1 Active swap
-[x] States A–F classification
-[x] FINAL_TARGET lock (NH3) — plant default 50 ppmw
-[x] Stream product NH3 + worksheet kgmole/h
-[x] PE board + response classes (KEPT/REVERSED)
-[x] Estimates refresh (COM)
-[x] Add Spec catalog (32 types) + when-to-add recommendations
+[x] Snapshot keep/reverse trials
 [x] Trial Map path / strategy board
-[x] Connections READ (condenser type, P, feeds) + Specs kgmole/h display
-[x] Specs Summary Active/Estimate APPLY + recommended clicks
+
+LAYER 2+ (2026-07-22 multi-variable integration)
+[x] States A–F (State F with flat/exhausted-family evidence)
+[x] FINAL_TARGET lock (NH3) — plant default 50 ppmw
+[x] Keep/reverse on FINAL_TARGET + operability (not score alone)
+[x] Multi-family chooser: A_init / B_energy / C_split (not RR-only)
+[x] HYSYS popup clues: detect + log + feed into PE board; auto-OK so multi-run continues
+[x] PE board shows family + hypothesis
+[x] Stream product NH3 + worksheet kgmole/h
+[x] Estimates refresh (COM)
+[x] Bottoms/duty/T operability gates
+[x] Connections READ + Specs Summary APPLY / click tips
+[x] Add Spec catalog (recommend only — no auto Add)
+
+PARTIAL / NEXT
+[ ] Condenser-aware Active policy beyond NH3→Ovhd recipe
+[ ] Optional H2S FINAL_TARGET table entry
+[ ] Learning/memory from new_intelligence (held)
 
 NOT CODED YET (by design)
 -------------------------
-[ ] Auto HYSYS "Add Spec" via Specs.Add (recommend only for now)
-[ ] Change column pressure automatically
-[ ] Change number of stages / feed stage automatically
-[ ] Parameters / Solver pages (await screenshots)
+[ ] Auto HYSYS "Add Spec" via Specs.Add
+[ ] Auto feed stage / stage count / pressure
+[ ] Auto-save .hsc
 [ ] Full 2x2 multivariable solver
 [ ] Hydraulic flooding validation
 [ ] CDU / VDU tools (separate products)
 
 DOCS (repo)
 -----------
+docs/INTELLIGENCE_INVENTORY_V1.md
+docs/MULTI_VARIABLE_ITERATION_MAP.md
+new_intelligence/00_COMPLEMENTARY_INTRO.md
 docs/SCOPE_SIMPLE_COLUMN_ASSIST.md
 docs/expert_decision_workflow.md
 docs/column_convergence_playbook.md
@@ -70,7 +84,7 @@ class IntelligenceWindow(QMainWindow):
         super().__init__(parent)
         self.assistant = assistant
         self.column_name = "SW Stripper"
-        self.setWindowTitle("PE Intelligence — Simple Column Assist")
+        self.setWindowTitle("PE Intelligence — Simple Column Assist v1")
         self.resize(1100, 720)
 
         root = QWidget()
@@ -90,7 +104,7 @@ class IntelligenceWindow(QMainWindow):
         layout.addLayout(top)
 
         hint = QLabel(
-            "Simple Column Assist only (not CDU/VDU). "
+            "Simple Column Assist v1 — New Intelligence only (not CDU/VDU). "
             "Add Spec actions are recommendations — does not auto-create specs yet. "
             "See docs/SCOPE_SIMPLE_COLUMN_ASSIST.md"
         )

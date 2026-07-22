@@ -162,6 +162,8 @@ class ColumnController:
 
     def __init__(self, hysys: HysysController) -> None:
         self.hysys = hysys
+        self.last_dialog_clues: list = []
+        self.last_message_clues: list = []
 
     def _require(self) -> None:
         if not self.hysys.connected or self.hysys.flowsheet is None:
@@ -706,18 +708,44 @@ class ColumnController:
             self.set_spec_goal(column_name, activate, activate_goal)
 
     def run_column(self, column_name: str) -> None:
-        """Request a column / case solve."""
+        """Request a column / case solve (HYSYS popups captured as PE clues)."""
+        from hysys_dialog_watcher import HysysDialogWatcher, remember_clues
+
         column = self._column(column_name)
         cfs = self._column_flowsheet(column)
         errors: list[str] = []
-        for action in (
-            lambda: cfs.Run(),
-            lambda: column.Run(),
-            lambda: self.hysys.solve(),
-        ):
+
+        def _try_run() -> bool:
+            for action in (
+                lambda: cfs.Run(),
+                lambda: column.Run(),
+                lambda: self.hysys.solve(),
+            ):
+                try:
+                    action()
+                    return True
+                except Exception as exc:
+                    errors.append(str(exc))
+            return False
+
+        watcher = HysysDialogWatcher(auto_dismiss=True)
+        watcher.start()
+        try:
+            ok = _try_run()
+        finally:
+            clues = watcher.stop()
+            remember_clues(clues)
+            existing = getattr(self, "last_dialog_clues", [])
+            self.last_dialog_clues = list(existing) + list(clues)
+            # Continuous Messages pane (warnings + solver trace) — PE clues
             try:
-                action()
-                return
-            except Exception as exc:
-                errors.append(str(exc))
-        raise HysysError("Could not run column: " + " | ".join(errors))
+                from hysys_messages_reader import capture_hysys_messages
+
+                case = getattr(self.hysys, "case", None)
+                msg_clues = capture_hysys_messages(case)
+                self.last_message_clues = list(msg_clues)
+            except Exception:
+                self.last_message_clues = []
+
+        if not ok:
+            raise HysysError("Could not run column: " + " | ".join(errors))

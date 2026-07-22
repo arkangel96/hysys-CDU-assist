@@ -30,62 +30,108 @@ class StrategyDef:
     last_resort: bool = False
 
 
-# Ordered playbook for a typical stripper / distillation convergence search
+# Multi-variable playbook — ChemE families A–F (RR is only one B-family option)
 STRATEGY_CATALOG: list[StrategyDef] = [
     StrategyDef(
         "refresh_estimates",
         "Refresh / use estimates",
-        "Estimates",
-        "Update inactive rate estimates from the last solution before changing specs.",
+        "A_init",
+        "Update inactive rate estimates before changing Active philosophy or GoalValues.",
     ),
     StrategyDef(
         "reflux_nudge_down",
         "Nudge reflux ratio down",
-        "Active Spec",
-        "Small decrease of active reflux-ratio GoalValue; keep only if residuals improve.",
+        "B_energy",
+        "Decrease active RR GoalValue when over-refluxed or residual says Goal >> Current.",
     ),
     StrategyDef(
         "reflux_nudge_up",
         "Nudge reflux ratio up",
-        "Active Spec",
-        "Small increase of active reflux-ratio GoalValue; keep only if residuals improve.",
+        "B_energy",
+        "Increase active RR when separation under-powered / impurity FINAL_TARGET miss.",
+    ),
+    StrategyDef(
+        "reflux_flow_nudge",
+        "Nudge reflux flow",
+        "B_energy",
+        "Bounded move of active reflux-flow GoalValue (energy family, not RR-only).",
+    ),
+    StrategyDef(
+        "boilup_nudge",
+        "Nudge boilup / reboiler spec",
+        "B_energy",
+        "Bounded move of active boilup or reboiler-related GoalValue.",
+    ),
+    StrategyDef(
+        "ovhd_rate_nudge",
+        "Nudge overhead / distillate rate",
+        "C_split",
+        "Bounded move of active Ovhd/distillate rate — split family.",
+    ),
+    StrategyDef(
+        "bottoms_rate_nudge",
+        "Nudge bottoms rate",
+        "C_split",
+        "Bounded move of active bottoms rate — split / dry-bottoms recovery.",
     ),
     StrategyDef(
         "nh3_goal_nudge",
-        "Nudge NH3 bottoms goal (bounded)",
-        "Active Spec",
-        "Bounded move of composition purity GoalValue when reflux nudges are exhausted.",
+        "Nudge NH3 bottoms goal (blocked if locked)",
+        "D_target",
+        "FINAL_TARGET purity GoalValue — blocked while locked; monitor only.",
+        last_resort=True,
     ),
     StrategyDef(
         "lower_damping",
         "Lower solver damping",
-        "Solver",
-        "Make Inside-Out steps more cautious (common when residuals oscillate).",
+        "A_init",
+        "Manual in HYSYS — cautious Inside-Out steps when residuals oscillate.",
     ),
     StrategyDef(
         "raise_iterations",
         "Increase max iterations",
-        "Solver",
-        "Allow more column iterations when progress is slow but direction is healthy.",
+        "A_init",
+        "Manual in HYSYS — more iterations when progress is slow but healthy.",
     ),
     StrategyDef(
         "spec_swap_last_resort",
         "1-for-1 temporary spec swap",
-        "Spec Set",
-        "Deactivate one active spec and activate one estimate — only if DOF stays 0.",
+        "A_init",
+        "Deactivate one Active, activate one estimate — DOF stays 0; condenser-aware.",
         last_resort=True,
     ),
     StrategyDef(
         "fix_dof",
         "Fix degrees of freedom",
-        "Spec Set",
+        "A_init",
         "DOF ≠ 0: activate/deactivate specs manually before numerical trials.",
     ),
     StrategyDef(
         "feed_or_case_change",
         "Feed / case change (external)",
-        "Case",
-        "Feed composition, T, P, or flow changed outside the assist loop — log as context.",
+        "E_feed",
+        "Feed F/T/P/comp changed outside Assist — log as context.",
+    ),
+    StrategyDef(
+        "feed_stage_change",
+        "Change feed stage",
+        "F_structural",
+        "Approval-only structural move — not auto-executed.",
+        last_resort=True,
+    ),
+    StrategyDef(
+        "stage_count_change",
+        "Change stage count",
+        "F_structural",
+        "Approval-only structural move — not auto-executed.",
+        last_resort=True,
+    ),
+    StrategyDef(
+        "report_state_f",
+        "Report State F / stop",
+        "Stop",
+        "Category-1 families exhausted or flat product response — do not relax FINAL_TARGET.",
+        last_resort=True,
     ),
 ]
 
@@ -143,9 +189,17 @@ def classify_strategy(action: TrialAction) -> str:
         goal = payload.get("goal")
         if "reflux" in name and "ratio" in name and prev is not None and goal is not None:
             return "reflux_nudge_down" if float(goal) < float(prev) else "reflux_nudge_up"
-        if "nh3" in name or "ammonia" in name or "mass frac" in name:
+        if "reflux" in name and "ratio" not in name:
+            return "reflux_flow_nudge"
+        if "boilup" in name or "boil" in name or ("reb" in name and "duty" in name):
+            return "boilup_nudge"
+        if "ovhd" in name or "distill" in name or "overhead" in name:
+            return "ovhd_rate_nudge"
+        if "btms" in name or "bottoms" in name:
+            return "bottoms_rate_nudge"
+        if "nh3" in name or "ammonia" in name or "mass frac" in name or "frac" in name:
             return "nh3_goal_nudge"
-        return "nh3_goal_nudge" if "frac" in name else "reflux_nudge_down"
+        return str(payload.get("strategy_id", "reflux_nudge_up"))
     if "damp" in action.description.lower():
         return "lower_damping"
     if "estimate" in action.description.lower():

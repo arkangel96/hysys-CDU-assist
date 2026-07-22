@@ -10,6 +10,7 @@
 | **This file** | Master PE reasoning specification (intelligence) |
 | [`column_convergence_playbook.md`](column_convergence_playbook.md) | SW Stripper / Studio v0.1 operational slice + COM transferability |
 | [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md) | Integrated backlog: gaps, P0–P3 roadmap, anti-complexity layers |
+| [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) | **Coded vs paper vs planned** — read before adding new intelligence |
 | `trial_map.py` / `column_engine.py` | Current executable subset — must be aligned to this workflow over time |
 
 **v0.1.1:** Integrated senior-PE intelligence review (layered implementation, Assist gaps, success definition for State E).
@@ -834,11 +835,13 @@ Because exact automation object names and accessible properties vary by HYSYS re
 
 ---
 
-## Appendix A — Studio v0.1 transferability (current COM)
+## Appendix A — Studio v1 transferability (current COM)
 
-Map of this workflow to what **HYSYS Automation Studio** can do today. Full detail remains in [`column_convergence_playbook.md`](column_convergence_playbook.md).
+Map of this workflow to what **Simple Column Assist v1** can do today.  
+Canonical coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md).  
+Full COM detail: [`column_convergence_playbook.md`](column_convergence_playbook.md).
 
-| Workflow concept | Studio today | Tag |
+| Workflow concept | Assist today | Tag |
 |------------------|--------------|-----|
 | DOF / active specs / GoalValue / Current / Error | `column_api.inspect` | AUTO read |
 | Set GoalValue / IsActive / 1-for-1 swap | `set_spec_goal`, `set_spec_active`, `swap_active_spec` | AUTO write |
@@ -847,22 +850,22 @@ Map of this workflow to what **HYSYS Automation Studio** can do today. Full deta
 | Stage T/P profiles | Main TS | AUTO read |
 | Cond Q / Reb Q | Energy streams | AUTO read |
 | Feed composition / T / P / F | Stream writers | AUTO (Stream tab) |
-| External FINAL_TARGET layer | Not implemented yet | TODO |
-| States A–F classification | Partial (diagnosis codes) | TODO |
-| Response classes after trial | Keep/reverse + score only | TODO |
-| Refresh estimates / solver damping | HYSYS UI | MANUAL |
+| External FINAL_TARGET layer (NH₃ 50 ppmw) | `FinalTarget` + stream check | AUTO (SWS default) |
+| States A–E classification | `classify_engineering_state` | AUTO (State F PARTIAL) |
+| Response classes after trial | `classify_response` | AUTO (score-heavy PARTIAL) |
+| Refresh estimates | `refresh_estimates` COM | AUTO |
+| Solver damping | HYSYS UI | MANUAL |
 | Hydraulics flooding | Not mapped | MANUAL / future |
 | Structural (stages, feed tray) | Not in Assist | PERMISSION / later |
-| Interactive PE pause board | Chat + Trial Map trail | TODO in GUI |
+| Interactive PE board | Intelligence window + Trial Map | PARTIAL (Assist Loop can still batch) |
 
-**Non-negotiable Studio policy (from this workflow):**
+**Non-negotiable Assist policy (from this workflow):**
 
 ```text
 FINAL_TARGET (e.g. NH3 bottoms)  → locked unless user explicitly allows
 Category-1 MVs (e.g. RR / energy) → preferred Assist experiments
 Weak response / State F          → stop and report; do not relax product targets
 ```
-
 ---
 
 ## Appendix B — Alignment with SW Stripper stress-test lessons
@@ -902,13 +905,14 @@ COM is the foundation. Expert judgment must be encoded in layers — not as one 
 Full PE intelligence lives in **this document**. Executable Assist must grow in **thin layers**:
 
 ```text
-Layer 1 (now):   Read + one MV + keep/reverse + human judge
-Layer 2 (next):  States A–F + locked FINAL_TARGET + units/stream checks
-Layer 3:         Spec-role swaps, sensitivity, State F reporting
-Layer 4 (later): Structural moves, 2×2 matrices, hydraulics
+Layer 1:   Read + one MV + keep/reverse + human judge          → CODED
+Layer 2:   States A–E + locked FINAL_TARGET + units/stream     → CODED (State F PARTIAL)
+Layer 3:   Spec-role swaps, sensitivity, State F reporting     → PARTIAL / next
+Layer 4:   Structural moves, 2×2 matrices, hydraulics          → DOCS only later
 ```
 
-**Do not** implement Sections 1–27 of this workflow in code in one pass. Rich docs, thin automation; expand only after SW Stripper validation.
+**Do not** implement Sections 1–27 of this workflow in code in one pass. Rich docs, thin automation.  
+Current coded checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md).
 
 ### 28.3 Known Assist gaps (must close over time)
 

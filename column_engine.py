@@ -1,17 +1,20 @@
 """
 Distillation convergence assistant engine.
 
-Layer 2 intelligence (expert workflow):
-  Classify States A–F → protect FINAL_TARGET → one bounded move →
-  solve → response class → keep/reverse → PE board
+Multi-variable ChemE intelligence (not RR-only):
+  Classify States A–F → choose variable family A/B/C → one bounded move →
+  solve → judge FINAL_TARGET + operability → keep/reverse → switch or State F
 
-Never auto-relaxes locked product FINAL_TARGETs (e.g. NH3).
+Never auto-relaxes locked product FINAL_TARGETs.
 Never adds an extra Active spec when DOF is already 0 without a 1-for-1 swap.
+Never auto-saves the HYSYS .hsc; structural moves are approval-only.
+See docs/MULTI_VARIABLE_ITERATION_MAP.md
 """
 from __future__ import annotations
 
 from column_api import ColumnController, is_sentinel
 from column_models import (
+    ColumnSpecState,
     ColumnState,
     ConvergenceLimits,
     Diagnosis,
@@ -24,6 +27,15 @@ from column_models import (
     default_sw_stripper_targets,
 )
 from column_spec_catalog import recommend_add_spec, recommend_specs_summary_clicks
+from hysys_dialog_watcher import (
+    clue_engineering_hint,
+    clue_to_preferred_family,
+    take_last_clues,
+)
+from hysys_messages_reader import (
+    message_engineering_hint,
+    take_last_messages,
+)
 
 
 def score_state(state: ColumnState) -> float:
@@ -108,11 +120,24 @@ def operable(state: ColumnState, limits: ConvergenceLimits) -> bool:
     if not state.physical_solution:
         return False
     if state.bottoms_molar_flow_kgmole_h is not None:
-        return state.bottoms_molar_flow_kgmole_h >= limits.min_bottoms_flow_kgmole_h
-    flow = state.bottoms_molar_flow
-    if flow is None or is_sentinel(flow):
-        return False
-    return abs(float(flow)) > 1e-6
+        if state.bottoms_molar_flow_kgmole_h < limits.min_bottoms_flow_kgmole_h:
+            return False
+    else:
+        flow = state.bottoms_molar_flow
+        if flow is None or is_sentinel(flow) or abs(float(flow)) <= 1e-6:
+            return False
+
+    for duty in (state.condenser_duty, state.reboiler_duty):
+        if duty is not None and not is_sentinel(duty) and abs(duty) > limits.max_duty_abs:
+            return False
+
+    temps = state.profile.temperatures
+    if temps:
+        if max(temps) > limits.max_temperature_c or min(temps) < limits.min_temperature_c:
+            return False
+        if limits.require_profile_for_state_e and (max(temps) - min(temps)) < 0.05:
+            return False
+    return True
 
 
 def classify_engineering_state(
@@ -120,6 +145,7 @@ def classify_engineering_state(
     limits: ConvergenceLimits,
     targets: list[FinalTarget],
     target_status: dict[str, dict] | None = None,
+    infeasible_evidence: bool = False,
 ) -> EngineeringState:
     dof = state.degrees_of_freedom
     if dof is not None and dof != 0:
@@ -137,6 +163,9 @@ def classify_engineering_state(
         info["met"] or not hard_by_id[tid].hard for tid, info in target_status.items()
     )
 
+    if infeasible_evidence and (hard_miss or not state.appears_converged):
+        return EngineeringState.F_INFEASIBLE
+
     if hard_ok and state.appears_converged and operable(state, limits):
         return EngineeringState.E_ACCEPTABLE
 
@@ -152,16 +181,213 @@ def classify_engineering_state(
     return EngineeringState.B_NUMERICAL
 
 
+def _spec_family(name: str) -> str:
+    lower = name.lower()
+    if "frac" in lower or "nh3" in lower or "comp" in lower or "purity" in lower:
+        return "D_target"
+    if "reflux ratio" in lower or (
+        "reflux" in lower and "ratio" in lower
+    ):
+        return "B_energy"
+    if "reflux" in lower or "boilup" in lower or "boil" in lower:
+        return "B_energy"
+    if "duty" in lower and ("cond" in lower or "reb" in lower):
+        return "B_energy"
+    if (
+        "ovhd" in lower
+        or "distill" in lower
+        or "overhead" in lower
+        or "btms" in lower
+        or "bottoms" in lower
+        or "draw" in lower
+    ):
+        return "C_split"
+    return "B_energy"
+
+
+def _strategy_for_spec(name: str, new_goal: float, old_goal: float) -> str:
+    lower = name.lower()
+    fam = _spec_family(name)
+    if fam == "C_split":
+        if "btms" in lower or "bottoms" in lower:
+            return "bottoms_rate_nudge"
+        return "ovhd_rate_nudge"
+    if "reflux ratio" in lower or ("reflux" in lower and "ratio" in lower):
+        return "reflux_nudge_down" if new_goal < old_goal else "reflux_nudge_up"
+    if "reflux" in lower:
+        return "reflux_flow_nudge"
+    if "boilup" in lower or "boil" in lower or "reb" in lower:
+        return "boilup_nudge"
+    if fam == "D_target":
+        return "nh3_goal_nudge"
+    return "reflux_nudge_up" if new_goal >= old_goal else "reflux_nudge_down"
+
+
+def _nudge_goal(
+    spec: ColumnSpecState,
+    *,
+    direction: float | None,
+    frac: float,
+    limits: ConvergenceLimits,
+    toward_current: bool = False,
+) -> TrialAction | None:
+    if spec.goal_value is None:
+        return None
+    base = float(spec.goal_value)
+    current = spec.current_value
+    if toward_current and current is not None and not is_sentinel(current):
+        cur = float(current)
+        if abs(cur - base) < 1e-30:
+            return None
+        step = abs(base) * frac if abs(base) > 1e-30 else abs(cur) * frac
+        if abs(base) > 1e-30:
+            gap_ratio = abs(cur - base) / abs(base)
+            if gap_ratio > 0.5:
+                step = min(abs(cur - base), max(step, abs(base) * min(0.25, frac * 4)))
+        new_goal = base + (step if cur > base else -step)
+    else:
+        d = 1.0 if direction is None else direction
+        if abs(base) < 1e-30:
+            new_goal = base + d * 1e-6
+        else:
+            new_goal = base * (1.0 + d * frac)
+        if "reflux ratio" in spec.name.lower():
+            new_goal = min(max(new_goal, limits.min_reflux_ratio), limits.max_reflux_ratio)
+
+    if abs(new_goal - base) < 1e-30:
+        return None
+    sid = _strategy_for_spec(spec.name, new_goal, base)
+    return TrialAction(
+        kind="set_goal",
+        description=f"Nudge '{spec.name}' GoalValue {base:.4g} -> {new_goal:.4g} [{_spec_family(spec.name)}]",
+        payload={
+            "spec_name": spec.name,
+            "goal": new_goal,
+            "previous": base,
+            "strategy_id": sid,
+            "family": _spec_family(spec.name),
+        },
+    )
+
+
+def _dominant_active_spec(state: ColumnState) -> ColumnSpecState | None:
+    actives = [s for s in state.active_specs() if s.goal_value is not None]
+    if not actives:
+        return None
+    actives.sort(key=lambda s: s.score_error(), reverse=True)
+    return actives[0]
+
+
+def _find_active(state: ColumnState, *needles: str) -> ColumnSpecState | None:
+    for spec in state.active_specs():
+        lower = spec.name.lower()
+        if all(n in lower for n in needles):
+            return spec
+    for spec in state.active_specs():
+        lower = spec.name.lower()
+        if any(n in lower for n in needles):
+            return spec
+    return None
+
+
+def _product_delta(
+    before: ColumnState,
+    after: ColumnState,
+    targets: list[FinalTarget],
+) -> tuple[float, bool, bool]:
+    """Return (relative impurity improvement, any_improved, any_worsened) for locked targets."""
+    before_t = evaluate_final_targets(before, targets)
+    after_t = evaluate_final_targets(after, targets)
+    improved = False
+    worsened = False
+    rel = 0.0
+    n = 0
+    for target in targets:
+        if not target.locked:
+            continue
+        b = before_t.get(target.id, {}).get("measured")
+        a = after_t.get(target.id, {}).get("measured")
+        if b is None or a is None or is_sentinel(b) or is_sentinel(a):
+            continue
+        b = float(b)
+        a = float(a)
+        n += 1
+        if target.relationship == "less_or_equal":
+            if a < b * (1.0 - 1e-12):
+                improved = True
+            if a > b * 1.05:
+                worsened = True
+            if abs(b) > 1e-30:
+                rel += (b - a) / abs(b)
+        elif target.relationship == "greater_or_equal":
+            if a > b * (1.0 + 1e-12):
+                improved = True
+            if a < b * 0.95:
+                worsened = True
+            if abs(b) > 1e-30:
+                rel += (a - b) / abs(b)
+        else:
+            if abs(a - target.target_value) < abs(b - target.target_value):
+                improved = True
+            if abs(a - target.target_value) > abs(b - target.target_value) * 1.05:
+                worsened = True
+    return (rel / n if n else 0.0, improved, worsened)
+
+
+def should_keep_trial(
+    before: ColumnState,
+    after: ColumnState,
+    before_score: float,
+    after_score: float,
+    limits: ConvergenceLimits,
+    targets: list[FinalTarget],
+) -> bool:
+    """Plant judgment: FINAL_TARGET + operability first; residual score second."""
+    if not after.physical_solution:
+        return False
+
+    before_op = operable(before, limits)
+    after_op = operable(after, limits)
+    if before_op and not after_op:
+        return False
+
+    _rel, product_improved, product_worsened = _product_delta(before, after, targets)
+    if product_worsened:
+        return False
+
+    residual_improved = after_score < before_score * 0.98
+    hard_miss_before = any(
+        not info["met"]
+        for info in evaluate_final_targets(before, targets).values()
+    )
+
+    if hard_miss_before:
+        if product_improved and after_op:
+            return True
+        if after_op and residual_improved and not product_worsened:
+            return True
+        return False
+
+    if after_op and (product_improved or residual_improved):
+        return True
+    if not before_op and after_op and after.physical_solution:
+        return True
+    return False
+
+
 def diagnose(
     state: ColumnState,
     limits: ConvergenceLimits | None = None,
     targets: list[FinalTarget] | None = None,
+    infeasible_evidence: bool = False,
+    exhausted_families: set[str] | None = None,
 ) -> Diagnosis:
     limits = limits or ConvergenceLimits()
     targets = targets if targets is not None else default_sw_stripper_targets()
     codes: list[DiagnosisCode] = []
     details: list[str] = []
     target_status = evaluate_final_targets(state, targets)
+    exhausted_families = exhausted_families or set()
 
     dof = state.degrees_of_freedom
     if dof is not None and dof > 0:
@@ -196,8 +422,8 @@ def diagnose(
     if state.physical_solution and not operable(state, limits):
         codes.append(DiagnosisCode.OPERABILITY_FAIL)
         details.append(
-            f"Bottoms flow operability gate failed "
-            f"(need ≥ {limits.min_bottoms_flow_kgmole_h:g} kgmole/h)."
+            f"Operability gate failed (bottoms flow / duty / T window). "
+            f"Need bottoms ≥ {limits.min_bottoms_flow_kgmole_h:g} kgmole/h."
         )
 
     temps = state.profile.temperatures
@@ -211,7 +437,15 @@ def diagnose(
             codes.append(DiagnosisCode.DUTY_EXTREME)
             details.append(f"{label} duty |{duty:.3g}| exceeds engineering limit.")
 
-    eng = classify_engineering_state(state, limits, targets, target_status)
+    if exhausted_families:
+        details.append(f"Exhausted / flat families: {sorted(exhausted_families)}")
+
+    eng = classify_engineering_state(
+        state, limits, targets, target_status, infeasible_evidence=infeasible_evidence
+    )
+
+    preferred_family = ""
+    pe_hypothesis = ""
 
     if eng == EngineeringState.E_ACCEPTABLE:
         codes = [DiagnosisCode.CONVERGED]
@@ -220,12 +454,16 @@ def diagnose(
         severity = "info"
         pe_read = "Acceptable converged solution."
         potential = "success"
+        preferred_family = ""
+        pe_hypothesis = "No further operating moves required."
     elif eng == EngineeringState.A_INVALID:
         strategy = "fix_dof"
         summary = "State A — DOF invalid. Fix specification set before tuning."
         severity = "critical"
         pe_read = "Model not properly posed."
         potential = "nowhere"
+        preferred_family = "A_init"
+        pe_hypothesis = "Restore DOF = 0 before any GoalValue iteration."
     elif eng == EngineeringState.B_NUMERICAL:
         strategy = "numerical_recovery"
         summary = (
@@ -235,12 +473,19 @@ def diagnose(
         severity = "critical"
         pe_read = "Bottoms/duties not trustworthy; recover physical solution first."
         potential = "marginal"
+        preferred_family = "A_init"
+        pe_hypothesis = "Family A (init/estimates) before energy or split nudges."
     elif eng == EngineeringState.D_CONSTRAINT:
-        strategy = "operability_review"
-        summary = "State D — targets look met but operability/constraints fail."
+        strategy = "nudge_operating_mv"
+        summary = (
+            "State D — targets look met but operability fails. "
+            "Prefer split-family (Ovhd/Btms rates) — not purity relax."
+        )
         severity = "warn"
-        pe_read = "Green residuals with unrealistic bottoms/duties — not plant-acceptable."
-        potential = "nowhere"
+        pe_read = "Green residuals with unrealistic bottoms/duties — fix split/energy path."
+        potential = "going_somewhere"
+        preferred_family = "C_split"
+        pe_hypothesis = "Adjust Active Ovhd/Btms rate toward a physical split."
         if "full reflux" in (state.condenser_type or "").lower():
             details.append(
                 "Connections: Full Reflux condenser — Ovhd is vapor product; "
@@ -249,18 +494,30 @@ def diagnose(
     elif eng == EngineeringState.C_OFF_SPEC:
         strategy = "nudge_operating_mv"
         summary = (
-            "State C — physical (or partially) but FINAL_TARGET / active residuals unmet. "
-            "Nudge Category-1 operating MVs only; FINAL_TARGET locked."
+            "State C — FINAL_TARGET / residuals unmet. "
+            "Choose Category-1 family (energy OR split) — not RR alone; FINAL_TARGET locked."
         )
         severity = "warn"
-        pe_read = "Separation/energy path — adjust RR/rates, not product GoalValue."
+        pe_read = "Multi-variable operating path — RR / rates / boilup as Active allows."
         potential = "going_somewhere"
+        dom = _dominant_active_spec(state)
+        if dom is not None:
+            preferred_family = _spec_family(dom.name)
+            pe_hypothesis = (
+                f"Dominant Active residual on '{dom.name}' -> try family {preferred_family}."
+            )
+        else:
+            preferred_family = "B_energy"
+            pe_hypothesis = "No clear dominant Active -- start with energy family if RR Active."
     else:
         strategy = "report_infeasible"
         summary = "State F — likely infeasible under current structure/assumptions."
         severity = "critical"
-        pe_read = "Operating MVs exhausted or weak response — escalate or stop."
+        pe_read = "Category-1 families exhausted or flat product response — escalate."
         potential = "nowhere"
+        preferred_family = "F_structural"
+        pe_hypothesis = "Stop operating nudges; structural/feed changes need engineer approval."
+        codes.append(DiagnosisCode.LIKELY_INFEASIBLE)
 
     if not codes:
         codes.append(DiagnosisCode.UNKNOWN_FAILURE)
@@ -277,7 +534,7 @@ def diagnose(
         has_composition_final_target=has_comp_target,
         physical_solution=state.physical_solution,
         final_target_met=final_met,
-        weak_operating_response=False,
+        weak_operating_response=infeasible_evidence,
     )
     add_lines = [
         f"{r.action}: {r.hysys_type_name or '(none)'} — {r.reason}" for r in add_recs
@@ -309,8 +566,65 @@ def diagnose(
         elif c.set_estimate is False:
             bits.append("Estimate=OFF")
         if c.sync_goal_from_current:
-            bits.append("Sync Current→Goal")
+            bits.append("Sync Current->Goal")
         click_lines.append(f"{' | '.join(bits)} — {c.reason}")
+
+    # HYSYS popup clues — SEE + ACT (feed into family / hypothesis)
+    dialog_clues = take_last_clues()
+    dialog_lines: list[str] = []
+    clue_tags: list[str] = []
+    for clue in dialog_clues:
+        clue_tags.extend(clue.clue_tags)
+        dialog_lines.append(clue.summary())
+        details.append(f"HYSYS popup: {clue.summary()}")
+        hint = clue_engineering_hint(clue.clue_tags, clue.message)
+        if hint and hint not in details:
+            details.append(hint)
+
+    # Continuous Messages pane clues
+    message_clues = take_last_messages()
+    message_lines: list[str] = []
+    for clue in message_clues:
+        clue_tags.extend(clue.clue_tags)
+        message_lines.append(clue.summary())
+        details.append(f"HYSYS Messages: {clue.summary()}")
+        hint = message_engineering_hint(clue.clue_tags, clue.text)
+        if hint and hint not in details:
+            details.append(hint)
+
+    if clue_tags:
+        fam_from_popup = clue_to_preferred_family(clue_tags)
+        if fam_from_popup:
+            preferred_family = fam_from_popup
+        if "temperature_cross" in clue_tags and not pe_hypothesis:
+            pe_hypothesis = message_engineering_hint(clue_tags, message_lines[-1] if message_lines else "")
+        if "invalid_temperature" in clue_tags or "poor_spec" in clue_tags:
+            if eng not in {EngineeringState.A_INVALID, EngineeringState.B_NUMERICAL}:
+                # Prefer numerical/model review over purity chase
+                if not state.physical_solution:
+                    eng = EngineeringState.B_NUMERICAL
+                    strategy = "numerical_recovery"
+                    preferred_family = "A_init"
+            pe_hypothesis = message_engineering_hint(clue_tags, message_lines[-1] if message_lines else "")
+        if "draw_exceeds_feed" in clue_tags:
+            pe_hypothesis = clue_engineering_hint(clue_tags, dialog_clues[-1].message if dialog_clues else "")
+            if eng == EngineeringState.E_ACCEPTABLE:
+                # Illegal draw is not an acceptable plant state for Assist judgment
+                eng = EngineeringState.A_INVALID
+                strategy = "fix_dof"
+                summary = (
+                    "State A/D — HYSYS rejected draw spec (draw > feed). "
+                    "Fix Ovhd/Btms Active set; do not keep the illegal Goal."
+                )
+                severity = "critical"
+                pe_read = "Popup clue: overhead draw exceeds feed — split/spec invalid."
+                potential = "nowhere"
+                codes.append(DiagnosisCode.UNDER_SPECIFIED)
+            elif eng in {EngineeringState.C_OFF_SPEC, EngineeringState.D_CONSTRAINT}:
+                pe_hypothesis = (
+                    "HYSYS popup draw>feed — prefer C_split lower Ovhd / restore Btms; "
+                    "do not raise Ovhd further."
+                )
 
     return Diagnosis(
         codes=codes,
@@ -324,6 +638,10 @@ def diagnose(
         final_target_status=target_status,
         add_spec_recommendations=add_lines,
         specs_summary_clicks=click_lines,
+        preferred_family=preferred_family,
+        pe_hypothesis=pe_hypothesis,
+        hysys_dialog_clues=dialog_lines,
+        hysys_message_clues=message_lines,
     )
 
 
@@ -357,7 +675,8 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
     lines = [
         f"PE BOARD | State {diagnosis.engineering_state.value} | potential={diagnosis.potential}",
         f"  {diagnosis.pe_read}",
-        f"  Strategy: {diagnosis.recommended_strategy}",
+        f"  Family: {diagnosis.preferred_family or '—'} | Strategy: {diagnosis.recommended_strategy}",
+        f"  Hypothesis: {diagnosis.pe_hypothesis or '—'}",
         f"  DOF={state.degrees_of_freedom} physical={state.physical_solution} "
         f"converged_flag={state.appears_converged} score={score_state(state):.4g}",
         f"  CondQ={state.condenser_duty} RebQ={state.reboiler_duty}",
@@ -377,16 +696,24 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
             f"  TARGET {tid}: {info['measured']} vs {info['target']} "
             f"(met={info['met']}, locked={info['locked']})"
         )
+    if diagnosis.hysys_dialog_clues:
+        lines.append("  HYSYS POPUP CLUES (acted on as PE evidence):")
+        for clue in diagnosis.hysys_dialog_clues[-6:]:
+            lines.append(f"    !! {clue}")
+    if diagnosis.hysys_message_clues:
+        lines.append("  HYSYS MESSAGES PANE CLUES:")
+        for clue in diagnosis.hysys_message_clues[-8:]:
+            lines.append(f"    :: {clue}")
     if diagnosis.add_spec_recommendations:
         lines.append("  ADD SPEC intelligence:")
         for rec in diagnosis.add_spec_recommendations:
             lines.append(f"    - {rec}")
     if diagnosis.specs_summary_clicks:
-        lines.append("  SPECS SUMMARY clicks (Design → Specs Summary):")
+        lines.append("  SPECS SUMMARY clicks (Design -> Specs Summary):")
         for rec in diagnosis.specs_summary_clicks:
-            lines.append(f"    → {rec}")
+            lines.append(f"    -> {rec}")
     lines.append(f"  Summary: {diagnosis.summary}")
-    for detail in diagnosis.details[:6]:
+    for detail in diagnosis.details[:8]:
         lines.append(f"  • {detail}")
     return "\n".join(lines)
 
@@ -405,88 +732,221 @@ def propose_action(
     limits: ConvergenceLimits,
     diagnosis: Diagnosis,
     targets: list[FinalTarget] | None = None,
+    skipped_families: set[str] | None = None,
 ) -> TrialAction | None:
+    """Multi-variable ChemE chooser — energy, split, and init families (not RR alone)."""
     targets = targets if targets is not None else default_sw_stripper_targets()
+    skipped = skipped_families or set()
     strategy = diagnosis.recommended_strategy
 
     if strategy == "none_converged":
         return None
 
     if strategy == "fix_dof":
+        clue_text = " ".join(diagnosis.hysys_dialog_clues).lower()
+        if "draw_exceeds_feed" in clue_text or "draw rate must be less than" in clue_text:
+            ovhd = (
+                _find_active(state, "ovhd")
+                or _find_active(state, "distill")
+                or _find_active(state, "overhead")
+            )
+            if ovhd is not None and not _is_locked_final_spec(ovhd.name, targets, limits):
+                action = _nudge_goal(
+                    ovhd, direction=-1.0, frac=max(limits.rate_nudge_fraction, 0.15), limits=limits
+                )
+                if action is not None:
+                    action.description += " [popup clue: draw>feed -> lower Ovhd]"
+                    return action
+            return TrialAction(
+                kind="stop",
+                description=(
+                    "HYSYS popup: Ovhd/draw exceeds feed. Deactivate Ovhd or set Goal < feed "
+                    "(manual Specs Summary). Do not raise draw further."
+                ),
+                payload={
+                    "strategy_id": "ovhd_rate_nudge",
+                    "family": "C_split",
+                    "response": "STOP_INFEASIBLE",
+                },
+            )
         return TrialAction(
             kind="manual_dof",
             description="DOF must be fixed manually (activate/deactivate specs to reach 0).",
-            payload={"dof": state.degrees_of_freedom, "strategy_id": "fix_dof"},
-        )
-
-    if strategy == "operability_review":
-        return TrialAction(
-            kind="stop",
-            description=(
-                "State D — FINAL_TARGET may be met but bottoms flow/operability fails. "
-                "Manual PE review required (not auto-relaxing product specs)."
-            ),
-            payload={"strategy_id": "feed_or_case_change", "response": "STOP_INFEASIBLE"},
+            payload={"dof": state.degrees_of_freedom, "strategy_id": "fix_dof", "family": "A_init"},
         )
 
     if strategy == "report_infeasible":
         return TrialAction(
             kind="stop",
             description="State F — likely infeasible; stop without relaxing FINAL_TARGET.",
-            payload={"strategy_id": "fix_dof", "response": "STOP_INFEASIBLE"},
+            payload={"strategy_id": "report_state_f", "response": "STOP_INFEASIBLE", "family": "F_structural"},
         )
 
     if strategy == "numerical_recovery":
         return TrialAction(
             kind="refresh_estimates",
-            description="State B recovery: refresh composition estimates and re-solve.",
-            payload={"strategy_id": "refresh_estimates"},
+            description="State B recovery: refresh composition estimates and re-solve [A_init].",
+            payload={"strategy_id": "refresh_estimates", "family": "A_init"},
         )
 
-    # State C / general: Category-1 operating MVs only
-    reflux = next((s for s in state.active_specs() if "reflux ratio" in s.name.lower()), None)
-    if reflux is not None and reflux.goal_value is not None:
-        nh3_miss = any(
-            tid.startswith("NH3") and not info["met"]
-            for tid, info in diagnosis.final_target_status.items()
-        )
-        base = float(reflux.goal_value)
-        current = reflux.current_value
-        use_reflux = False
-        direction = 1.0
-        frac = limits.reflux_nudge_fraction
-        if nh3_miss and state.physical_solution:
-            use_reflux = True
-            direction = 1.0
-        elif reflux.score_error() > limits.max_active_spec_error:
-            use_reflux = True
-            if current is not None and not is_sentinel(current) and abs(current) < 1e6:
-                direction = 1.0 if float(current) > base else -1.0
-            else:
-                direction = -1.0 if (reflux.error or 0.0) > 0 else 1.0
-            if current is not None and not is_sentinel(current) and abs(base) > 1e-12:
-                gap_ratio = abs(float(current) - base) / abs(base)
-                if gap_ratio > 0.5:
-                    frac = min(0.25, frac * 4.0)
+    # --- Build candidate nudges across families B and C ---
+    candidates: list[TrialAction] = []
 
-        if use_reflux:
-            new_goal = base * (1.0 + direction * frac)
-            new_goal = min(max(new_goal, limits.min_reflux_ratio), limits.max_reflux_ratio)
-            if abs(new_goal - base) >= 1e-12:
-                strategy_id = "reflux_nudge_down" if new_goal < base else "reflux_nudge_up"
-                return TrialAction(
-                    kind="set_goal",
-                    description=f"Nudge '{reflux.name}' GoalValue {base:.4g} → {new_goal:.4g}",
-                    payload={
-                        "spec_name": reflux.name,
-                        "goal": new_goal,
-                        "previous": base,
-                        "strategy_id": strategy_id,
-                    },
+    # Dominant Active residual (any family except locked D)
+    dom = _dominant_active_spec(state)
+    if dom is not None and not _is_locked_final_spec(dom.name, targets, limits):
+        fam = _spec_family(dom.name)
+        if fam not in skipped and dom.score_error() > limits.max_active_spec_error:
+            action = _nudge_goal(
+                dom,
+                direction=None,
+                frac=limits.rate_nudge_fraction
+                if fam == "C_split"
+                else limits.reflux_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is not None:
+                candidates.append(action)
+
+    # B_energy: RR — impurity miss → increase energy; else toward current
+    if "B_energy" not in skipped:
+        rr = _find_active(state, "reflux ratio") or _find_active(state, "reflux", "ratio")
+        if rr is not None and rr.goal_value is not None:
+            nh3_miss = any(
+                (not info["met"]) and tid.upper().startswith("NH3")
+                for tid, info in diagnosis.final_target_status.items()
+            )
+            hard_miss = any(not info["met"] for info in diagnosis.final_target_status.values())
+            if (nh3_miss or hard_miss) and state.physical_solution:
+                action = _nudge_goal(
+                    rr, direction=1.0, frac=limits.reflux_nudge_fraction, limits=limits
                 )
+            else:
+                action = _nudge_goal(
+                    rr,
+                    direction=None,
+                    frac=limits.reflux_nudge_fraction,
+                    limits=limits,
+                    toward_current=True,
+                )
+            if action is not None:
+                candidates.append(action)
 
-    # Baseline swap if NH3 locked active
-    if limits.allow_baseline_spec_swap and state.degrees_of_freedom == 0:
+        for needle in (("reflux",), ("boilup",), ("boil",)):
+            spec = _find_active(state, *needle)
+            if spec is None or spec is rr:
+                continue
+            if "ratio" in spec.name.lower() and needle == ("reflux",):
+                continue
+            if _is_locked_final_spec(spec.name, targets, limits):
+                continue
+            action = _nudge_goal(
+                spec,
+                direction=None,
+                frac=limits.reflux_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is not None:
+                candidates.append(action)
+
+    # C_split: Ovhd / Btms — especially State D / dry bottoms
+    if "C_split" not in skipped:
+        prefer_btms_up = (
+            diagnosis.engineering_state == EngineeringState.D_CONSTRAINT
+            or (
+                state.bottoms_molar_flow_kgmole_h is not None
+                and state.bottoms_molar_flow_kgmole_h < limits.min_bottoms_flow_kgmole_h
+            )
+        )
+        btms = _find_active(state, "btms") or _find_active(state, "bottoms")
+        ovhd = (
+            _find_active(state, "ovhd")
+            or _find_active(state, "distill")
+            or _find_active(state, "overhead")
+        )
+        if prefer_btms_up and btms is not None and not _is_locked_final_spec(btms.name, targets, limits):
+            action = _nudge_goal(
+                btms, direction=1.0, frac=limits.rate_nudge_fraction, limits=limits
+            )
+            if action is not None:
+                candidates.insert(0, action)
+        if prefer_btms_up and ovhd is not None and not _is_locked_final_spec(ovhd.name, targets, limits):
+            # High Ovhd can starve bottoms on Full Reflux — reduce Ovhd or move toward current
+            action = _nudge_goal(
+                ovhd,
+                direction=-1.0,
+                frac=limits.rate_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is None:
+                action = _nudge_goal(
+                    ovhd, direction=-1.0, frac=limits.rate_nudge_fraction, limits=limits
+                )
+            if action is not None:
+                candidates.insert(0, action)
+        for spec in (btms, ovhd):
+            if spec is None or _is_locked_final_spec(spec.name, targets, limits):
+                continue
+            action = _nudge_goal(
+                spec,
+                direction=None,
+                frac=limits.rate_nudge_fraction,
+                limits=limits,
+                toward_current=True,
+            )
+            if action is None and prefer_btms_up:
+                direction = 1.0 if spec is btms else -1.0
+                action = _nudge_goal(
+                    spec, direction=direction, frac=limits.rate_nudge_fraction, limits=limits
+                )
+            if action is not None:
+                candidates.append(action)
+
+    # Deduplicate by spec name (keep first)
+    seen: set[str] = set()
+    unique: list[TrialAction] = []
+    for action in candidates:
+        name = str(action.payload.get("spec_name", ""))
+        if name in seen:
+            continue
+        seen.add(name)
+        unique.append(action)
+
+    if unique:
+        clue_text = " ".join(diagnosis.hysys_dialog_clues).lower()
+        block_ovhd_up = "draw_exceeds_feed" in clue_text or "draw rate must be less than" in clue_text
+        if block_ovhd_up:
+            filtered: list[TrialAction] = []
+            for action in unique:
+                name = str(action.payload.get("spec_name", "")).lower()
+                prev = action.payload.get("previous")
+                goal = action.payload.get("goal")
+                if (
+                    ("ovhd" in name or "distill" in name or "overhead" in name)
+                    and prev is not None
+                    and goal is not None
+                    and float(goal) > float(prev)
+                ):
+                    continue  # never raise Ovhd after draw>feed popup
+                filtered.append(action)
+            unique = filtered or unique
+        # Prefer diagnosis family if present
+        prefer = diagnosis.preferred_family
+        if prefer:
+            for action in unique:
+                if action.payload.get("family") == prefer:
+                    return action
+        return unique[0]
+
+    # Baseline swap if NH3 locked active (State B follow-on / last resort init)
+    if (
+        limits.allow_baseline_spec_swap
+        and state.degrees_of_freedom == 0
+        and "A_init" not in skipped
+    ):
         nh3 = next((s for s in state.active_specs() if "nh3" in s.name.lower()), None)
         ovhd = next((s for s in state.specs if "ovhd" in s.name.lower()), None)
         if (
@@ -503,51 +963,16 @@ def propose_action(
                     kind="baseline_swap",
                     description=(
                         f"1-for-1 baseline swap: deactivate '{nh3.name}', "
-                        f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor)."
+                        f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor) [A_init]."
                     ),
                     payload={
                         "deactivate": nh3.name,
                         "activate": ovhd.name,
                         "activate_goal": float(goal),
                         "strategy_id": "spec_swap_last_resort",
+                        "family": "A_init",
                     },
                 )
-
-    remaining = [s for s in state.active_specs() if s.goal_value is not None]
-    remaining.sort(key=lambda s: s.score_error(), reverse=True)
-    for spec in remaining:
-        if "reflux ratio" in spec.name.lower():
-            continue
-        if _is_locked_final_spec(spec.name, targets, limits):
-            continue
-        base = float(spec.goal_value)
-        current = spec.current_value
-        name_l = spec.name.lower()
-        is_comp = "frac" in name_l
-        if is_comp and current is not None and not is_sentinel(current):
-            gap = float(current) - base
-            step = abs(base) * limits.reflux_nudge_fraction
-            if abs(gap) > 1e-30:
-                step = min(abs(gap), max(step, abs(gap) * limits.reflux_nudge_fraction))
-            new_goal = base + (step if gap > 0 else -step)
-            if new_goal <= 0:
-                new_goal = base * (1.0 + limits.reflux_nudge_fraction)
-        elif abs(base) < 1e-30:
-            new_goal = base + 1e-6
-        else:
-            new_goal = base * (1.0 - limits.reflux_nudge_fraction)
-        if abs(new_goal - base) < 1e-30:
-            continue
-        return TrialAction(
-            kind="set_goal",
-            description=f"Nudge '{spec.name}' GoalValue {base:.4g} → {new_goal:.4g}",
-            payload={
-                "spec_name": spec.name,
-                "goal": new_goal,
-                "previous": base,
-                "strategy_id": "reflux_nudge_down",
-            },
-        )
 
     locked_active = [
         s for s in state.active_specs() if _is_locked_final_spec(s.name, targets, limits)
@@ -556,16 +981,16 @@ def propose_action(
         return TrialAction(
             kind="stop",
             description=(
-                "FINAL_TARGET still active/unmet and no safe operating MV left. "
-                "Stop — do not auto-relax product GoalValue (State F evidence)."
+                "No safe Category-1 MV left (energy/split/init). "
+                "FINAL_TARGET still locked — State F evidence; do not auto-relax product GoalValue."
             ),
-            payload={"strategy_id": "fix_dof", "response": "STOP_INFEASIBLE"},
+            payload={"strategy_id": "report_state_f", "response": "STOP_INFEASIBLE", "family": "F_structural"},
         )
 
     return TrialAction(
         kind="refresh_estimates",
-        description="No safe knob found; refresh estimates and re-evaluate.",
-        payload={"strategy_id": "refresh_estimates"},
+        description="No safe knob found; refresh estimates and re-evaluate [A_init].",
+        payload={"strategy_id": "refresh_estimates", "family": "A_init"},
     )
 
 
@@ -616,13 +1041,30 @@ class ConvergenceAssistant:
         self.targets = targets if targets is not None else default_sw_stripper_targets()
         self.history: list[TrialResult] = []
         self._estimates_refreshed = False
+        self._flat_product_streak = 0
+        self._skipped_families: set[str] = set()
+        self._family_flat_counts: dict[str, int] = {}
+
+    def _infeasible_evidence(self) -> bool:
+        if self._flat_product_streak >= self.limits.max_flat_trials_before_f:
+            return True
+        # Both energy and split families flat/exhausted
+        if {"B_energy", "C_split"}.issubset(self._skipped_families):
+            return True
+        return False
 
     def inspect(self, column_name: str) -> ColumnState:
         return self.columns.inspect(column_name)
 
     def diagnose_column(self, column_name: str) -> tuple[ColumnState, Diagnosis]:
         state = self.inspect(column_name)
-        return state, diagnose(state, self.limits, self.targets)
+        return state, diagnose(
+            state,
+            self.limits,
+            self.targets,
+            infeasible_evidence=self._infeasible_evidence(),
+            exhausted_families=self._skipped_families,
+        )
 
     def pe_board(self, column_name: str) -> str:
         state, diagnosis = self.diagnose_column(column_name)
@@ -630,8 +1072,20 @@ class ConvergenceAssistant:
 
     def run_one_trial(self, column_name: str, dry_run: bool = False) -> TrialResult:
         before = self.inspect(column_name)
-        diagnosis = diagnose(before, self.limits, self.targets)
-        action = propose_action(before, self.limits, diagnosis, self.targets)
+        diagnosis = diagnose(
+            before,
+            self.limits,
+            self.targets,
+            infeasible_evidence=self._infeasible_evidence(),
+            exhausted_families=self._skipped_families,
+        )
+        action = propose_action(
+            before,
+            self.limits,
+            diagnosis,
+            self.targets,
+            skipped_families=self._skipped_families,
+        )
         before_score = score_state(before)
         board = format_pe_board(before, diagnosis)
 
@@ -685,11 +1139,18 @@ class ConvergenceAssistant:
             and self.limits.allow_baseline_spec_swap
         ):
             diagnosis.recommended_strategy = "nudge_operating_mv"
-            alt = propose_action(before, self.limits, diagnosis, self.targets)
+            alt = propose_action(
+                before,
+                self.limits,
+                diagnosis,
+                self.targets,
+                skipped_families=self._skipped_families | {"A_init"},
+            )
             if alt is not None and alt.kind == "baseline_swap":
                 action = alt
 
         snap = self.columns.snapshot(column_name)
+        family = str(action.payload.get("family", ""))
         try:
             if action.kind == "set_goal":
                 self.columns.set_spec_goal(
@@ -722,7 +1183,6 @@ class ConvergenceAssistant:
             self.columns.run_column(column_name)
             after = self.inspect(column_name)
             after_score = score_state(after)
-            after_diag = diagnose(after, self.limits, self.targets)
 
             unphysical = not after.physical_solution
             if after.profile.temperatures:
@@ -738,31 +1198,17 @@ class ConvergenceAssistant:
                 ):
                     unphysical = True
 
-            improved = after_score < before_score * 0.98
+            keep = (not unphysical) and should_keep_trial(
+                before, after, before_score, after_score, self.limits, self.targets
+            )
             if action.kind in {"refresh_estimates", "baseline_swap"}:
                 if after.physical_solution and not before.physical_solution:
-                    improved = True
+                    keep = True
                 elif after.physical_solution and after_score <= before_score * 1.05:
-                    improved = True
+                    keep = keep or operable(after, self.limits)
 
-            keep = improved and not unphysical
-            for tid, before_info in diagnosis.final_target_status.items():
-                after_info = after_diag.final_target_status.get(tid, {})
-                bval = before_info.get("measured")
-                aval = after_info.get("measured")
-                if (
-                    bval is not None
-                    and aval is not None
-                    and not is_sentinel(bval)
-                    and not is_sentinel(aval)
-                ):
-                    target = next(t for t in self.targets if t.id == tid)
-                    if (
-                        target.locked
-                        and target.relationship == "less_or_equal"
-                        and aval > bval * 1.05
-                    ):
-                        keep = False
+            rel_prod, _imp, _wors = _product_delta(before, after, self.targets)
+            flat_product = abs(rel_prod) < self.limits.flat_product_relative
 
             if not keep:
                 self.columns.restore(snap)
@@ -772,20 +1218,43 @@ class ConvergenceAssistant:
                 response = classify_response(
                     before, after, before_score, after_score, False, self.limits, self.targets
                 )
+                if family in {"B_energy", "C_split", "A_init"}:
+                    self._family_flat_counts[family] = self._family_flat_counts.get(family, 0) + 1
+                    if self._family_flat_counts[family] >= self.limits.max_flat_trials_before_f:
+                        self._skipped_families.add(family)
+                if flat_product:
+                    self._flat_product_streak += 1
                 message = (
                     f"REVERSED [{response.value}] — {action.description}. "
-                    f"score {before_score:.4g} → trial worse/unphysical; restored."
+                    f"score {before_score:.4g} → trial worse/unphysical/product; restored."
                 )
             else:
                 response = classify_response(
                     before, after, before_score, after_score, True, self.limits, self.targets
                 )
+                if flat_product and not _imp:
+                    self._flat_product_streak += 1
+                    if family:
+                        self._family_flat_counts[family] = self._family_flat_counts.get(family, 0) + 1
+                        if self._family_flat_counts[family] >= self.limits.max_flat_trials_before_f:
+                            self._skipped_families.add(family)
+                else:
+                    self._flat_product_streak = 0
                 message = (
                     f"KEPT [{response.value}] — {action.description}. "
                     f"score {before_score:.4g} → {after_score:.4g}."
                 )
 
-            after_board = format_pe_board(after, diagnose(after, self.limits, self.targets))
+            after_board = format_pe_board(
+                after,
+                diagnose(
+                    after,
+                    self.limits,
+                    self.targets,
+                    infeasible_evidence=self._infeasible_evidence(),
+                    exhausted_families=self._skipped_families,
+                ),
+            )
             result = TrialResult(
                 action=action,
                 before_score=before_score,
@@ -823,7 +1292,7 @@ class ConvergenceAssistant:
         max_iterations: int | None = None,
         dry_run: bool = False,
     ) -> list[TrialResult]:
-        """Run the controlled trial loop until State E, blocked, or iteration limit."""
+        """Run the controlled trial loop until State E, State F, blocked, or iteration limit."""
         results: list[TrialResult] = []
         limit = max_iterations or self.limits.max_iterations
         for _ in range(limit):
@@ -842,14 +1311,16 @@ class ConvergenceAssistant:
                     )
                 )
                 break
-            if diagnosis.recommended_strategy in {
-                "fix_dof",
-                "report_infeasible",
-                "operability_review",
-            }:
+            if diagnosis.engineering_state == EngineeringState.F_INFEASIBLE or (
+                diagnosis.recommended_strategy in {"fix_dof", "report_infeasible"}
+            ):
                 results.append(
                     TrialResult(
-                        action=TrialAction("stop", diagnosis.recommended_strategy),
+                        action=TrialAction(
+                            "stop",
+                            diagnosis.recommended_strategy,
+                            payload={"strategy_id": "report_state_f"},
+                        ),
                         before_score=score_state(state),
                         after_score=score_state(state),
                         kept=False,
@@ -872,15 +1343,23 @@ class ConvergenceAssistant:
                 "baseline_swap",
             }:
                 if len(results) >= 3 and all(not r.kept for r in results[-3:]):
+                    self._flat_product_streak = max(
+                        self._flat_product_streak, self.limits.max_flat_trials_before_f
+                    )
                     results.append(
                         TrialResult(
-                            action=TrialAction("stop", "No progress"),
+                            action=TrialAction(
+                                "stop",
+                                "No progress",
+                                payload={"strategy_id": "report_state_f"},
+                            ),
                             before_score=trial.after_score,
                             after_score=trial.after_score,
                             kept=False,
                             message=(
                                 "Stopped: three consecutive reversed trials "
-                                "(State F evidence — not relaxing FINAL_TARGET)."
+                                "(State F evidence — not relaxing FINAL_TARGET). "
+                                f"Skipped families={sorted(self._skipped_families)}"
                             ),
                             after_state=trial.after_state,
                             response_class=ResponseClass.STOP_INFEASIBLE,

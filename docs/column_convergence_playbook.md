@@ -651,19 +651,26 @@ Start → reflux_nudge_up (rev) → reflux_nudge_up (kept) → reflux_nudge_up (
 | UI orientation | `gui.py`, `trial_map_window.py` | Column Assistant tab, Trial Map window |
 | External feed changes | `hysys_api.py`, Stream tab | logged via `manual_map_event` |
 
-### Gap list (playbook ahead of code)
+### Gap list (playbook ↔ code) — synced 2026-07-22
 
-Aligned with master workflow **§28** and [`intelligence_improvement_notes.md`](intelligence_improvement_notes.md):
+Canonical checklist: [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md).
 
-- [ ] States A–F classification before targeting (P0)
-- [ ] External FINAL_TARGET layer — NH₃ locked (P0)
-- [ ] Worksheet units on Specs display (e.g. Ovhd kgmole/h not raw SI) (P0)
-- [ ] Product checks from bottoms **stream**, not only spec Current (P0)
-- [ ] Response classes after each trial (P0)
-- [ ] Spec-role Active swaps policy-driven in Assist (P1)
-- [ ] Operability gates — bottoms flow, duties, T profile (P1)
-- [ ] Interactive PE board default; Assist Loop opt-in (P1)
-- [ ] `refresh_estimates` COM (`UpdateCompositionEstimates`) wired (P1)
+**Done (CODED):**
+- [x] States A–E classification before targeting (P0) — State F classifier still PARTIAL
+- [x] External FINAL_TARGET layer — NH₃ locked @ 50 ppmw (P0)
+- [x] Worksheet units on Specs display (e.g. Ovhd kgmole/h) (P0)
+- [x] Product checks from bottoms **stream** (P0)
+- [x] Response classes after each trial (P0) — still score-heavy (PARTIAL)
+- [x] Bottoms-flow operability gate (P1 partial)
+- [x] `refresh_estimates` COM wired (P1)
+- [x] PE board + Connections READ + Specs Summary recommendations
+
+**Still open:**
+- [ ] True State F classification (flat FINAL_TARGET sensitivity) (P2)
+- [ ] Keep/reverse on FINAL_TARGET + operability first (not score-first) (P0 polish)
+- [ ] Spec-role Active swaps — condenser-aware policy (P1)
+- [ ] Duty / T-profile / MB gates for State E (P1)
+- [ ] Interactive PE board forced default; Assist Loop opt-in only (P1)
 - [ ] Going-nowhere / sensitivity stop → State F report (P2)
 - [ ] User-visible "PE hypothesis" string in UI (P1)
 
@@ -694,14 +701,14 @@ Aligned with master workflow **§28** and [`intelligence_improvement_notes.md`](
 
 Do **not** try to code the entire expert workflow at once. Executable Assist grows as:
 
-| Layer | Content | Status |
-|-------|---------|--------|
-| 1 | Read + one MV + keep/reverse + human judge | Partial today |
-| 2 | States A–F + FINAL_TARGET lock + units/stream checks | **Next code priority** |
-| 3 | Spec-role swaps, sensitivity, State F reporting | Planned |
+| Layer | Content | Status (2026-07-22) |
+|-------|---------|---------------------|
+| 1 | Read + one MV + keep/reverse + human judge | **CODED** |
+| 2 | States A–E + FINAL_TARGET lock + units/stream checks | **CODED (State F PARTIAL)** |
+| 3 | Spec-role swaps, sensitivity, State F reporting | **PARTIAL / planned** |
 | 4 | Structural / multivariable / hydraulics | Later + permission |
 
-See master workflow **§28** for P0–P3 detail and State E success definition.
+See [`INTELLIGENCE_INVENTORY_V1.md`](INTELLIGENCE_INVENTORY_V1.md) for the coded checklist and master workflow **§28** for P0–P3 policy.
 
 ---
 

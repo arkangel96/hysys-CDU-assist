@@ -193,6 +193,13 @@ class Diagnosis:
     final_target_status: dict[str, Any] = field(default_factory=dict)
     add_spec_recommendations: list[str] = field(default_factory=list)
     specs_summary_clicks: list[str] = field(default_factory=list)
+    # Multi-variable intelligence (not RR-only)
+    preferred_family: str = ""  # A_init | B_energy | C_split | D_target | E_feed | F_structural
+    pe_hypothesis: str = ""
+    # HYSYS modal popup clues captured during solve
+    hysys_dialog_clues: list[str] = field(default_factory=list)
+    # Continuous Messages window clues (warnings / solver trace)
+    hysys_message_clues: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -227,9 +234,13 @@ class ConvergenceLimits:
     damping_min: float = 0.1
     damping_max: float = 1.0
     damping_step: float = 0.1
-    # Layer 2 intelligence policy
+    # Layer 2+ multi-variable intelligence policy
     allow_relax_final_targets: bool = False
     allow_baseline_spec_swap: bool = True
     min_bottoms_flow_kgmole_h: float = 1.0  # operability gate (worksheet)
     weak_response_relative: float = 0.02  # <2% change = no material change
+    flat_product_relative: float = 0.02  # product move below this = flat
+    max_flat_trials_before_f: int = 2  # flat product trials → State F evidence
+    rate_nudge_fraction: float = 0.05
+    require_profile_for_state_e: bool = False  # optional tighter State E
 

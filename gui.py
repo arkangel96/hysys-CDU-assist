@@ -4,9 +4,10 @@ from datetime import datetime
 
 import pyqtgraph as pg
 from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QCursor, QFont
 from PyQt5.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
@@ -231,6 +232,9 @@ class SimpleColumnAssist(QMainWindow):
         self.assistant = ConvergenceAssistant(self.column_api, ConvergenceLimits())
         self.trial_map_window: TrialMapWindow | None = None
         self.intelligence_window: IntelligenceWindow | None = None
+        self._column_job_busy = False
+        self._last_column_state = None
+        self._last_specs_clicks: list[str] = []
         self.streams = {}
         self.stream_data = []
         self.operations = []
@@ -241,7 +245,7 @@ class SimpleColumnAssist(QMainWindow):
         self.setup_connections()
 
     def setup_ui(self) -> None:
-        self.setWindowTitle("Simple Column Assist — for Aspen HYSYS")
+        self.setWindowTitle("Simple Column Assist v1 — New Intelligence")
         self.setMinimumSize(1280, 820)
         self.setStyleSheet(DARK_THEME)
         central = QWidget()
@@ -252,9 +256,9 @@ class SimpleColumnAssist(QMainWindow):
 
         top = QHBoxLayout()
         top.setContentsMargins(0, 0, 0, 4)
-        logo = QLabel("SIMPLE COLUMN ASSIST")
+        logo = QLabel("SIMPLE COLUMN ASSIST v1")
         logo.setStyleSheet("font-size: 22px; font-weight: 700; color: #58a6ff;")
-        subtitle = QLabel("Simple distillation & stripping  ·  not CDU/VDU")
+        subtitle = QLabel("New Intelligence  ·  simple distillation & stripping  ·  not CDU/VDU")
         subtitle.setStyleSheet("color: #8b949e; font-size: 12px;")
         self.status = QLabel("● DISCONNECTED")
         self.status.setStyleSheet("color: #f85149; font-weight: 600;")
@@ -638,6 +642,8 @@ class SimpleColumnAssist(QMainWindow):
     def refresh_data(self) -> None:
         if not self.controller.connected:
             return
+        if getattr(self, "_column_job_busy", False):
+            return
         try:
             self.streams = self.controller.get_stream_objects()
             selected = self.stream_combo.currentText()
@@ -678,6 +684,60 @@ class SimpleColumnAssist(QMainWindow):
             raise HysysError("No distillation column selected.")
         return name
 
+    def _column_assist_buttons(self) -> list:
+        return [
+            self.inspect_column_button,
+            self.diagnose_column_button,
+            self.dry_run_button,
+            self.one_trial_button,
+            self.assist_button,
+            self.trial_map_button,
+            self.intelligence_button,
+            self.apply_specs_button,
+            self.apply_recommended_specs_button,
+            self.sync_spec_current_button,
+            self.refresh_specs_button,
+        ]
+
+    def _set_column_busy(self, busy: bool, message: str = "") -> None:
+        self._column_job_busy = busy
+        for btn in self._column_assist_buttons():
+            btn.setEnabled(not busy)
+        if busy:
+            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            if message:
+                self._column_assist_log(message)
+                self.column_summary.setText(message)
+                self.column_summary.setStyleSheet(
+                    "color: #58a6ff; padding: 10px; background: #161b22; "
+                    "border: 1px solid #30363d; border-radius: 6px;"
+                )
+            QApplication.processEvents()
+        else:
+            QApplication.restoreOverrideCursor()
+
+    def _run_column_job(self, label: str, work) -> None:
+        """Defer HYSYS COM so the click paints; show busy state while COM runs."""
+        if self._column_job_busy:
+            self._column_assist_log(f"Busy — ignore '{label}' (wait for current HYSYS action).")
+            return
+
+        def _execute() -> None:
+            self._set_column_busy(True, f"Working: {label}... (HYSYS COM — UI may pause briefly)")
+            auto_was_on = self.timer.isActive()
+            if auto_was_on:
+                self.timer.stop()
+            try:
+                work()
+            except Exception as exc:
+                self._show_error(exc)
+            finally:
+                if auto_was_on and self.auto_refresh.isChecked():
+                    self.timer.start()
+                self._set_column_busy(False)
+
+        QTimer.singleShot(0, _execute)
+
     def _column_assist_log(self, message: str) -> None:
         self.column_assist_log.append(f"[{datetime.now():%H:%M:%S}] {message}")
         self.log(message)
@@ -708,9 +768,22 @@ class SimpleColumnAssist(QMainWindow):
             eng = getattr(diagnosis, "engineering_state", None)
             pe = getattr(diagnosis, "pe_read", "")
             pot = getattr(diagnosis, "potential", "")
+            fam = getattr(diagnosis, "preferred_family", "") or "-"
+            hyp = getattr(diagnosis, "pe_hypothesis", "") or "-"
             detail = diagnosis.summary
             if eng is not None:
-                detail = f"[{eng.value}] potential={pot}\n{pe}\n{detail}"
+                detail = (
+                    f"[{eng.value}] potential={pot}\n"
+                    f"Family: {fam}\n"
+                    f"Hypothesis: {hyp}\n"
+                    f"{pe}\n{detail}"
+                )
+            popup_clues = getattr(diagnosis, "hysys_dialog_clues", None) or []
+            if popup_clues:
+                detail += "\nHYSYS POPUP CLUES:\n• " + "\n• ".join(popup_clues[:4])
+            msg_clues = getattr(diagnosis, "hysys_message_clues", None) or []
+            if msg_clues:
+                detail += "\nHYSYS MESSAGES:\n• " + "\n• ".join(msg_clues[:6])
             if diagnosis.details:
                 detail += "\n• " + "\n• ".join(diagnosis.details[:8])
             if getattr(state, "bottoms_nh3_mass_frac", None) is not None:
@@ -731,7 +804,8 @@ class SimpleColumnAssist(QMainWindow):
             self.column_summary.setText(
                 f"{state.name} ({state.flowsheet_tag})  ·  score {score_state(state):.4g}\n"
                 "Active specs drive the solve. Inactive rows are estimates only.\n"
-                "FINAL_TARGET (NH3) is locked — Assist will not auto-relax product GoalValue."
+                "FINAL_TARGET (NH3) is locked — Assist will not auto-relax product GoalValue.\n"
+                "Click Diagnose to see Family + Hypothesis (multi-variable PE choice)."
             )
             self.column_summary.setStyleSheet(
                 "color: #8b949e; padding: 10px; background: #161b22; "
@@ -820,6 +894,7 @@ class SimpleColumnAssist(QMainWindow):
                 pen=pg.mkPen("#f0883e", width=2),
                 symbol="o",
             )
+        QApplication.processEvents()
 
     def _specs_summary_rows_from_table(self) -> list[dict]:
         rows = []
@@ -841,7 +916,7 @@ class SimpleColumnAssist(QMainWindow):
         return rows
 
     def apply_specs_summary_to_hysys(self) -> None:
-        try:
+        def work() -> None:
             name = self._selected_column()
             rows = self._specs_summary_rows_from_table()
             if not rows:
@@ -850,13 +925,13 @@ class SimpleColumnAssist(QMainWindow):
             self.column_api.run_column(name)
             state = self.assistant.inspect(name)
             self._show_column_state(state)
-            self._column_assist_log("Applied Specs Summary → HYSYS:\n  " + "\n  ".join(notes))
+            self._column_assist_log("Applied Specs Summary -> HYSYS:\n  " + "\n  ".join(notes))
             self.column_pages.setCurrentIndex(2)
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job("Apply Specs Summary", work)
 
     def apply_recommended_specs_clicks(self) -> None:
-        try:
+        def work() -> None:
             from column_spec_catalog import recommend_specs_summary_clicks
 
             name = self._selected_column()
@@ -882,7 +957,7 @@ class SimpleColumnAssist(QMainWindow):
             for click in clicks:
                 if click.sync_goal_from_current:
                     val = self.column_api.sync_spec_goal_from_current(name, click.spec_name)
-                    notes.append(f"{click.spec_name}: Goal←Current ({val:.6g})")
+                    notes.append(f"{click.spec_name}: Goal<-Current ({val:.6g})")
                 row: dict = {"name": click.spec_name}
                 if click.set_active is not None:
                     row["is_active"] = click.set_active
@@ -900,11 +975,11 @@ class SimpleColumnAssist(QMainWindow):
                 + format_pe_board(state2, diagnosis2)
             )
             self.column_pages.setCurrentIndex(2)
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job("Apply recommended clicks", work)
 
     def sync_selected_spec_current_to_goal(self) -> None:
-        try:
+        def work() -> None:
             name = self._selected_column()
             row = self.column_specs_table.currentRow()
             if row < 0:
@@ -916,32 +991,31 @@ class SimpleColumnAssist(QMainWindow):
             val = self.column_api.sync_spec_goal_from_current(name, spec_name)
             state = self.assistant.inspect(name)
             self._show_column_state(state)
-            self._column_assist_log(f"Synced {spec_name}: Goal ← Current ({val:.6g})")
-        except Exception as exc:
-            self._show_error(exc)
+            self._column_assist_log(f"Synced {spec_name}: Goal <- Current ({val:.6g})")
+
+        self._run_column_job("Sync Goal from Current", work)
 
     def inspect_column(self) -> None:
-        try:
+        def work() -> None:
             state = self.assistant.inspect(self._selected_column())
             self._show_column_state(state)
             self._column_assist_log(f"Inspected {state.name}: DOF={state.degrees_of_freedom}")
-            self.column_pages.setCurrentIndex(2)  # Specs Summary
-        except Exception as exc:
-            self._show_error(exc)
+            self.column_pages.setCurrentIndex(2)
+
+        self._run_column_job("Inspect", work)
 
     def diagnose_column(self) -> None:
-        try:
+        def work() -> None:
             state, diagnosis = self.assistant.diagnose_column(self._selected_column())
             self._show_column_state(state, diagnosis)
             self._column_assist_log(format_pe_board(state, diagnosis))
-            self.column_pages.setCurrentIndex(2)  # Specs Summary (show clicks)
-        except Exception as exc:
-            self._show_error(exc)
+            self.column_pages.setCurrentIndex(2)
+
+        self._run_column_job("Diagnose", work)
 
     def open_trial_map(self) -> None:
-        try:
+        def work() -> None:
             name = self.column_combo.currentText().strip() or "SW Stripper"
-            # Recreate if older dialog instance somehow remains
             if self.trial_map_window is None or not isinstance(self.trial_map_window, TrialMapWindow):
                 self.trial_map_window = TrialMapWindow(self.assistant)
             self.trial_map_window.refresh(name)
@@ -950,11 +1024,11 @@ class SimpleColumnAssist(QMainWindow):
             self.trial_map_window.raise_()
             self.trial_map_window.activateWindow()
             self._column_assist_log(f"Opened Trial Map for {name}")
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job("Trial Map", work)
 
     def open_intelligence(self) -> None:
-        try:
+        def work() -> None:
             name = self.column_combo.currentText().strip() or "SW Stripper"
             if self.intelligence_window is None:
                 self.intelligence_window = IntelligenceWindow(self.assistant)
@@ -963,8 +1037,8 @@ class SimpleColumnAssist(QMainWindow):
             self.intelligence_window.raise_()
             self.intelligence_window.activateWindow()
             self._column_assist_log(f"Opened PE Intelligence for {name}")
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job("PE Board", work)
 
     def log_feed_change_on_map(self, description: str) -> None:
         """Optional: record an external feed/case change onto the trial map history."""
@@ -973,7 +1047,9 @@ class SimpleColumnAssist(QMainWindow):
             self.trial_map_window.refresh(self.column_combo.currentText().strip())
 
     def run_column_trial(self, dry_run: bool = True) -> None:
-        try:
+        label = "Dry-Run" if dry_run else "One Trial"
+
+        def work() -> None:
             name = self._selected_column()
             if not dry_run:
                 answer = QMessageBox.question(
@@ -988,22 +1064,23 @@ class SimpleColumnAssist(QMainWindow):
                     return
             result = self.assistant.run_one_trial(name, dry_run=dry_run)
             if result.after_state is not None:
-                self._show_column_state(result.after_state, diagnose(result.after_state))
+                _, diagnosis = self.assistant.diagnose_column(name)
+                self._show_column_state(result.after_state, diagnosis)
             self._column_assist_log(result.message)
             if self.trial_map_window is not None and self.trial_map_window.isVisible():
                 self.trial_map_window.refresh(name)
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job(label, work)
 
     def run_assist_loop(self) -> None:
-        try:
+        def work() -> None:
             name = self._selected_column()
             answer = QMessageBox.question(
                 self,
                 "Column Assistant",
                 (
                     "Run the automatic assist loop?\n\n"
-                    "Sequence: diagnose → one bounded change → solve → keep/reverse → repeat.\n"
+                    "Sequence: diagnose -> one bounded change -> solve -> keep/reverse -> repeat.\n"
                     "Stops when converged, DOF blocked, or no progress."
                 ),
             )
@@ -1011,13 +1088,14 @@ class SimpleColumnAssist(QMainWindow):
                 return
             results = self.assistant.assist(name, dry_run=False)
             if results and results[-1].after_state is not None:
-                self._show_column_state(results[-1].after_state, diagnose(results[-1].after_state))
+                _, diagnosis = self.assistant.diagnose_column(name)
+                self._show_column_state(results[-1].after_state, diagnosis)
             for result in results:
                 self._column_assist_log(result.message)
             if self.trial_map_window is not None and self.trial_map_window.isVisible():
                 self.trial_map_window.refresh(name)
-        except Exception as exc:
-            self._show_error(exc)
+
+        self._run_column_job("Assist Loop", work)
 
     def load_stream_detail(self, name: str) -> None:
         stream = self.streams.get(name)
@@ -1099,7 +1177,7 @@ class SimpleColumnAssist(QMainWindow):
 
     def _show_error(self, error: Exception) -> None:
         self.log(f"ERROR: {error}")
-        QMessageBox.critical(self, "Simple Column Assist", str(error))
+        QMessageBox.critical(self, "Simple Column Assist v1", str(error))
 
 
 # Backward-compatible alias

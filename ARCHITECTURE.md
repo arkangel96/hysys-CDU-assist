@@ -1,6 +1,7 @@
-# Architecture — Simple Column Assist
+# Architecture — Simple Column Assist v1 (New Intelligence)
 
 External COM assist for **simple distillation / stripping** in Aspen HYSYS.
+**Version 1.0** — New Intelligence line (States A–F, PE board, Trial Map).
 CDU/VDU are out of scope (separate future tools). See `docs/SCOPE_SIMPLE_COLUMN_ASSIST.md`.
 
 ## High level
