@@ -50,6 +50,9 @@ LAYER 2+ (2026-07-22 multi-variable integration)
 [x] Estimates refresh (COM)
 [x] Bottoms/duty/T operability gates
 [x] Connections READ + Specs Summary APPLY / click tips
+[x] Connections STRUCTURAL intelligence (Family F) — recommend + approval-gated write
+[x] Simple optimize — min RR / RebQ / CondQ / stages (product locked; thin layer)
+[x] Multi-variable families A_init / B_energy / C_split (not RR-only)
 [x] Add Spec catalog (recommend only — no auto Add)
 
 PARTIAL / NEXT

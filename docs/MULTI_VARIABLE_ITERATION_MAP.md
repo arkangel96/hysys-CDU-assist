@@ -28,7 +28,7 @@ A senior process engineer does **not** “always increase RR.”
 | **C** | Material split | Distillate / Ovhd rate, bottoms rate, D/F | Wrong split, dry bottoms, Full Reflux traps |
 | **D** | Product FINAL_TARGET | Composition / purity on product stream | **Monitor / locked** — do not auto-relax |
 | **E** | Feed context | F, T, P, composition, VF | Diagnose / log — user usually changes |
-| **F** | Structural | Feed stage, stage count, pressure, property package | **Approval-only** |
+| **F** | Structural | Feed stage, stage count, P_cond/P_reb, condenser type, inlet stream | **Think + recommend; write only with PE approval** (`column_connections.py`) |
 
 ---
 

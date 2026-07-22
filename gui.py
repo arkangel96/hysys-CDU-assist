@@ -45,10 +45,16 @@ from ui_style import style_table_headers
 
 
 DARK_THEME = """
-QMainWindow, QWidget { background: #0d1117; color: #c9d1d9; }
+QMainWindow, QWidget {
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: "Segoe UI";
+  font-size: 9pt;
+}
+QLabel { font-size: 9pt; }
 QFrame {
   border: 1px solid #21262d;
-  border-radius: 4px;
+  border-radius: 2px;
   padding: 0px;
   background: #161b22;
 }
@@ -58,32 +64,34 @@ QFrame#metricCard, QFrame#statusChip {
 }
 QGroupBox {
   border: 1px solid #30363d;
-  border-radius: 4px;
-  margin-top: 12px;
-  padding: 10px 8px 8px 8px;
+  border-radius: 2px;
+  margin-top: 8px;
+  padding: 4px 6px 4px 6px;
   font-weight: 600;
+  font-size: 9pt;
 }
 QGroupBox#compactBox {
-  margin-top: 8px;
-  padding: 6px 8px 6px 8px;
-  font-size: 11px;
+  margin-top: 6px;
+  padding: 4px 6px 4px 6px;
+  font-size: 8pt;
 }
 QGroupBox::title {
   subcontrol-origin: margin;
   subcontrol-position: top left;
-  left: 12px;
-  padding: 0 6px;
+  left: 8px;
+  padding: 0 4px;
   color: #c9d1d9;
   background: #0d1117;
+  font-size: 8pt;
 }
 QPushButton {
   background: #21262d;
   border: 1px solid #30363d;
-  border-radius: 3px;
-  padding: 7px 12px;
-  min-height: 22px;
-  min-width: 88px;
-  font-size: 12px;
+  border-radius: 2px;
+  padding: 2px 8px;
+  min-height: 18px;
+  min-width: 64px;
+  font-size: 8pt;
 }
 QPushButton:hover { background: #30363d; border-color: #484f58; }
 QPushButton:pressed { background: #161b22; }
@@ -97,9 +105,13 @@ QPushButton#primaryAction:hover { background: #388bfd; }
 QLineEdit, QComboBox, QDoubleSpinBox, QTextEdit, QTableWidget {
   background: #161b22;
   border: 1px solid #30363d;
-  border-radius: 4px;
-  padding: 6px;
-  min-height: 18px;
+  border-radius: 2px;
+  padding: 2px 4px;
+  min-height: 16px;
+  font-size: 8pt;
+}
+QComboBox QAbstractItemView {
+  font-size: 8pt;
 }
 QHeaderView {
   background-color: #21262d;
@@ -107,22 +119,23 @@ QHeaderView {
 QHeaderView::section {
   background-color: #21262d;
   color: #ffffff;
-  padding: 12px 10px;
+  padding: 4px 6px;
   border: none;
   border-right: 1px solid #30363d;
-  border-bottom: 2px solid #58a6ff;
-  font-size: 13px;
+  border-bottom: 1px solid #58a6ff;
+  font-size: 8pt;
   font-weight: 700;
-  min-height: 36px;
+  min-height: 22px;
 }
 QTableWidget {
   gridline-color: #30363d;
   selection-background-color: #1f6feb;
   color: #e6edf3;
   alternate-background-color: #12171e;
+  font-size: 8pt;
 }
 QTableWidget::item {
-  padding: 6px;
+  padding: 2px 4px;
   color: #e6edf3;
 }
 QTableWidget::item:selected {
@@ -131,50 +144,57 @@ QTableWidget::item:selected {
 }
 QTabWidget::pane {
   border: 1px solid #30363d;
-  border-radius: 4px;
+  border-radius: 2px;
   top: -1px;
-  padding: 6px;
+  padding: 4px;
 }
 QTabBar::tab {
   background: #161b22;
   border: 1px solid #30363d;
-  padding: 8px 14px;
-  margin-right: 2px;
+  padding: 3px 8px;
+  margin-right: 1px;
+  font-size: 8pt;
+  min-height: 18px;
 }
 QTabBar::tab:selected {
   background: #21262d;
   border-bottom-color: #21262d;
   color: #58a6ff;
 }
-QSplitter::handle { background: #21262d; width: 4px; }
+QSplitter::handle { background: #21262d; width: 3px; }
+QTextEdit {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 8pt;
+}
 """
 
 
 class MetricCard(QFrame):
-    """Stream property tile — uses QFont (not CSS font-size) to avoid Windows garble."""
+    """Stream property tile — compact Aspen-like density."""
 
     def __init__(self, title: str, unit: str, color: str) -> None:
         super().__init__()
         self.setObjectName("metricCard")
-        self.setMinimumHeight(70)
+        self.setMinimumHeight(44)
+        self.setMaximumHeight(52)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(4)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(1)
 
         title_label = QLabel(title.upper())
-        title_label.setFont(QFont("Segoe UI", 9))
+        title_label.setFont(QFont("Segoe UI", 7))
         title_label.setStyleSheet("color: #8b949e; border: none; background: transparent;")
 
         self.value = QLabel("—")
-        value_font = QFont("Segoe UI", 13)
+        value_font = QFont("Segoe UI", 10)
         value_font.setBold(True)
         self.value.setFont(value_font)
         self.value.setStyleSheet(f"color: {color}; border: none; background: transparent;")
         self.value.setTextInteractionFlags(Qt.TextSelectableByMouse)
 
         self.unit_label = QLabel(unit)
-        self.unit_label.setFont(QFont("Segoe UI", 9))
+        self.unit_label.setFont(QFont("Segoe UI", 7))
         self.unit_label.setStyleSheet("color: #8b949e; border: none; background: transparent;")
 
         layout.addWidget(title_label)
@@ -194,18 +214,19 @@ class StatusChip(QFrame):
     def __init__(self, title: str) -> None:
         super().__init__()
         self.setObjectName("statusChip")
-        self.setMinimumHeight(56)
+        self.setMinimumHeight(34)
+        self.setMaximumHeight(40)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setSpacing(2)
+        layout.setContentsMargins(6, 3, 6, 3)
+        layout.setSpacing(0)
 
         self.title = QLabel(title)
-        self.title.setFont(QFont("Segoe UI", 9))
+        self.title.setFont(QFont("Segoe UI", 7))
         self.title.setStyleSheet("color: #8b949e; border: none; background: transparent;")
 
         self.value = QLabel("—")
-        value_font = QFont("Segoe UI", 12)
+        value_font = QFont("Segoe UI", 9)
         value_font.setBold(True)
         self.value.setFont(value_font)
         self.value.setStyleSheet("color: #c9d1d9; border: none; background: transparent;")
@@ -246,22 +267,24 @@ class SimpleColumnAssist(QMainWindow):
 
     def setup_ui(self) -> None:
         self.setWindowTitle("Simple Column Assist v1 — New Intelligence")
-        self.setMinimumSize(1280, 820)
+        self.setMinimumSize(1100, 700)
         self.setStyleSheet(DARK_THEME)
+        app_font = QFont("Segoe UI", 8)
+        QApplication.setFont(app_font)
         central = QWidget()
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
-        root.setContentsMargins(14, 14, 14, 14)
-        root.setSpacing(12)
+        root.setContentsMargins(8, 6, 8, 6)
+        root.setSpacing(6)
 
         top = QHBoxLayout()
-        top.setContentsMargins(0, 0, 0, 4)
+        top.setContentsMargins(0, 0, 0, 2)
         logo = QLabel("SIMPLE COLUMN ASSIST v1")
-        logo.setStyleSheet("font-size: 22px; font-weight: 700; color: #58a6ff;")
-        subtitle = QLabel("New Intelligence  ·  simple distillation & stripping  ·  not CDU/VDU")
-        subtitle.setStyleSheet("color: #8b949e; font-size: 12px;")
+        logo.setStyleSheet("font-size: 12pt; font-weight: 700; color: #58a6ff;")
+        subtitle = QLabel("New Intelligence · simple distillation & stripping · not CDU/VDU")
+        subtitle.setStyleSheet("color: #8b949e; font-size: 8pt;")
         self.status = QLabel("● DISCONNECTED")
-        self.status.setStyleSheet("color: #f85149; font-weight: 600;")
+        self.status.setStyleSheet("color: #f85149; font-weight: 600; font-size: 8pt;")
         brand = QVBoxLayout()
         brand.setSpacing(0)
         brand.addWidget(logo)
@@ -399,6 +422,28 @@ class SimpleColumnAssist(QMainWindow):
         self.assist_button.setObjectName("primaryAction")
         self.trial_map_button = QPushButton("Trial Map")
         self.intelligence_button = QPushButton("PE Board")
+        toolbar_row.addWidget(QLabel("Optimize"))
+        self.optimize_combo = QComboBox()
+        self.optimize_combo.addItem("Min RR", "min_reflux_ratio")
+        self.optimize_combo.addItem("Min Reb Q", "min_reboiler_duty")
+        self.optimize_combo.addItem("Min Cond Q", "min_condenser_duty")
+        self.optimize_combo.addItem("Min stages", "min_stage_count")
+        self.optimize_combo.setMinimumWidth(110)
+        self.optimize_combo.setToolTip(
+            "What Optimize 1 minimizes:\n"
+            "• Min RR — lower Active Reflux Ratio\n"
+            "• Min Reb Q — lower reboiler duty (usually via RR)\n"
+            "• Min Cond Q — lower condenser duty (usually via RR)\n"
+            "• Min stages — propose fewer stages (needs your approval)\n"
+            "Only runs if NH3 FINAL_TARGET already met."
+        )
+        toolbar_row.addWidget(self.optimize_combo)
+        self.optimize_one_button = QPushButton("Optimize 1")
+        self.optimize_one_button.setToolTip(
+            "One clear optimize step: shows objective, what knob changed, "
+            "before/after numbers, and KEEP or REVERSE."
+        )
+        self.optimize_loop_button = QPushButton("Optimize Loop")
         for button in (
             self.inspect_column_button,
             self.diagnose_column_button,
@@ -407,8 +452,10 @@ class SimpleColumnAssist(QMainWindow):
             self.assist_button,
             self.trial_map_button,
             self.intelligence_button,
+            self.optimize_one_button,
+            self.optimize_loop_button,
         ):
-            button.setMinimumHeight(30)
+            button.setMinimumHeight(22)
             toolbar_row.addWidget(button)
         column_layout.addLayout(toolbar_row)
 
@@ -450,31 +497,46 @@ class SimpleColumnAssist(QMainWindow):
         self.column_summary.setWordWrap(True)
         self.column_summary.setAlignment(Qt.AlignTop | Qt.AlignLeft)
         self.column_summary.setStyleSheet(
-            "color: #c9d1d9; padding: 12px; background: #161b22; "
-            "border: 1px solid #30363d; border-radius: 4px;"
+            "color: #c9d1d9; padding: 6px; background: #161b22; "
+            "border: 1px solid #30363d; border-radius: 2px; font-size: 8pt;"
         )
         diagnosis_layout.addWidget(self.column_summary, 1)
         self.column_pages.addTab(diagnosis_page, "Diagnosis")
 
-        # Page: Connections (HYSYS Design → Connections READ)
+        # Page: Connections (HYSYS Design → Connections READ + F structural)
         connections_page = QWidget()
         connections_layout = QVBoxLayout(connections_page)
         connections_layout.setContentsMargins(8, 8, 8, 8)
         conn_hint = QLabel(
-            "Read-only mirror of HYSYS Design → Connections. "
-            "Stages / feed / condenser type / pressures — not auto-edited yet."
+            "HYSYS Design → Connections. Intelligence READs this window and can RECOMMEND "
+            "mechanical changes (feed stage, stages, P_cond/P_reb). "
+            "Writes need your explicit approval — never silent."
         )
         conn_hint.setWordWrap(True)
         conn_hint.setStyleSheet("color: #8b949e; border: none; background: transparent;")
         connections_layout.addWidget(conn_hint)
+        self.structural_label = QLabel("Diagnose to see Connections structural recommendations.")
+        self.structural_label.setWordWrap(True)
+        self.structural_label.setStyleSheet(
+            "color: #f0883e; border: none; background: transparent;"
+        )
+        connections_layout.addWidget(self.structural_label)
+        conn_btns = QHBoxLayout()
+        self.apply_structural_button = QPushButton("Apply First COM Proposal (requires confirm)")
+        self.apply_structural_button.setObjectName("primaryAction")
+        conn_btns.addWidget(self.apply_structural_button)
+        conn_btns.addStretch()
+        connections_layout.addLayout(conn_btns)
         self.connections_text = QTextEdit()
         self.connections_text.setReadOnly(True)
         self.connections_text.setPlainText("Inspect a column to load Connections.")
         self.connections_text.setStyleSheet(
-            "font-family: Consolas, 'Courier New', monospace; font-size: 12px;"
+            "font-family: Consolas, 'Courier New', monospace; font-size: 8pt;"
         )
         connections_layout.addWidget(self.connections_text, 1)
         self.column_pages.addTab(connections_page, "Connections")
+        self._last_structural_recs: list[str] = []
+        self._last_structural_payload: dict | None = None
 
         # Page: Specs Summary (HYSYS Design → Specs Summary — Active / Estimate)
         specs_page = QWidget()
@@ -516,10 +578,10 @@ class SimpleColumnAssist(QMainWindow):
             "No specs loaded yet — click Inspect."
         )
         self.specs_empty_hint.setAlignment(Qt.AlignCenter)
-        self.specs_empty_hint.setMinimumHeight(80)
+        self.specs_empty_hint.setMinimumHeight(40)
         self.specs_empty_hint.setStyleSheet(
-            "color: #f0883e; padding: 24px; background: #12171e; "
-            "border: 1px dashed #30363d; border-radius: 4px;"
+            "color: #f0883e; padding: 10px; background: #12171e; "
+            "border: 1px dashed #30363d; border-radius: 2px; font-size: 8pt;"
         )
         specs_layout.addWidget(self.specs_empty_hint)
 
@@ -596,12 +658,16 @@ class SimpleColumnAssist(QMainWindow):
         self.dry_run_button.clicked.connect(lambda: self.run_column_trial(dry_run=True))
         self.one_trial_button.clicked.connect(lambda: self.run_column_trial(dry_run=False))
         self.assist_button.clicked.connect(self.run_assist_loop)
+        self.optimize_one_button.clicked.connect(lambda: self.run_optimize_trial(loop=False))
+        self.optimize_loop_button.clicked.connect(lambda: self.run_optimize_trial(loop=True))
+        self.optimize_combo.currentIndexChanged.connect(self._on_optimize_objective_changed)
         self.trial_map_button.clicked.connect(self.open_trial_map)
         self.intelligence_button.clicked.connect(self.open_intelligence)
         self.apply_specs_button.clicked.connect(self.apply_specs_summary_to_hysys)
         self.apply_recommended_specs_button.clicked.connect(self.apply_recommended_specs_clicks)
         self.sync_spec_current_button.clicked.connect(self.sync_selected_spec_current_to_goal)
         self.refresh_specs_button.clicked.connect(self.inspect_column)
+        self.apply_structural_button.clicked.connect(self.apply_structural_with_approval)
 
     def _toggle_timer(self, enabled: bool) -> None:
         self.timer.start() if enabled else self.timer.stop()
@@ -691,12 +757,15 @@ class SimpleColumnAssist(QMainWindow):
             self.dry_run_button,
             self.one_trial_button,
             self.assist_button,
+            self.optimize_one_button,
+            self.optimize_loop_button,
             self.trial_map_button,
             self.intelligence_button,
             self.apply_specs_button,
             self.apply_recommended_specs_button,
             self.sync_spec_current_button,
             self.refresh_specs_button,
+            self.apply_structural_button,
         ]
 
     def _set_column_busy(self, busy: bool, message: str = "") -> None:
@@ -709,8 +778,8 @@ class SimpleColumnAssist(QMainWindow):
                 self._column_assist_log(message)
                 self.column_summary.setText(message)
                 self.column_summary.setStyleSheet(
-                    "color: #58a6ff; padding: 10px; background: #161b22; "
-                    "border: 1px solid #30363d; border-radius: 6px;"
+                    "color: #58a6ff; padding: 6px; background: #161b22; "
+                    "border: 1px solid #30363d; border-radius: 2px; font-size: 8pt;"
                 )
             QApplication.processEvents()
         else:
@@ -797,8 +866,8 @@ class SimpleColumnAssist(QMainWindow):
                 diagnosis.severity, "#8b949e"
             )
             self.column_summary.setStyleSheet(
-                f"color: {color}; padding: 10px; background: #161b22; "
-                "border: 1px solid #30363d; border-radius: 6px;"
+                f"color: {color}; padding: 6px; background: #161b22; "
+                "border: 1px solid #30363d; border-radius: 2px; font-size: 8pt;"
             )
         else:
             self.column_summary.setText(
@@ -808,14 +877,34 @@ class SimpleColumnAssist(QMainWindow):
                 "Click Diagnose to see Family + Hypothesis (multi-variable PE choice)."
             )
             self.column_summary.setStyleSheet(
-                "color: #8b949e; padding: 10px; background: #161b22; "
-                "border: 1px solid #30363d; border-radius: 6px;"
+                "color: #8b949e; padding: 6px; background: #161b22; "
+                "border: 1px solid #30363d; border-radius: 2px; font-size: 8pt;"
             )
 
         self.connections_text.setPlainText(format_connections_block(state))
         self._last_column_state = state
 
         if diagnosis is not None:
+            struct = getattr(diagnosis, "structural_recommendations", []) or []
+            self._last_structural_recs = list(struct)
+            from column_connections import pick_primary_structural_action, recommend_connections_moves
+
+            moves = recommend_connections_moves(
+                state,
+                diagnosis.engineering_state,
+                preferred_family=diagnosis.preferred_family,
+                infeasible_evidence=diagnosis.engineering_state.value.startswith("F"),
+            )
+            self._last_structural_payload = pick_primary_structural_action(moves)
+            if struct:
+                self.structural_label.setText(
+                    "STRUCTURAL (mechanical) — approval required:\n• " + "\n• ".join(struct)
+                )
+            else:
+                self.structural_label.setText(
+                    "No Connections structural change recommended right now "
+                    "(operating families still preferred)."
+                )
             clicks = getattr(diagnosis, "specs_summary_clicks", []) or []
             self._last_specs_clicks = list(clicks)
             if clicks:
@@ -826,6 +915,10 @@ class SimpleColumnAssist(QMainWindow):
                 self.specs_clicks_label.setText("No Specs Summary click changes recommended.")
         elif not getattr(self, "_last_specs_clicks", None):
             self.specs_clicks_label.setText("Diagnose to see recommended Specs Summary clicks.")
+            if not getattr(self, "_last_structural_recs", None):
+                self.structural_label.setText(
+                    "Diagnose to see Connections structural recommendations."
+                )
 
         if not state.specs:
             self.specs_empty_hint.setText(
@@ -914,6 +1007,60 @@ class SimpleColumnAssist(QMainWindow):
                 }
             )
         return rows
+
+    def apply_structural_with_approval(self) -> None:
+        """Mechanical Connections write — QMessageBox confirm required."""
+        payload = getattr(self, "_last_structural_payload", None)
+        if not payload:
+            QMessageBox.information(
+                self,
+                "No structural proposal",
+                "Diagnose first. Structural proposals appear when Family F / State F "
+                "or operating families are exhausted.",
+            )
+            return
+        if not payload.get("com_writable", True):
+            QMessageBox.warning(
+                self,
+                "Manual in HYSYS",
+                f"This proposal is MANUAL:\n\n{payload.get('description')}\n\n"
+                "Change it on Design → Connections in HYSYS, then Inspect again.",
+            )
+            return
+        msg = (
+            "MECHANICAL CHANGE — you are about to edit Design → Connections.\n\n"
+            f"{payload.get('description')}\n\n"
+            f"parameter: {payload.get('parameter')}\n"
+            f"current → proposed: {payload.get('current')} → {payload.get('proposed')}\n\n"
+            "This is not a GoalValue nudge. Confirm to apply via COM (no auto-save .hsc)."
+        )
+        reply = QMessageBox.question(
+            self,
+            "Approve structural Connections change?",
+            msg,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            self._column_assist_log("Structural change cancelled by user (no write).")
+            return
+
+        def work() -> None:
+            name = self._selected_column()
+            notes = self.column_api.apply_structural_move(
+                name,
+                str(payload["parameter"]),
+                payload["proposed"],
+                approved=True,
+                run_after=True,
+            )
+            state, diagnosis = self.assistant.diagnose_column(name)
+            self._show_column_state(state, diagnosis)
+            self._column_assist_log(
+                "Applied APPROVED structural Connections change:\n  " + "\n  ".join(notes)
+            )
+
+        self._run_column_job("Apply structural (approved)", work)
 
     def apply_specs_summary_to_hysys(self) -> None:
         def work() -> None:
@@ -1069,6 +1216,61 @@ class SimpleColumnAssist(QMainWindow):
             self._column_assist_log(result.message)
             if self.trial_map_window is not None and self.trial_map_window.isVisible():
                 self.trial_map_window.refresh(name)
+
+        self._run_column_job(label, work)
+
+    def _on_optimize_objective_changed(self) -> None:
+        key = self.optimize_combo.currentData()
+        if key:
+            self.assistant.set_optimize_objective(str(key))
+
+    def run_optimize_trial(self, loop: bool = False) -> None:
+        label = "Optimize Loop" if loop else "Optimize 1"
+
+        def work() -> None:
+            name = self._selected_column()
+            key = self.optimize_combo.currentData()
+            if key:
+                self.assistant.set_optimize_objective(str(key))
+            if loop:
+                answer = QMessageBox.question(
+                    self,
+                    "Simple Optimize",
+                    (
+                        "Run simple optimize loop?\n\n"
+                        "Requires FINAL_TARGET already met. Minimizes selected objective "
+                        "(RR / duty / stages). Stages need separate approval. "
+                        "Never relaxes product specs."
+                    ),
+                )
+                if answer != QMessageBox.Yes:
+                    return
+                results = self.assistant.assist_optimize(name, dry_run=False)
+            else:
+                results = [self.assistant.run_one_optimize_trial(name, dry_run=False)]
+            if results and results[-1].after_state is not None:
+                _, diagnosis = self.assistant.diagnose_column(name)
+                self._show_column_state(results[-1].after_state, diagnosis)
+            for result in results:
+                self._column_assist_log(result.message)
+                if result.action.kind == "structural_approval":
+                    self._last_structural_payload = dict(result.action.payload)
+                    self.structural_label.setText(
+                        "OPTIMIZE structural proposal (approve on Connections tab):\n• "
+                        + result.action.description
+                    )
+            # Clear popup so Optimize 1 is obvious
+            if results and not loop:
+                obj_name = self.optimize_combo.currentText()
+                header = (
+                    f"You asked Optimize 1 with objective: {obj_name}\n"
+                    f"(dropdown Optimize = what we minimize)\n\n"
+                )
+                QMessageBox.information(
+                    self,
+                    f"Optimize 1 — {obj_name}",
+                    header + results[-1].message,
+                )
 
         self._run_column_job(label, work)
 

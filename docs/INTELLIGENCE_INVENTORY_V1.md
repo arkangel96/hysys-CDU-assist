@@ -181,13 +181,15 @@ P14 Thin intelligence layers
 | 3 | Multi-variable family chooser (A/B/C — not RR-only) | **CODED** |
 | 3b | HYSYS popup clues — SEE + log + act in diagnosis (auto-OK dismiss) | **CODED** |
 | 4 | Condenser-aware Active policy (beyond NH₃→Ovhd) | PARTIAL — still SWS swap recipe |
+| 4b | Connections structural intelligence (feed/stages/P) approval-only | **CODED** — `column_connections.py` |
+| 4c | Simple optimize (min RR / RebQ / CondQ / stages) | **CODED** — `column_optimize.py` |
 | 5 | Optional second FINAL_TARGET (H₂S) via table | PLANNED |
 | 6 | Learning/memory system from `new_intelligence/` | HELD |
 | 7 | Workspace folder reorg (Deliverable 6) | HELD |
 
 See [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) and `new_intelligence/00_COMPLEMENTARY_INTRO.md`.
 
-**Explicitly not next:** GoalValue spam, auto-relax purity, auto Specs.Add, structural automation, CDU logic.
+**Explicitly not next:** GoalValue spam, auto-relax purity, auto Specs.Add, **silent** structural automation, CDU logic.
 
 ---
 

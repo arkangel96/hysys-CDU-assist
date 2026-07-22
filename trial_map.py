@@ -116,14 +116,46 @@ STRATEGY_CATALOG: list[StrategyDef] = [
         "feed_stage_change",
         "Change feed stage",
         "F_structural",
-        "Approval-only structural move — not auto-executed.",
+        "Approval-only mechanical Connections move — never silent.",
         last_resort=True,
     ),
     StrategyDef(
         "stage_count_change",
         "Change stage count",
         "F_structural",
-        "Approval-only structural move — not auto-executed.",
+        "Approval-only mechanical Connections move — never silent.",
+        last_resort=True,
+    ),
+    StrategyDef(
+        "pressure_change",
+        "Change P_cond / P_reb",
+        "F_structural",
+        "Approval-only mechanical Connections pressure move — never silent.",
+        last_resort=True,
+    ),
+    StrategyDef(
+        "optimize_min_rr",
+        "Simple optimize: min reflux ratio",
+        "optimize",
+        "Lower Active RR while locked FINAL_TARGET + operable hold.",
+    ),
+    StrategyDef(
+        "optimize_min_reb_duty",
+        "Simple optimize: min reboiler duty",
+        "optimize",
+        "Lower energy (usually via RR) while product locked.",
+    ),
+    StrategyDef(
+        "optimize_min_cond_duty",
+        "Simple optimize: min condenser duty",
+        "optimize",
+        "Lower condenser duty path while product locked.",
+    ),
+    StrategyDef(
+        "optimize_done",
+        "Simple optimize stop",
+        "optimize",
+        "Objective flat or blocked — product still protected.",
         last_resort=True,
     ),
     StrategyDef(
@@ -134,8 +166,6 @@ STRATEGY_CATALOG: list[StrategyDef] = [
         last_resort=True,
     ),
 ]
-
-
 @dataclass(slots=True)
 class PathNode:
     index: int

@@ -8,11 +8,17 @@ Multi-variable ChemE intelligence (not RR-only):
 Never auto-relaxes locked product FINAL_TARGETs.
 Never adds an extra Active spec when DOF is already 0 without a 1-for-1 swap.
 Never auto-saves the HYSYS .hsc; structural moves are approval-only.
-See docs/MULTI_VARIABLE_ITERATION_MAP.md
+See docs/MULTI_VARIABLE_ITERATION_MAP.md and column_connections.py
 """
 from __future__ import annotations
 
 from column_api import ColumnController, is_sentinel
+from column_connections import (
+    format_structural_block,
+    pick_primary_structural_action,
+    recommend_connections_moves,
+    structural_moves_as_lines,
+)
 from column_models import (
     ColumnSpecState,
     ColumnState,
@@ -626,6 +632,23 @@ def diagnose(
                     "do not raise Ovhd further."
                 )
 
+    # Connections structural intelligence (Family F) — think yes, write only with approval
+    structural_moves = recommend_connections_moves(
+        state,
+        eng,
+        preferred_family=preferred_family,
+        infeasible_evidence=infeasible_evidence,
+        limits=limits,
+    )
+    structural_lines = structural_moves_as_lines(structural_moves)
+    if structural_lines and eng == EngineeringState.F_INFEASIBLE:
+        preferred_family = preferred_family or "F_structural"
+        if not pe_hypothesis:
+            pe_hypothesis = (
+                "Mechanical Connections change may be required — approval only; "
+                "do not silent-edit stages/P/condenser."
+            )
+
     return Diagnosis(
         codes=codes,
         summary=summary,
@@ -642,6 +665,7 @@ def diagnose(
         pe_hypothesis=pe_hypothesis,
         hysys_dialog_clues=dialog_lines,
         hysys_message_clues=message_lines,
+        structural_recommendations=structural_lines,
     )
 
 
@@ -684,6 +708,23 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         f"Btms={state.bottoms_molar_flow_kgmole_h} kgmole/h | BtmsT={state.bottoms_temperature}",
     ]
     lines.append(format_connections_block(state))
+    if diagnosis.structural_recommendations:
+        lines.append("CONNECTIONS STRUCTURAL [F] — MECHANICAL / APPROVAL REQUIRED")
+        lines.append(
+            "  You must confirm before any write. Assist will not silent-edit Connections."
+        )
+        for rec in diagnosis.structural_recommendations:
+            lines.append(f"  -> {rec}")
+    else:
+        lines.append(
+            format_structural_block(
+                recommend_connections_moves(
+                    state,
+                    diagnosis.engineering_state,
+                    preferred_family=diagnosis.preferred_family,
+                )
+            )
+        )
     for sp in state.active_specs():
         goal = sp.goal_display if sp.goal_display is not None else sp.goal_value
         cur = sp.current_display if sp.current_display is not None else sp.current_value
@@ -776,10 +817,28 @@ def propose_action(
         )
 
     if strategy == "report_infeasible":
+        moves = recommend_connections_moves(
+            state,
+            diagnosis.engineering_state,
+            preferred_family="F_structural",
+            infeasible_evidence=True,
+            limits=limits,
+        )
+        payload = pick_primary_structural_action(moves)
+        if payload is not None:
+            return TrialAction(
+                kind="structural_approval",
+                description=str(payload["description"]),
+                payload=payload,
+            )
         return TrialAction(
             kind="stop",
             description="State F — likely infeasible; stop without relaxing FINAL_TARGET.",
-            payload={"strategy_id": "report_state_f", "response": "STOP_INFEASIBLE", "family": "F_structural"},
+            payload={
+                "strategy_id": "report_state_f",
+                "response": "STOP_INFEASIBLE",
+                "family": "F_structural",
+            },
         )
 
     if strategy == "numerical_recovery":
@@ -978,13 +1037,31 @@ def propose_action(
         s for s in state.active_specs() if _is_locked_final_spec(s.name, targets, limits)
     ]
     if locked_active:
+        moves = recommend_connections_moves(
+            state,
+            EngineeringState.F_INFEASIBLE,
+            preferred_family="F_structural",
+            infeasible_evidence=True,
+            limits=limits,
+        )
+        payload = pick_primary_structural_action(moves)
+        if payload is not None:
+            return TrialAction(
+                kind="structural_approval",
+                description=str(payload["description"]),
+                payload=payload,
+            )
         return TrialAction(
             kind="stop",
             description=(
                 "No safe Category-1 MV left (energy/split/init). "
                 "FINAL_TARGET still locked — State F evidence; do not auto-relax product GoalValue."
             ),
-            payload={"strategy_id": "report_state_f", "response": "STOP_INFEASIBLE", "family": "F_structural"},
+            payload={
+                "strategy_id": "report_state_f",
+                "response": "STOP_INFEASIBLE",
+                "family": "F_structural",
+            },
         )
 
     return TrialAction(
@@ -1044,6 +1121,11 @@ class ConvergenceAssistant:
         self._flat_product_streak = 0
         self._skipped_families: set[str] = set()
         self._family_flat_counts: dict[str, int] = {}
+        self._optimize_flat_streak = 0
+        # Simple optimize (thin layer) — default min RR
+        from column_optimize import SimpleObjective
+
+        self.optimize_objective = SimpleObjective.MIN_REFLUX_RATIO
 
     def _infeasible_evidence(self) -> bool:
         if self._flat_product_streak >= self.limits.max_flat_trials_before_f:
@@ -1103,16 +1185,23 @@ class ConvergenceAssistant:
             self.history.append(result)
             return result
 
-        if action.kind in {"manual_dof", "stop"}:
+        if action.kind in {"manual_dof", "stop", "structural_approval"}:
             result = TrialResult(
                 action=action,
                 before_score=before_score,
                 after_score=before_score,
                 kept=False,
-                message=action.description,
+                message=(
+                    action.description
+                    if action.kind != "structural_approval"
+                    else (
+                        "STRUCTURAL HOLD — mechanical Connections change needs your approval. "
+                        + action.description
+                    )
+                ),
                 after_state=before,
                 response_class=ResponseClass.STOP_INFEASIBLE
-                if action.kind == "stop"
+                if action.kind in {"stop", "structural_approval"}
                 else ResponseClass.INVALID_STATE,
                 pe_board=board,
             )
@@ -1367,3 +1456,205 @@ class ConvergenceAssistant:
                     )
                     break
         return results
+
+    def set_optimize_objective(self, objective: str) -> None:
+        from column_optimize import SimpleObjective
+
+        self.optimize_objective = SimpleObjective(str(objective))
+        self._optimize_flat_streak = 0
+
+    def optimize_board(self, column_name: str) -> str:
+        from column_optimize import format_optimize_board
+
+        state = self.inspect(column_name)
+        return format_optimize_board(
+            state, self.optimize_objective, self.targets, self.limits
+        )
+
+    def run_one_optimize_trial(
+        self, column_name: str, dry_run: bool = False
+    ) -> TrialResult:
+        """One simple optimize step; stages need structural approval."""
+        from column_optimize import (
+            format_optimize_step_report,
+            objective_value,
+            propose_optimize_action,
+            should_keep_optimize,
+        )
+
+        before = self.inspect(column_name)
+        action = propose_optimize_action(
+            before, self.optimize_objective, self.limits, self.targets
+        )
+        v0 = objective_value(before, self.optimize_objective)
+        before_score = float(v0) if v0 is not None else score_state(before)
+
+        if action.kind in {"stop", "manual_dof", "structural_approval"}:
+            report = format_optimize_step_report(
+                objective=self.optimize_objective,
+                before=before,
+                after=None,
+                action=action,
+                targets=self.targets,
+                limits=self.limits,
+                kept=None,
+                reason=action.description,
+            )
+            result = TrialResult(
+                action=action,
+                before_score=before_score,
+                after_score=before_score,
+                kept=False,
+                message=report,
+                after_state=before,
+                response_class=ResponseClass.STOP_INFEASIBLE,
+                pe_board=report,
+            )
+            self.history.append(result)
+            return result
+
+        if dry_run:
+            report = format_optimize_step_report(
+                objective=self.optimize_objective,
+                before=before,
+                after=None,
+                action=action,
+                targets=self.targets,
+                limits=self.limits,
+                kept=None,
+                reason="dry run",
+                dry_run=True,
+            )
+            result = TrialResult(
+                action=action,
+                before_score=before_score,
+                after_score=before_score,
+                kept=False,
+                message=report,
+                after_state=before,
+                response_class=None,
+                pe_board=report,
+            )
+            self.history.append(result)
+            return result
+
+        snap = self.columns.snapshot(column_name)
+        try:
+            if action.kind == "set_goal":
+                self.columns.set_spec_goal(
+                    column_name,
+                    action.payload["spec_name"],
+                    float(action.payload["goal"]),
+                )
+            else:
+                raise ValueError(f"Unsupported optimize action kind: {action.kind}")
+
+            self.columns.run_column(column_name)
+            after = self.inspect(column_name)
+            v1 = objective_value(after, self.optimize_objective)
+            after_score = float(v1) if v1 is not None else score_state(after)
+            keep, reason = should_keep_optimize(
+                before, after, self.optimize_objective, self.targets, self.limits
+            )
+
+            if not keep:
+                self.columns.restore(snap)
+                self.columns.run_column(column_name)
+                after = self.inspect(column_name)
+                v1 = objective_value(after, self.optimize_objective)
+                after_score = float(v1) if v1 is not None else before_score
+                self._optimize_flat_streak += 1
+                response = ResponseClass.CONVERGED_NO_MATERIAL_CHANGE
+            else:
+                self._optimize_flat_streak = 0
+                response = ResponseClass.CONVERGED_IMPROVED
+
+            report = format_optimize_step_report(
+                objective=self.optimize_objective,
+                before=before,
+                after=after,
+                action=action,
+                targets=self.targets,
+                limits=self.limits,
+                kept=keep,
+                reason=reason,
+            )
+            result = TrialResult(
+                action=action,
+                before_score=before_score,
+                after_score=after_score,
+                kept=keep,
+                message=report,
+                after_state=after,
+                response_class=response,
+                pe_board=report,
+            )
+            self.history.append(result)
+            return result
+        except Exception as exc:
+            try:
+                self.columns.restore(snap)
+                self.columns.run_column(column_name)
+            except Exception:
+                pass
+            report = format_optimize_step_report(
+                objective=self.optimize_objective,
+                before=before,
+                after=None,
+                action=action,
+                targets=self.targets,
+                limits=self.limits,
+                kept=False,
+                reason=f"FAILED and restored: {exc}",
+            )
+            result = TrialResult(
+                action=action,
+                before_score=before_score,
+                after_score=before_score,
+                kept=False,
+                message=report,
+                after_state=self.inspect(column_name),
+                response_class=ResponseClass.UNCONVERGED_RECOVERABLE,
+                pe_board=report,
+            )
+            self.history.append(result)
+            return result
+
+    def assist_optimize(
+        self,
+        column_name: str,
+        max_iterations: int | None = None,
+        dry_run: bool = False,
+    ) -> list[TrialResult]:
+        """Few optimize steps until blocked, flat twice, or structural hold."""
+        results: list[TrialResult] = []
+        limit = max_iterations or min(6, self.limits.max_iterations)
+        for _ in range(limit):
+            trial = self.run_one_optimize_trial(column_name, dry_run=dry_run)
+            results.append(trial)
+            if dry_run:
+                break
+            if trial.action.kind in {"stop", "manual_dof", "structural_approval", "none"}:
+                break
+            if not trial.kept and self._optimize_flat_streak >= 2:
+                results.append(
+                    TrialResult(
+                        action=TrialAction(
+                            "stop",
+                            "Optimize stop — objective flat (product still protected).",
+                            payload={
+                                "strategy_id": "optimize_done",
+                                "objective": self.optimize_objective.value,
+                            },
+                        ),
+                        before_score=trial.after_score,
+                        after_score=trial.after_score,
+                        kept=False,
+                        message="Stopped simple optimize: flat objective twice.",
+                        after_state=trial.after_state,
+                        response_class=ResponseClass.CONVERGED_NO_MATERIAL_CHANGE,
+                    )
+                )
+                break
+        return results
+

@@ -1,4 +1,4 @@
-"""Shared Qt table styling — Windows dark Fusion headers need explicit colors."""
+"""Shared Qt table styling — compact Aspen-like density on Windows dark Fusion."""
 
 from __future__ import annotations
 
@@ -12,25 +12,27 @@ def style_table_headers(table: QTableWidget, labels: tuple[str, ...] | list[str]
     table.setHorizontalHeaderLabels(list(labels))
     header = table.horizontalHeader()
     header.setVisible(True)
-    header.setMinimumHeight(40)
+    header.setMinimumHeight(24)
     header.setDefaultAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-    header.setMinimumSectionSize(80)
+    header.setMinimumSectionSize(56)
     font = QFont("Segoe UI")
-    font.setPointSize(11)
+    font.setPointSize(8)
     font.setBold(True)
     header.setFont(font)
     header.setStyleSheet(
         "QHeaderView::section {"
         " background-color: #21262d;"
         " color: #ffffff;"
-        " padding: 12px 10px;"
+        " padding: 4px 6px;"
         " border: none;"
         " border-right: 1px solid #30363d;"
-        " border-bottom: 2px solid #58a6ff;"
-        " font-size: 13px;"
+        " border-bottom: 1px solid #58a6ff;"
+        " font-size: 8pt;"
         " font-weight: 700;"
         "}"
     )
+    table.setFont(QFont("Segoe UI", 8))
+    table.verticalHeader().setDefaultSectionSize(22)
     for index, text in enumerate(labels):
         item = table.horizontalHeaderItem(index)
         if item is None:

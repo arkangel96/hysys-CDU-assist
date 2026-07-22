@@ -749,3 +749,113 @@ class ColumnController:
 
         if not ok:
             raise HysysError("Could not run column: " + " | ".join(errors))
+
+    def apply_structural_move(
+        self,
+        column_name: str,
+        parameter: str,
+        proposed: Any,
+        *,
+        approved: bool = False,
+        run_after: bool = True,
+    ) -> list[str]:
+        """
+        Apply one Design → Connections mechanical change.
+
+        **Requires approved=True.** Never silent. Never auto-saves .hsc.
+        """
+        if not approved:
+            raise HysysError(
+                "Structural Connections write blocked — set approved=True after PE confirmation."
+            )
+        notes: list[str] = []
+        column = self._column(column_name)
+        cfs = self._column_flowsheet(column)
+        ts = self._main_tray_section(cfs)
+        if ts is None:
+            raise HysysError("Could not locate Main tray section for structural write.")
+
+        param = parameter.lower().strip()
+        try:
+            if param == "feed_stage":
+                stage = int(proposed)
+                feed_stages = _safe_get(ts, "FeedStages")
+                if feed_stages is None:
+                    raise HysysError("No FeedStages COM collection on tray section.")
+                wrote = False
+                for feed in _items(feed_stages):
+                    for attr in ("IFaceStageNumber", "StageNumber", "FeedStage"):
+                        try:
+                            setattr(feed, attr, stage)
+                            wrote = True
+                            notes.append(f"feed_stage -> {stage} via {attr}")
+                            break
+                        except Exception:
+                            continue
+                    if wrote:
+                        break
+                if not wrote:
+                    raise HysysError("Could not write feed stage via COM.")
+            elif param == "stage_count":
+                n = int(proposed)
+                try:
+                    ts.NumberOfStages = n
+                    notes.append(f"stage_count -> {n}")
+                except Exception as exc:
+                    raise HysysError(f"Could not set NumberOfStages: {exc}") from exc
+            elif param in {"p_cond", "condenser_pressure"}:
+                p_bar = float(proposed)
+                wrote = False
+                for attr in ("TopPressure", "CondenserPressure"):
+                    try:
+                        setattr(ts, attr, p_bar * 100.0)
+                        wrote = True
+                        notes.append(f"{param} -> {p_bar} bar (wrote {attr} as kPa)")
+                        break
+                    except Exception:
+                        try:
+                            setattr(ts, attr, p_bar)
+                            wrote = True
+                            notes.append(f"{param} -> {p_bar} (wrote {attr} as-is)")
+                            break
+                        except Exception:
+                            continue
+                if not wrote:
+                    raise HysysError("Could not write condenser pressure via COM.")
+            elif param in {"p_reb", "reboiler_pressure"}:
+                p_bar = float(proposed)
+                wrote = False
+                for attr in ("BottomPressure", "ReboilerPressure"):
+                    try:
+                        setattr(ts, attr, p_bar * 100.0)
+                        wrote = True
+                        notes.append(f"{param} -> {p_bar} bar (wrote {attr} as kPa)")
+                        break
+                    except Exception:
+                        try:
+                            setattr(ts, attr, p_bar)
+                            wrote = True
+                            notes.append(f"{param} -> {p_bar} (wrote {attr} as-is)")
+                            break
+                        except Exception:
+                            continue
+                if not wrote:
+                    raise HysysError("Could not write reboiler pressure via COM.")
+            elif param in {"condenser_type", "inlet_stream"}:
+                raise HysysError(
+                    f"'{param}' is MANUAL in HYSYS Design → Connections (not COM-auto)."
+                )
+            else:
+                raise HysysError(f"Unknown structural parameter: {parameter}")
+        except HysysError:
+            raise
+        except Exception as exc:
+            raise HysysError(f"Structural apply failed: {exc}") from exc
+
+        if run_after:
+            try:
+                self.run_column(column_name)
+                notes.append("column run requested after structural change")
+            except HysysError as exc:
+                notes.append(f"run after structural change: {exc}")
+        return notes

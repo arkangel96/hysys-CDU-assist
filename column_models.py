@@ -200,6 +200,8 @@ class Diagnosis:
     hysys_dialog_clues: list[str] = field(default_factory=list)
     # Continuous Messages window clues (warnings / solver trace)
     hysys_message_clues: list[str] = field(default_factory=list)
+    # Design → Connections structural proposals (Family F — approval-only)
+    structural_recommendations: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
