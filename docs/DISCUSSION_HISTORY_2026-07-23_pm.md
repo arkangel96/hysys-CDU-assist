@@ -58,8 +58,17 @@
 
 ---
 
+## End-of-day addendum (going home)
+
+- **Hindsight heading:** operating PE campaign on T-100 — hold naphtha/kero (rate+quality) → honest net energy (PA+Cond) → log MVs → structure only with approval. Not Help-dump, not auto-trays.
+- **Next product need (discussed, no code yet):** program a **Trial Ledger** (JSONL/SQLite) so many trials auto-record before/after, quality, CondQ/PA, KEEP/REVERSE — trial map reads ledger; chat notes won’t scale.
+- Raw transcript refreshed in `transcripts/2026-07-23/bddd93c2-…jsonl` for home handoff.
+
+---
+
 ## Commits this afternoon (approx.)
 
 - `38878a1` — Field units quality + Decision Intelligence  
 - `6648aa4` — T-100 session trial map  
-- *(this)* — discussion script + raw transcript archive  
+- `0210e62` — discussion script + raw transcript archive  
+- *(this)* — transcript refresh + home handoff note  
