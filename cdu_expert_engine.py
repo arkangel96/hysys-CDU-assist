@@ -333,22 +333,6 @@ def generate_hypotheses(
                 mv_family="Estimates",
             )
         )
-        if limits.allow_baseline_spec_swap and state.degrees_of_freedom == 0:
-            hyps.append(
-                Hypothesis(
-                    rule_id="REC-002-baseline",
-                    subsystem="model_validation",
-                    symptom="numerical_recovery",
-                    mechanism="temporary baseline Active pair",
-                    evidence=["State B with DOF=0"],
-                    confidence=0.55,
-                    strategy_id="baseline_spec_recovery",
-                    spec_name=None,
-                    direction=0.0,
-                    predicted_response="Physical solution restored",
-                    mv_family="Spec Set",
-                )
-            )
         return hyps
 
     if eng == EngineeringState.D_CONSTRAINT:

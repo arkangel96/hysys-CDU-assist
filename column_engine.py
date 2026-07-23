@@ -97,21 +97,13 @@ def _spec_matches_final_target(spec_name: str, targets: list[FinalTarget]) -> Fi
 
 
 def _final_target_value(state: ColumnState, target: FinalTarget) -> float | None:
-    """Resolve measured value for a FINAL_TARGET (stream composition or matching spec Current)."""
-    comps = tuple(c.lower() for c in target.component_name_contains)
-    if comps and any(c in {"nh3", "ammonia"} for c in comps) and target.stream == "bottoms":
-        if state.bottoms_nh3_mass_frac is not None:
-            return state.bottoms_nh3_mass_frac
-
+    """Resolve measured value for a FINAL_TARGET (matching spec Current)."""
     needle = (target.spec_name_contains or "").lower().strip()
     if needle:
         for spec in state.specs:
             if needle in spec.name.lower() and spec.current_value is not None:
                 if not is_sentinel(spec.current_value):
                     return float(spec.current_value)
-
-    if target.stream == "bottoms" and state.bottoms_nh3_mass_frac is not None:
-        return state.bottoms_nh3_mass_frac
     return None
 
 
@@ -257,6 +249,9 @@ def _is_pa_spec(name: str) -> bool:
         return True
     if lower.startswith("pa ") and ("duty" in lower or "circ" in lower or "return" in lower):
         return True
+    # T-100 style: PA_1_Duty / PA_2_Circ / …
+    if "pa_" in lower and any(t in lower for t in ("duty", "circ", "return", "temp", "flow")):
+        return True
     return False
 
 
@@ -268,12 +263,51 @@ def _is_steam_spec(name: str) -> bool:
 
 
 def _is_side_draw_spec(name: str) -> bool:
+    """True for side-product rate Actives (T-100: Kero/Diesel/AGO_SS Prod Flow)."""
     lower = name.lower()
     if "ovhd" in lower or "overhead" in lower or "distill" in lower:
         return False
     if "btms" in lower or "bottoms" in lower or "residue" in lower:
         return False
-    return "draw" in lower
+    if "draw" in lower:
+        return True
+    if "prod flow" in lower or "prod rate" in lower:
+        return True
+    if "_ss" in lower and any(t in lower for t in ("prod", "flow", "rate")):
+        return True
+    if any(t in lower for t in ("kero", "diesel", "ago", "lgo", "hgo")) and any(
+        t in lower for t in ("prod", "flow", "rate")
+    ):
+        return True
+    return False
+
+
+def _canonical_skip_family(family: str) -> str:
+    """Map expert / monitor family labels onto A/B/C skip-set tokens for State F."""
+    if family in {"B_energy", "C_split", "C2_steam", "A_init", "F_structural", "D_target"}:
+        return family
+    f = (family or "").strip().lower().replace(" ", "_")
+    if f in {"c_split", "side_draw", "top_product", "ovhd", "bottoms", "residue"}:
+        return "C_split"
+    if f in {
+        "b_energy",
+        "pumparound",
+        "pa_duty",
+        "pa_rate",
+        "reflux",
+        "energy",
+        "liquid_flow",
+    }:
+        return "B_energy"
+    if f in {"c2_steam", "steam", "side_strip_steam", "ss_reb_duty", "strip_steam"}:
+        return "C2_steam"
+    if f in {"a_init", "estimates", "spec_set", "init", "case"}:
+        return "A_init"
+    if f == "f_structural":
+        return "F_structural"
+    if f == "d_target":
+        return "D_target"
+    return family
 
 
 def _spec_family(name: str) -> str:
@@ -285,7 +319,6 @@ def _spec_family(name: str) -> str:
         or "d86" in lower
         or "tbp" in lower
         or "frac" in lower
-        or "nh3" in lower
         or "comp" in lower
         or "purity" in lower
     ):
@@ -308,6 +341,7 @@ def _spec_family(name: str) -> str:
         or "bottoms" in lower
         or "residue" in lower
         or "draw" in lower
+        or _is_side_draw_spec(name)
     ):
         return "C_split"
     return "B_energy"
@@ -341,7 +375,7 @@ def _strategy_for_spec(name: str, new_goal: float, old_goal: float) -> str:
     if fam == "D_target":
         if "cut" in lower or "gap" in lower or "astm" in lower or "d86" in lower or "tbp" in lower:
             return "astm_cut_goal_nudge"
-        return "nh3_goal_nudge"
+        return "quality_goal_nudge"
     return "reflux_nudge_up" if new_goal >= old_goal else "reflux_nudge_down"
 
 
@@ -598,8 +632,9 @@ def diagnose(
             f"{getattr(state, 'molar_flow_unit', 'kgmole/h')}."
         )
 
+    # Same CDU gate as operable(): Field worksheet temps are °F, not °C.
     temps = state.profile.temperatures
-    if temps:
+    if temps and not state.cdu_topology:
         if max(temps) > limits.max_temperature_c or min(temps) < limits.min_temperature_c:
             codes.append(DiagnosisCode.PROFILE_UNPHYSICAL)
             details.append("Stage temperatures outside engineering window.")
@@ -707,10 +742,9 @@ def diagnose(
 
     has_rr = any("reflux ratio" in s.name.lower() for s in state.specs)
     has_comp_target = any(
-        t.property_type == "composition" or "nh3" in t.spec_name_contains.lower()
-        for t in targets
+        t.property_type == "composition" for t in targets
     ) or any(
-        "nh3" in s.name.lower() or "frac" in s.name.lower() for s in state.specs
+        "frac" in s.name.lower() or "comp" in s.name.lower() for s in state.specs
     )
     has_petroleum_target = any(
         t.property_type in {"astm_d86", "tbp", "cut", "gap", "cold_prop"}
@@ -736,9 +770,7 @@ def diagnose(
         f"{r.action}: {r.hysys_type_name or '(none)'} — {r.reason}" for r in add_recs
     ]
 
-    nh3_locked = any(
-        "nh3" in t.id.lower() or "nh3" in t.spec_name_contains.lower() for t in targets
-    )
+    locked_quality = any(t.locked for t in targets)
     click_recs = recommend_specs_summary_clicks(
         spec_rows=[
             {
@@ -751,7 +783,7 @@ def diagnose(
         engineering_state=eng.value,
         bottoms_flow_kgmole_h=state.bottoms_molar_flow_kgmole_h,
         min_bottoms_flow_kgmole_h=limits.min_bottoms_flow_kgmole_h,
-        nh3_is_final_target=nh3_locked,
+        final_target_monitor_only=locked_quality,
     )
     click_lines = []
     for c in click_recs:
@@ -1050,18 +1082,27 @@ def propose_action(
     targets: list[FinalTarget] | None = None,
     skipped_families: set[str] | None = None,
 ) -> TrialAction | None:
-    """Multi-variable ChemE chooser — energy, split, and init families (not RR alone)."""
+    """
+    Single CDU chooser (one brain).
+
+    Primary: expert hypotheses (quality / T-100 knowledge) with canonical A/B/C families.
+    Fallback: multi-family GoalValue nudges (draw / PA / steam / RR toward Current).
+    Complementary docs refine evidence — they do not open a second propose path.
+    """
     targets = targets if targets is not None else default_final_targets()
-    skipped = skipped_families or set()
+    skipped = {_canonical_skip_family(f) for f in (skipped_families or set())}
     strategy = diagnosis.recommended_strategy
 
     if strategy == "none_converged":
         return None
 
-    # Optional expert overlay from merged cdu_expert_engine (soft — never crash chooser)
+    # --- One brain: expert hypotheses first (respect exhausted families) ---
     try:
         from cdu_case_config import load_case_config
-        from cdu_expert_engine import build_expert_context, propose_from_expert
+        from cdu_expert_engine import (
+            build_expert_context,
+            hypothesis_to_action,
+        )
         from cdu_quality_engine import build_product_quality_state
         from cdu_spec_philosophy import audit_spec_philosophy
 
@@ -1082,11 +1123,37 @@ def propose_action(
                 mv_preference=case.mv_preference,
             )
             diagnosis.expert_context = expert
-        expert_action = propose_from_expert(state, expert, limits)
-        if expert_action is not None:
-            return expert_action
-    except Exception:
-        pass
+
+        ranked = list(expert.ranked_hypotheses or [])
+        if expert.selected_hypothesis is not None:
+            sel = expert.selected_hypothesis
+            ranked = [sel] + [h for h in ranked if h is not sel]
+
+        for hyp in ranked:
+            fam = _canonical_skip_family(
+                (hyp.mv_family or "").lower().replace(" ", "_")
+            )
+            if fam in skipped:
+                continue
+            action = hypothesis_to_action(hyp, state, limits)
+            if action is None:
+                continue
+            if action.kind in {"stop", "manual_dof", "none"}:
+                expert.selected_hypothesis = hyp
+                if "family" not in action.payload and fam:
+                    action.payload["family"] = fam
+                else:
+                    action.payload["family"] = _canonical_skip_family(
+                        str(action.payload.get("family", fam))
+                    )
+                return action
+            action.payload["family"] = fam or _canonical_skip_family(
+                str(action.payload.get("family", ""))
+            )
+            expert.selected_hypothesis = hyp
+            return action
+    except Exception as exc:
+        diagnosis.details.append(f"Expert chooser skipped ({type(exc).__name__}); CDU fallback.")
 
     if strategy == "fix_dof":
         clue_text = " ".join(diagnosis.hysys_dialog_clues).lower()
@@ -1196,31 +1263,14 @@ def propose_action(
 
         rr = _find_active(state, "reflux ratio") or _find_active(state, "reflux", "ratio")
         if rr is not None and rr.goal_value is not None:
-            nh3_miss = any(
-                (not info["met"]) and tid.upper().startswith("NH3")
-                for tid, info in diagnosis.final_target_status.items()
+            # CDU: never default to raising top RR — draw/PA/steam first.
+            action = _nudge_goal(
+                rr,
+                direction=None,
+                frac=limits.reflux_nudge_fraction,
+                limits=limits,
+                toward_current=True,
             )
-            hard_miss = bool(diagnosis.final_target_status) and any(
-                not info["met"] for info in diagnosis.final_target_status.values()
-            )
-            # Mid-cut / draw / steam problems: do NOT default to raising top RR
-            prefer_rr_up = (
-                state.physical_solution
-                and (nh3_miss or hard_miss)
-                and diagnosis.preferred_family not in {"C_split", "C2_steam"}
-            )
-            if prefer_rr_up:
-                action = _nudge_goal(
-                    rr, direction=1.0, frac=limits.reflux_nudge_fraction, limits=limits
-                )
-            else:
-                action = _nudge_goal(
-                    rr,
-                    direction=None,
-                    frac=limits.reflux_nudge_fraction,
-                    limits=limits,
-                    toward_current=True,
-                )
             if action is not None:
                 candidates.append(action)
 
@@ -1372,42 +1422,17 @@ def propose_action(
         prefer = diagnosis.preferred_family
         if prefer:
             for action in unique:
-                if action.payload.get("family") == prefer:
+                if _canonical_skip_family(str(action.payload.get("family", ""))) == prefer or (
+                    action.payload.get("family") == prefer
+                ):
+                    action.payload["family"] = _canonical_skip_family(
+                        str(action.payload.get("family", prefer))
+                    )
                     return action
-        return unique[0]
-
-    # Baseline swap if NH3 locked active (legacy path — rare on CDU)
-    if (
-        limits.allow_baseline_spec_swap
-        and state.degrees_of_freedom == 0
-        and "A_init" not in skipped
-    ):
-        nh3 = next((s for s in state.active_specs() if "nh3" in s.name.lower()), None)
-        ovhd = next((s for s in state.specs if "ovhd" in s.name.lower()), None)
-        if (
-            nh3 is not None
-            and ovhd is not None
-            and not ovhd.is_active
-            and _is_locked_final_spec(nh3.name, targets, limits)
-        ):
-            goal = ovhd.current_value
-            if goal is None or is_sentinel(goal):
-                goal = state.overhead_molar_flow
-            if goal is not None and not is_sentinel(goal):
-                return TrialAction(
-                    kind="baseline_swap",
-                    description=(
-                        f"1-for-1 baseline swap: deactivate '{nh3.name}', "
-                        f"activate '{ovhd.name}' (FINAL_TARGET stays locked as monitor) [A_init]."
-                    ),
-                    payload={
-                        "deactivate": nh3.name,
-                        "activate": ovhd.name,
-                        "activate_goal": float(goal),
-                        "strategy_id": "spec_swap_last_resort",
-                        "family": "A_init",
-                    },
-                )
+        chosen = unique[0]
+        if chosen.payload.get("family"):
+            chosen.payload["family"] = _canonical_skip_family(str(chosen.payload["family"]))
+        return chosen
 
     locked_active = [
         s for s in state.active_specs() if _is_locked_final_spec(s.name, targets, limits)
@@ -1624,8 +1649,8 @@ class ConvergenceAssistant:
         if (
             action.kind == "refresh_estimates"
             and self._estimates_refreshed
-            and self.limits.allow_baseline_spec_swap
         ):
+            # After one estimates pass, continue with operating MV (no stripper-era swap).
             diagnosis.recommended_strategy = "nudge_operating_mv"
             alt = propose_action(
                 before,
@@ -1634,11 +1659,11 @@ class ConvergenceAssistant:
                 self.targets,
                 skipped_families=self._skipped_families | {"A_init"},
             )
-            if alt is not None and alt.kind == "baseline_swap":
+            if alt is not None and alt.kind == "set_goal":
                 action = alt
 
         snap = self.columns.snapshot(column_name)
-        family = str(action.payload.get("family", ""))
+        family = _canonical_skip_family(str(action.payload.get("family", "")))
         try:
             if action.kind == "set_goal":
                 self.columns.set_spec_goal(
@@ -1651,29 +1676,41 @@ class ConvergenceAssistant:
                 self._estimates_refreshed = True
                 action.description = action.description + " | " + "; ".join(notes)
             elif action.kind == "baseline_swap":
-                self.columns.swap_active_spec(
-                    column_name,
-                    deactivate=str(action.payload["deactivate"]),
-                    activate=str(action.payload["activate"]),
-                    activate_goal=float(action.payload["activate_goal"]),
+                # Retired for CDU — should not be proposed; treat as no-op stop.
+                return TrialResult(
+                    action=TrialAction(
+                        kind="stop",
+                        description=(
+                            "baseline_swap retired (CDU-only). Use Specs Summary / "
+                            "refresh estimates — not legacy Active swaps."
+                        ),
+                        payload={"strategy_id": "refresh_estimates", "family": "A_init"},
+                    ),
+                    before_score=before_score,
+                    after_score=before_score,
+                    kept=False,
+                    message="Stopped: baseline_swap not used on CDU Assist.",
+                    after_state=before,
+                    response_class=None,
+                    pe_board=format_pe_board(
+                        before,
+                        diagnose(
+                            before,
+                            self.limits,
+                            self.targets,
+                            infeasible_evidence=self._infeasible_evidence(),
+                            exhausted_families=self._skipped_families,
+                        ),
+                    ),
                 )
-                for target in self.targets:
-                    if target.locked:
-                        for spec in before.specs:
-                            if target.spec_name_contains.lower() in spec.name.lower():
-                                try:
-                                    self.columns.set_spec_goal(
-                                        column_name, spec.name, float(target.target_value)
-                                    )
-                                except Exception:
-                                    pass
 
             self.columns.run_column(column_name)
             after = self.inspect(column_name)
             after_score = score_state(after)
 
             unphysical = not after.physical_solution
-            if after.profile.temperatures:
+            # Align with operable(): skip C-named T window when CDU Field temps (°F).
+            if after.profile.temperatures and not after.cdu_topology:
                 if max(after.profile.temperatures) > self.limits.max_temperature_c:
                     unphysical = True
                 if min(after.profile.temperatures) < self.limits.min_temperature_c:
@@ -1713,7 +1750,7 @@ class ConvergenceAssistant:
                 response = classify_response(
                     before, after, before_score, after_score, False, self.limits, self.targets
                 )
-                if family in {"B_energy", "C_split", "A_init"}:
+                if family in {"B_energy", "C_split", "C2_steam", "A_init"}:
                     self._family_flat_counts[family] = self._family_flat_counts.get(family, 0) + 1
                     if self._family_flat_counts[family] >= self.limits.max_flat_trials_before_f:
                         self._skipped_families.add(family)
@@ -1729,7 +1766,7 @@ class ConvergenceAssistant:
                 )
                 if flat_product and not _imp:
                     self._flat_product_streak += 1
-                    if family:
+                    if family in {"B_energy", "C_split", "C2_steam", "A_init"}:
                         self._family_flat_counts[family] = self._family_flat_counts.get(family, 0) + 1
                         if self._family_flat_counts[family] >= self.limits.max_flat_trials_before_f:
                             self._skipped_families.add(family)

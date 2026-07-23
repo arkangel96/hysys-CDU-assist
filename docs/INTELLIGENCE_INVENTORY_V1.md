@@ -18,7 +18,8 @@
 | **PLANNED** | Agreed next layer — do not implement until inventory is stable |
 
 **Anti-complexity:** Full PE judgment lives in docs. Code grows in thin layers.  
-One new intelligence item = one inventory row + one validation on the **atmospheric CDU reference case** (legacy SW Stripper shell tests do not prove CDU State E).
+**One brain:** `propose_action` is the only runtime chooser (expert hypotheses + CDU fallback). Complementary docs refine evidence — they do not open a second propose path.  
+One new intelligence item = one inventory row + one validation on the **atmospheric CDU reference case**.
 
 ---
 
@@ -68,21 +69,19 @@ One new intelligence item = one inventory row + one validation on the **atmosphe
 
 | Item | Where | Notes |
 |------|-------|-------|
-| Engineering States A–E | `column_engine.classify_engineering_state` | **State F not returned by classifier** (see gaps) |
+| Engineering States A–F | `column_engine.classify_engineering_state` | **F** when `infeasible_evidence` + hard miss / unconverged |
 | Diagnosis codes + summary | `column_engine.diagnose` | |
 | External FINAL_TARGET object | `column_models.FinalTarget` | Separate from HYSYS Active |
-| Default SWS NH₃ = 50 ppmw (5e‑5) | `default_sw_stripper_targets` | **Legacy shell** — not CDU FINAL_TARGET |
+| Default FINAL_TARGET factory | `default_final_targets` → `default_cdu_targets` | CDU cuts/ASTM/gap only |
 | Never auto-relax locked FINAL_TARGET | `propose_action`, keep logic | Binding for CDU |
-| Stream NH₃ mass frac check | `column_api` → `bottoms_nh3_mass_frac` | **Legacy stripper** path |
 | Worksheet-style rate display (kgmole/h) | `ColumnSpecState.goal_display` etc. | Reusable |
 | Physical-solution / sentinel checks | `physical_solution`, duties, T | Reusable |
 | Bottoms-flow operability gate | `operable()`, `min_bottoms_flow_kgmole_h` | Reusable idea; extend to multi-draw/PA |
 | State D stop (operability fail) | `propose_action` → `operability_review` | Manual PE review |
-| Category-1 RR nudge (State C) | `propose_action` | **Legacy SWS** NH₃→RR — replace with CDU family chooser |
+| RR GoalValue nudge (toward Current) | `propose_action` | No auto raise-RR on quality miss |
 | State B → refresh estimates first | `propose_action` / `run_one_trial` | Reusable |
-| Baseline 1-for-1 swap NH₃→Ovhd | `baseline_swap` | **SWS Full Reflux heuristic** — not CDU policy |
 | Response classes after trial | `classify_response` | Still score-heavy (PARTIAL) |
-| Keep/reverse with restore | `ConvergenceAssistant.run_one_trial` | Extend to multi-product FINAL_TARGETs |
+| Keep/reverse with restore | `ConvergenceAssistant.run_one_trial` | Multi-product FINAL_TARGETs |
 | Thrashing stop (3 consecutive reverses) | `assist()` | Treated as State F *evidence* |
 | Score function (residuals + soft physics) | `score_state` | Support metric — not plant truth |
 
@@ -96,7 +95,7 @@ One new intelligence item = one inventory row + one validation on the **atmosphe
 | Specs Summary click recommendations | `column_spec_catalog.recommend_specs_summary_clicks` | Recommend only |
 | Add Spec catalog + when-to-add | `column_spec_catalog`, Intelligence window | **No auto Specs.Add** |
 | Trial Map path + strategy board | `trial_map.py`, `trial_map_window.py` | |
-| Strategy catalog (stripper IDs) | `STRATEGY_CATALOG` | RR / estimates / NH₃ / swap / DOF |
+| Strategy catalog | `STRATEGY_CATALOG` | RR / estimates / draw / PA / steam / quality / DOF |
 
 ### 4.4 Validated live lessons (shell — legacy stripper)
 
@@ -104,10 +103,8 @@ One new intelligence item = one inventory row + one validation on the **atmosphe
 |--------|------------|----------|
 | Dead bottoms / sentinel duties | State B first — not purity chase | Keep |
 | Full Reflux + high Ovhd Active → tiny bottoms | State D + Specs Summary hints | Pattern reusable; not CDU default condenser |
-| NH₃ stress 0.1 ppm was wrong | Default FINAL_TARGET 50 ppmw | **Legacy only** — replace with ASTM/cut set |
 | Units: COM SI vs worksheet | Display conversion | Keep |
 | Spec Current vs stream disagree | Stream preferred | Keep principle for product props |
-| Active swap recovered State B | `baseline_swap` | Retarget beyond NH₃→Ovhd |
 
 ---
 
@@ -115,10 +112,10 @@ One new intelligence item = one inventory row + one validation on the **atmosphe
 
 | Item | What works | What’s missing |
 |------|------------|----------------|
-| **State F** | Stop messages / 3× reverse / locked-MV stop | `classify_engineering_state` never returns `F_INFEASIBLE` |
+| **State F** | Returns `F_INFEASIBLE` when flat-streak / exhausted B+C evidence set | Cold Diagnose (no trial history) still never F — expected |
 | **Response / sensitivity** | Classes exist; weak-response % on score | No \(S=\Delta y/\Delta u\) on FINAL_TARGET |
 | **Keep/reverse judgment** | Quality delta + FINAL_TARGET available-flag + residual second | Live D86/flash COM still PARTIAL |
-| **Spec-role engine** | One NH₃↔Ovhd swap recipe | Condenser-aware Active policy table |
+| **Spec-role engine** | Specs Summary click hints (RR OFF when draws/PAs Active) | Full condenser-aware Active policy table |
 | **Operability** | Bottoms flow gate | MB (F≈D+B), duty signs, T-profile gate for State E |
 | **FINAL_TARGET layer** | Multi-product JSON + case quality merge (2026-07-23) | Petroleum property COM reads |
 | **CDU families** | A/B/C shell + draw/PA/steam name-match | Full sensitivity memory |
@@ -171,7 +168,7 @@ Keep in markdown until a thin layer is justified:
 | `CDU-FT-MULTI` | Multi-product FINAL_TARGET numbers on T-100 | **CODED** (config); measure **PARTIAL** |
 | `CDU-KEEP-QUALITY` | Keep/reverse quality before residual score | **CODED** |
 | `CDU-INTERACTIVE-1` | Assist Loop max 1 trial when interactive_only | **CODED** |
-| `CDU-DECIDE-T100` | T-100 energy/tray decision authority (hierarchy, keep/reverse, MV order, stop, permissions) | **DOCS** `new_intelligence/CDU_T100_Decision_Intelligence_v1.md` — not coded yet |
+| `CDU-DECIDE-T100` | T-100 optimize playbook (hierarchy, keep/reverse, MV order, stop, permissions) | **DOCS complementary** — not coded; does **not** supersede Inventory / `propose_action` |
 
 ---
 
@@ -181,8 +178,8 @@ Keep in markdown until a thin layer is justified:
 |----|--------|--------|
 | `refresh_estimates` | Estimates | **CODED** |
 | `reflux_nudge_up` / `reflux_nudge_down` | Active Spec | **CODED** |
-| `nh3_goal_nudge` | Active Spec | Catalog row exists — **blocked by FINAL_TARGET lock** (correct) |
-| `spec_swap_last_resort` | Spec Set | **PARTIAL** (SWS NH₃→Ovhd) |
+| `quality_goal_nudge` / `astm_cut_goal_nudge` | Active Spec | Catalog — **blocked by FINAL_TARGET lock** |
+| `spec_swap_last_resort` | Spec Set | Catalog / manual — no auto NH₃-era swap |
 | `fix_dof` | Spec Set | **CODED** as manual stop |
 | `lower_damping` / `raise_iterations` | Solver | **DOCS / MANUAL** |
 | `feed_or_case_change` | Case | **LOG / UI** |
@@ -218,12 +215,13 @@ P14 Thin intelligence layers
 | 2 | Keep/reverse on FINAL_TARGET + operability first | **CODED** |
 | 3 | Multi-variable family chooser (A/B/C — not RR-only) | **CODED** |
 | 3b | HYSYS popup clues — SEE + log + act in diagnosis (auto-OK dismiss) | **CODED** |
-| 4 | Condenser-aware Active policy (beyond NH₃→Ovhd) | PARTIAL — still SWS swap recipe |
+| 4 | Condenser-aware Active policy (draw/PA vs RR) | PARTIAL — Specs Summary hints CODED |
 | 4b | Connections structural intelligence (feed/stages/P) approval-only | **CODED** — `column_connections.py` |
 | 4c | Simple optimize (min RR / RebQ / CondQ / stages) | **CODED** — `column_optimize.py` |
 | 5 | Multi-product FINAL_TARGET (ASTM/cut/gap) + CDU family chooser | **CODED** (config 2026-07-23) — COM property read still PARTIAL |
 | 5b | Quality-first keep/reverse + interactive Assist | **CODED** 2026-07-23 — see `INTELLIGENCE_BUILDUP_STRATEGY.md` |
-| 6 | Learning/memory system from `new_intelligence/` | HELD |
+| 6 | Learning/memory system from `new_intelligence/` | HELD (auto confidence / case DB) |
+| 6b | Curated lessons folder + Trial Map notes | **PARTIAL** — `docs/lessons/` (manual; does not drive propose) |
 | 7 | Workspace folder reorg (Deliverable 6) | HELD |
 
 See [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) and `new_intelligence/00_COMPLEMENTARY_INTRO.md`.
@@ -242,6 +240,8 @@ See [`MULTI_VARIABLE_ITERATION_MAP.md`](MULTI_VARIABLE_ITERATION_MAP.md) and `ne
 | Execute / evaluate | `ConvergenceAssistant.run_one_trial` |
 | PE board | `format_pe_board` |
 | Trial memory | `trial_map.py` |
+| Discussion continuity | `docs/DISCUSSION_LOG.md` + `.cursor/rules/discussion-continuity.mdc` |
+| Curated lessons | `docs/lessons/` (manual; not auto propose) |
 | Add Spec advice | `column_spec_catalog.py` |
 | UI shell | `gui.py`, `intelligence_window.py`, `trial_map_window.py` |
 

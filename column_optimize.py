@@ -317,7 +317,7 @@ def _objective_meaning(objective: SimpleObjective) -> str:
             "Lower condenser duty (usually by nudging Active RR down a little)"
         ),
         SimpleObjective.MIN_REFLUX_RATIO: (
-            "Lower Active Reflux Ratio Goal while product NH3 still met"
+            "Lower Active Reflux Ratio Goal while locked FINAL_TARGETs still met"
         ),
         SimpleObjective.MIN_STAGE_COUNT: (
             "Propose fewer stages (mechanical — you must approve; not auto-applied)"
@@ -325,18 +325,16 @@ def _objective_meaning(objective: SimpleObjective) -> str:
     }.get(objective, objective.value)
 
 
-def _nh3_line(state: ColumnState, targets: list[FinalTarget]) -> str:
+def _target_status_line(state: ColumnState, targets: list[FinalTarget]) -> str:
     from column_engine import evaluate_final_targets
 
-    nh3 = state.bottoms_nh3_mass_frac
-    ppm = f"{nh3 * 1e6:.4g} ppmw" if nh3 is not None else "—"
     status = evaluate_final_targets(state, targets)
     if not status:
-        return f"NH3={ppm}"
+        return "FINAL_TARGETs: (none configured)"
     bits = []
     for tid, info in status.items():
         bits.append(f"{tid} met={info['met']} ({info['measured']} vs {info['target']})")
-    return f"NH3={ppm}; " + "; ".join(bits)
+    return "FINAL_TARGETs: " + "; ".join(bits)
 
 
 def format_optimize_step_report(
@@ -368,7 +366,7 @@ def format_optimize_step_report(
         f"  RR={_fmt(before.reflux_ratio)}  RebQ={_fmt(before.reboiler_duty)}  "
         f"CondQ={_fmt(before.condenser_duty)}",
         f"  stages={before.number_of_stages}  feed={before.feed_stage}",
-        f"  {_nh3_line(before, targets)}",
+        f"  {_target_status_line(before, targets)}",
         "",
         "ACTION",
     ]
@@ -384,8 +382,8 @@ def format_optimize_step_report(
             lines.append(f"  New GoalValue = {_fmt(new_g)}")
         lines.append(f"  Detail: {action.description}")
         lines.append(
-            "  Why this knob: for strippers, lowering RR usually reduces energy; "
-            "product FINAL_TARGET stays locked."
+            "  Why this knob: energy objective often nudges RR/PA; "
+            "product FINAL_TARGETs stay locked."
         )
     elif action.kind == "structural_approval":
         lines.append("  NO change applied yet (mechanical / needs your approval).")
@@ -418,7 +416,7 @@ def format_optimize_step_report(
             f"  RR={_fmt(after.reflux_ratio)}  RebQ={_fmt(after.reboiler_duty)}  "
             f"CondQ={_fmt(after.condenser_duty)}"
         )
-        lines.append(f"  {_nh3_line(after, targets)}")
+        lines.append(f"  {_target_status_line(after, targets)}")
     if v0 is not None and v1 is not None and v0 != 0:
         delta = v1 - v0
         pct = 100.0 * (v0 - v1) / abs(v0)

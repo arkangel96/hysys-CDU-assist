@@ -50,19 +50,13 @@ Do **not** stretch CDU Assist into simple-column or VDU products. New repos or m
 4. States A–F, FINAL_TARGET lock, PE board, Trial Map  
 5. Add Spec catalog (recommend only — no auto Add)  
 
-**Legacy stripper validation (COM shell proof — not CDU physics):**
+**CDU intelligence:**
 
-6. Fake “converged” dry bottoms → pre-estimate MB → RR + Btms Active  
-7. Realistic NH₃ FINAL_TARGET = **50 ppmw (5e‑5)**  
-8. Live State E case: RR≈2.5, Btms≈12,500 kgmole/h, NH₃≪50 ppmw  
+6. Multi-product FINAL_TARGETs (ASTM / TBP / cut / gap)  
+7. Variable families: side draws, pumparounds, steam, top energy  
+8. CDU when-to-add matrix + atmospheric reference case (T-100)  
 
-**CDU intelligence (docs v1.1 — code next):**
-
-9. Multi-product FINAL_TARGETs (ASTM / TBP / cut / gap)  
-10. Variable families: side draws, pumparounds, steam, top energy  
-11. CDU when-to-add matrix + atmospheric reference case  
-
-Helper scripts (optional / legacy): `apply_preestimate.py`, `rr_ladder.py`, `set_realistic_nh3.py`, `smoke_test_live.py`
+Helper scripts (optional): `smoke_test_live.py`, `stress_test_cdu_t100.py`
 
 ---
 

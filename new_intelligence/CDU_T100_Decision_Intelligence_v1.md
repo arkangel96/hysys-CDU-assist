@@ -16,7 +16,12 @@ It governs:
 - permissions
 - escalation
 
-The AI shall use this file as the decision authority. It shall not perform uncontrolled structural changes.
+This file is a **complementary optimize playbook** for T-100 (DOCS until coded).
+It does **not** supersede Inventory v1, coded Assist (`propose_action` / keep-reverse),
+or locked FINAL_TARGETs. Prefer coded quality `mv_preference` and energy_optimize_order
+when they differ; reconcile docs before treating any rule as runtime authority.
+
+It shall not perform uncontrolled structural changes.
 
 ---
 

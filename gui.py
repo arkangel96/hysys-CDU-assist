@@ -441,7 +441,7 @@ class CduAssist(QMainWindow):
             "• Min Reb Q — lower reboiler duty (usually via RR)\n"
             "• Min Cond Q — lower condenser duty (usually via RR)\n"
             "• Min stages — propose fewer stages (needs your approval)\n"
-            "Only runs if NH3 FINAL_TARGET already met."
+            "Only runs if locked FINAL_TARGETs (cuts / ASTM) already met."
         )
         toolbar_row.addWidget(self.optimize_combo)
         self.optimize_one_button = QPushButton("Optimize 1")
@@ -492,7 +492,7 @@ class CduAssist(QMainWindow):
         diagnosis_layout.setSpacing(6)
         how_to = QLabel(
             "Workflow: Inspect → Diagnose → Dry-Run → One Trial / Assist Loop. "
-            "FINAL_TARGET (NH₃) stays locked unless you change it in HYSYS."
+            "FINAL_TARGETs (product cuts / ASTM) stay locked unless you change them in HYSYS."
         )
         how_to.setWordWrap(True)
         how_to.setStyleSheet("color: #8b949e; border: none; background: transparent;")
@@ -894,8 +894,6 @@ class CduAssist(QMainWindow):
                 detail += "\nHYSYS MESSAGES:\n• " + "\n• ".join(msg_clues[:6])
             if diagnosis.details:
                 detail += "\n• " + "\n• ".join(diagnosis.details[:8])
-            if getattr(state, "bottoms_nh3_mass_frac", None) is not None:
-                detail += f"\n• Bottoms NH3 (stream)={state.bottoms_nh3_mass_frac:.4g}"
             mu = getattr(state, "molar_flow_unit", "kgmole/h")
             if getattr(state, "overhead_molar_flow_kgmole_h", None) is not None:
                 detail += f"\n• Ovhd={state.overhead_molar_flow_kgmole_h:.4g} {mu}"
@@ -913,7 +911,7 @@ class CduAssist(QMainWindow):
             self.column_summary.setText(
                 f"{state.name} ({state.flowsheet_tag})  ·  score {score_state(state):.4g}\n"
                 "Active specs drive the solve. Inactive rows are estimates only.\n"
-                "FINAL_TARGET (NH3) is locked — Assist will not auto-relax product GoalValue.\n"
+                "FINAL_TARGETs (cuts / ASTM) are locked — Assist will not auto-relax product GoalValue.\n"
                 "Click Diagnose to see Family + Hypothesis (multi-variable PE choice)."
             )
             self.column_summary.setStyleSheet(

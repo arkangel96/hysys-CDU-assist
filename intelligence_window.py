@@ -64,7 +64,7 @@ LAYER 2+ (2026-07-22 multi-variable integration)
 [x] Add Spec: HYSYS Add… steps + approval-gated COM try (no silent Add)
 
 PARTIAL / NEXT
-[ ] Condenser-aware Active policy beyond NH3→Ovhd recipe
+[ ] Condenser-aware Active policy (CDU draw/PA vs RR)
 [ ] Optional H2S FINAL_TARGET table entry
 [ ] Learning/memory from new_intelligence (held)
 

@@ -1,0 +1,50 @@
+---
+description: Persist project discussion progress in-repo (no need for user to remind)
+alwaysApply: true
+---
+
+# Discussion continuity (project progress log)
+
+Discussions in this repo are **project progress**. Do not treat them as disposable.
+
+## New chat / context full (critical)
+
+A **new Cursor chat does not automatically load the old chat window**.
+Continuity comes from **files in this repo**, not from magic memory of the prior UI thread.
+
+**At the start of a new conversation** in this repo (or when the user says recall / continue / what did we decide):
+
+1. **Read** [`docs/DISCUSSION_LOG.md`](docs/DISCUSSION_LOG.md) first.
+2. If they need more depth, open the linked `DISCUSSION_HISTORY_*.md` and/or `docs/lessons/`.
+3. Only dig into `docs/transcripts/*.jsonl` if they ask for the full raw chat.
+
+Answer from those files — do not pretend you still have the vanished chat buffer.
+
+## Always-on habit (no user reminder required)
+
+When a chat includes **decisions, architecture verdicts, PE locks, live HYSYS results, or “we agreed to…”**:
+
+1. **Update** [`docs/DISCUSSION_LOG.md`](docs/DISCUSSION_LOG.md) — short bullets only (newest session at top).
+2. Include: date, topic tags, decisions, open questions, pointers to lessons/trials if any.
+3. If the session is substantial (architecture, live test, multi-topic), also add/update a dated file `docs/DISCUSSION_HISTORY_YYYY-MM-DD.md` (or `_pm` / `_night` suffix if same day already exists).
+4. Prefer **simple markdown** — not dumping full chat JSON into the log.
+5. Before this chat hits context limits, prefer updating the log early so a new chat can continue.
+
+## Raw transcripts
+
+- Cursor keeps full chats under the local agent-transcripts cache (may stay on this PC only).
+- To put a copy **inside the git repo** (survives new chat / other PC after push):
+  `scripts/archive_discussion_transcript.py`
+- Index: [`docs/transcripts/README.md`](docs/transcripts/README.md).
+
+## Do not
+
+- Wait for the user to say “please record this.”
+- Claim you “remember the old chat window” without reading DISCUSSION_LOG.
+- Replace Inventory / coded Assist with chat opinions.
+- Paste entire transcripts into DISCUSSION_LOG (keep the log thin).
+
+## Related
+
+- Curated PE lessons: `docs/lessons/`
+- Trial ledger: `docs/T100_SESSION_TRIAL_MAP.md`

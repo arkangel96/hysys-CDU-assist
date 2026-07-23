@@ -2,10 +2,13 @@
 
 **Purpose:** Track what we tried (variable-by-variable) and what’s next — so we don’t lose the thread.  
 **Case:** Atmospheric Crude Tower / **T-100**  
-**Authority:** `new_intelligence/CDU_T100_Decision_Intelligence_v1.md`  
+**Playbook (complementary DOCS):** `new_intelligence/CDU_T100_Decision_Intelligence_v1.md`  
+**Runtime brain:** coded Assist (`propose_action` / keep-reverse / case `mv_preference`) — Inventory is status of truth.
 **Units:** HYSYS Field (°F, Btu/hr, USGPM) — no Assist conversion  
 
 Live canvas twin (open beside chat): `canvases/t100-trial-map.canvas.tsx` in the Cursor project.
+
+**Curated lessons (multi-feed safe):** [`lessons/README.md`](lessons/README.md) — after KEEP/REVERSE, add a short note with Feed/assay + Reusable vs Case-specific.
 
 ---
 

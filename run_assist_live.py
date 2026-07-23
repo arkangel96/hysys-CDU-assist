@@ -41,8 +41,11 @@ def main() -> int:
             print(f"{spec.goal_value} current={spec.current_value} err={spec.error}")
             break
     for spec in state.specs:
-        if spec.is_active and ("nh3" in spec.name.lower() or "ammonia" in spec.name.lower()):
-            print(f"  NH3 goal={spec.goal_value} current={spec.current_value} err={spec.error}")
+        if not spec.is_active:
+            continue
+        lower = spec.name.lower()
+        if any(t in lower for t in ("prod flow", "prod rate", "pa_", "draw", "cut", "astm", "d86")):
+            print(f"  Active {spec.name}: goal={spec.goal_value} current={spec.current_value} err={spec.error}")
     print(f"  Cond Q={state.condenser_duty}  Reb Q={state.reboiler_duty}")
     return 0 if state.appears_converged else 1
 

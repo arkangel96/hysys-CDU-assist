@@ -53,4 +53,4 @@ Speak and reason **expert-to-expert** with the user (both expert CDU / Aspen HYS
 - Reference case: atmospheric crude / **T-100**
 - Strategy: `docs/INTELLIGENCE_BUILDUP_STRATEGY.md`
 - Assay specialist docs (when needed): `docs/expert/10_Crude_Assay.md`
-- T-100 energy / tray / CondQ **decision authority** (optimize path): `new_intelligence/CDU_T100_Decision_Intelligence_v1.md` — use for hierarchy, keep/reverse, MV order, tray triggers, stop rules, permissions (DOCS until coded; still no silent structural writes)
+- T-100 energy / tray / CondQ **complementary optimize playbook** (DOCS): `new_intelligence/CDU_T100_Decision_Intelligence_v1.md` — hierarchy, keep/reverse, MV order, tray triggers, stop rules, permissions. Does **not** supersede Inventory / coded `propose_action`; still no silent structural writes

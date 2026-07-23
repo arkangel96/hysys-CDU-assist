@@ -76,7 +76,7 @@ def default_cdu_targets() -> list[FinalTarget]:
 
     Merges config/cdu_final_targets.json with configured quality targets
     from config/cdu_t100_case.json. Empty only if both absent.
-    Never invents NH3 / stripper purity targets.
+    Never invents stripper purity targets — CDU cuts/ASTM/gap only.
     """
     try:
         from cdu_quality_engine import merge_final_targets
@@ -91,7 +91,7 @@ def default_cdu_targets() -> list[FinalTarget]:
             return []
 
 
-def default_final_targets(*, product_line: str = "cdu") -> list[FinalTarget]:
+def default_final_targets() -> list[FinalTarget]:
     """CDU Assist FINAL_TARGET factory — atmospheric crude only."""
     return default_cdu_targets()
 
@@ -350,8 +350,6 @@ class ColumnState:
     sum_active_spec_error: float = 0.0
     appears_converged: bool = False
     notes: list[str] = field(default_factory=list)
-    # Product / display enrichment (Layer 2 intelligence)
-    bottoms_nh3_mass_frac: float | None = None
     # Worksheet molar flows (field name historical; values use molar_flow_unit)
     overhead_molar_flow_kgmole_h: float | None = None
     bottoms_molar_flow_kgmole_h: float | None = None
@@ -429,7 +427,7 @@ class ConvergenceLimits:
     damping_step: float = 0.1
     # Layer 2+ multi-variable intelligence policy
     allow_relax_final_targets: bool = False
-    allow_baseline_spec_swap: bool = True
+    allow_baseline_spec_swap: bool = False  # retired — CDU uses estimates / Specs Summary
     min_bottoms_flow_kgmole_h: float = 1.0  # operability gate (worksheet)
     weak_response_relative: float = 0.02  # <2% change = no material change
     flat_product_relative: float = 0.02  # product move below this = flat

@@ -106,10 +106,10 @@ STRATEGY_CATALOG: list[StrategyDef] = [
         "Bounded move of active stripping-steam rate/duty (main or side stripper).",
     ),
     StrategyDef(
-        "nh3_goal_nudge",
-        "Nudge NH3 bottoms goal (legacy / blocked if locked)",
+        "quality_goal_nudge",
+        "Nudge quality GoalValue (blocked if locked)",
         "D_target",
-        "Legacy stripper FINAL_TARGET purity GoalValue — blocked while locked; monitor only.",
+        "Petroleum / composition FINAL_TARGET GoalValue — blocked while locked; monitor only.",
         last_resort=True,
     ),
     StrategyDef(
@@ -277,8 +277,8 @@ def classify_strategy(action: TrialAction) -> str:
             return "side_draw_nudge"
         if "cut" in name or "gap" in name or "astm" in name or "d86" in name or "tbp" in name:
             return "astm_cut_goal_nudge"
-        if "nh3" in name or "ammonia" in name or "mass frac" in name or "frac" in name:
-            return "nh3_goal_nudge"
+        if "frac" in name or "comp" in name or "purity" in name:
+            return "quality_goal_nudge"
         return str(payload.get("strategy_id", "reflux_nudge_up"))
     if "damp" in action.description.lower():
         return "lower_damping"

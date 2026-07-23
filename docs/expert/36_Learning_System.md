@@ -30,7 +30,7 @@ Historical cases shall improve future decisions — not repeat blind failures.
 | Success score | keep/reverse + response class |
 | Final state | Snapshot after (if kept) |
 
-**Storage today:** Trial Map path + activity log. **Future:** structured case memory per column/case.
+**Storage today:** Trial Map path + activity log + curated [`docs/lessons/`](../lessons/README.md) (Reusable vs Case-specific; feed/assay tagged). **Future:** structured case memory per column/case (auto confidence still HELD).
 
 ---
 

@@ -228,3 +228,50 @@ def test_quality_board_configured() -> None:
     case = load_case_config()
     pqs = build_product_quality_state(_t100_state(), case, columns=None)
     assert pqs.configured_count >= 1
+
+
+def test_t100_ss_prod_flow_is_side_draw_family() -> None:
+    from column_engine import _canonical_skip_family, _is_side_draw_spec, _spec_family
+
+    assert _is_side_draw_spec("Diesel_SS Prod Flow")
+    assert _is_side_draw_spec("Kero_SS Prod Flow")
+    assert _is_side_draw_spec("AGO_SS Prod Flow")
+    assert _spec_family("Diesel_SS Prod Flow") == "C_split"
+    assert _spec_family("PA_1_Duty") == "B_energy"
+    assert _canonical_skip_family("side_draw") == "C_split"
+    assert _canonical_skip_family("pumparound") == "B_energy"
+    assert _canonical_skip_family("pa_duty") == "B_energy"
+
+
+def test_cdu_topology_skips_celsius_profile_gate() -> None:
+    from column_engine import diagnose, operable
+    from column_models import DiagnosisCode, StageProfile
+
+    limits = ConvergenceLimits(max_temperature_c=400.0, min_temperature_c=-50.0)
+    hot_f = ColumnState(
+        name="T-100",
+        degrees_of_freedom=0,
+        physical_solution=True,
+        appears_converged=True,
+        cdu_topology=True,
+        bottoms_molar_flow_kgmole_h=1400.0,
+        profile=StageProfile(temperatures=[450.0, 520.0, 650.0]),
+        specs=[],
+    )
+    assert operable(hot_f, limits)
+    diag = diagnose(hot_f, limits, targets=[])
+    assert DiagnosisCode.PROFILE_UNPHYSICAL not in diag.codes
+
+    cold_path = ColumnState(
+        name="Column-A",
+        degrees_of_freedom=0,
+        physical_solution=True,
+        appears_converged=True,
+        cdu_topology=False,
+        bottoms_molar_flow_kgmole_h=100.0,
+        profile=StageProfile(temperatures=[450.0, 520.0]),
+        specs=[],
+    )
+    assert not operable(cold_path, limits)
+    diag2 = diagnose(cold_path, limits, targets=[])
+    assert DiagnosisCode.PROFILE_UNPHYSICAL in diag2.codes

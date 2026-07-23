@@ -15,6 +15,7 @@ It is meant to **help and strengthen** the existing CDU Assist v1 New Intelligen
 | Existing docs + Inventory v1 + coded Assist | **Active judgment today** (States, FINAL_TARGET, trials, COM safety) |
 | This package (Deliverables 1–6) | **Complementary OS** — mindset, knowledge, interaction, learning, rules, workspace |
 | Both together | Same PE direction; clarify and extend — **no rival brain** |
+| `CDU_T100_Decision_Intelligence_v1.md` | **Complementary optimize playbook (DOCS)** — feeds chat/PE guidance; runtime brain remains coded Assist |
 
 ### Rules
 

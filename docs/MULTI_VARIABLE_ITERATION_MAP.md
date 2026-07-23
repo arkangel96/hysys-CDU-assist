@@ -6,7 +6,7 @@
 
 Complementary PE OS: `new_intelligence/` (helps this map — does not supersede it).
 
-**Legacy:** Strategy IDs such as `nh3_goal_nudge` remain in code from SW Stripper shell validation — blocked for locked FINAL_TARGET; do not treat as CDU process guidance.
+**Note:** Quality GoalValue IDs (`quality_goal_nudge` / `astm_cut_goal_nudge`) are blocked while FINAL_TARGET is locked — monitor only; do not treat as free purity relax.
 
 ---
 
@@ -88,7 +88,7 @@ REVERSE if:
 | `ovhd_rate_nudge` | C | Yes if Active | Light ends |
 | `bottoms_rate_nudge` / `residue_rate_nudge` | C | Yes if Active | |
 | `steam_nudge` | C2 | **PLANNED** | |
-| `nh3_goal_nudge` | D | **Blocked** | Legacy stripper ID — FINAL_TARGET lock |
+| `quality_goal_nudge` | D | **Blocked** | Locked FINAL_TARGET — monitor only |
 | `astm_cut_goal_nudge` | D | **Blocked** while locked | Prefer external FINAL_TARGET monitor |
 | `feed_or_case_change` | E | Log / manual | Assay / furnace |
 | `feed_stage_change` / `draw_stage_change` / `pa_stage_change` / `stage_count_change` | F | Approval-only | |

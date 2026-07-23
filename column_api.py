@@ -600,9 +600,6 @@ class ColumnController:
             state.bottoms_molar_flow_kgmole_h = self._stream_flow_unit(
                 state.bottoms_liquid_product, molar_u
             )
-            state.bottoms_nh3_mass_frac = self.read_component_mass_fraction(
-                state.bottoms_liquid_product, ("ammonia", "nh3")
-            )
             if state.reboiler_pressure_bar is None:
                 state.reboiler_pressure_bar = self._stream_pressure_display(
                     state.bottoms_liquid_product
