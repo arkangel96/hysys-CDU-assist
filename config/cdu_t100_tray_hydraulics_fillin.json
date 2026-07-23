@@ -1,0 +1,301 @@
+{
+  "_readme": "Fill-in sheet for T-100 tray / hydraulics / energy intelligence. Units = HYSYS display (Field). Leave null if unknown. Do not invent. Structural moves stay approval-only.",
+  "_purpose": "Build L4 structural + hydraulic + condenser/stripper energy intelligence. Operating MV optimize (PA/draws) is separate.",
+  "case_id": "t100_baseline",
+  "column_name": "T-100",
+  "units": {
+    "temperature": "F",
+    "pressure": "psia",
+    "length": "ft",
+    "volume": "ft3",
+    "energy": "Btu/hr",
+    "flow_vol": "USGPM",
+    "notes": "Copy HYSYS — no Assist conversion"
+  },
+
+  "A_stage_structure": {
+    "_what": "Tower Details → Customize (your screenshots)",
+    "main_ts": {
+      "current_trays": 29,
+      "stage_numbering": null,
+      "condenser_counts_as_stage": null,
+      "reboiler_on_main": false,
+      "notes": "PE fill: numbering top/bottom; any inactive trays?"
+    },
+    "side_strippers": {
+      "Kero_SS": { "current_trays": 3, "notes": null },
+      "Diesel_SS": { "current_trays": 3, "notes": null },
+      "AGO_SS": { "current_trays": 3, "notes": null }
+    },
+    "optimization_bounds_optional": {
+      "main_ts_trays_min": null,
+      "main_ts_trays_max": null,
+      "stripper_trays_min": null,
+      "stripper_trays_max": null,
+      "allowed_to_change_trays": false,
+      "notes": "Set true only if plant/revamp allows structural change"
+    }
+  },
+
+  "B_feed_draw_pa_locations": {
+    "_what": "Design → Connections + Side Ops (many already known — confirm)",
+    "feeds": [
+      {
+        "stream": "Atm Feed",
+        "section": "Main TS",
+        "stage_label": "28__Main TS",
+        "stage_number": 28,
+        "confirm_ok": null,
+        "plant_preferred_stage": null
+      },
+      {
+        "stream": "Main Steam",
+        "section": "Main TS",
+        "stage_label": null,
+        "stage_number": null,
+        "confirm_ok": null,
+        "plant_preferred_stage": null
+      }
+    ],
+    "side_stripper_attachments": [
+      {
+        "name": "Kero_SS",
+        "liq_draw_stage": "9_Main TS",
+        "vap_return_stage": "8_Main TS",
+        "confirm_ok": null,
+        "plant_preferred_draw": null,
+        "plant_preferred_return": null
+      },
+      {
+        "name": "Diesel_SS",
+        "liq_draw_stage": "17_Main TS",
+        "vap_return_stage": "16_Main TS",
+        "confirm_ok": null,
+        "plant_preferred_draw": null,
+        "plant_preferred_return": null
+      },
+      {
+        "name": "AGO_SS",
+        "liq_draw_stage": "22_Main TS",
+        "vap_return_stage": "21_Main TS",
+        "confirm_ok": null,
+        "plant_preferred_draw": null,
+        "plant_preferred_return": null
+      }
+    ],
+    "pumparounds": [
+      {
+        "name": "PA_1",
+        "draw_stage": "2_Main TS",
+        "return_stage": "1_Main TS",
+        "confirm_ok": null,
+        "plant_preferred_draw": null,
+        "plant_preferred_return": null
+      },
+      {
+        "name": "PA_2",
+        "draw_stage": "17_Main TS",
+        "return_stage": "16_Main TS",
+        "confirm_ok": null,
+        "notes": "Aligned with Diesel_SS trays"
+      },
+      {
+        "name": "PA_3",
+        "draw_stage": "22_Main TS",
+        "return_stage": "21_Main TS",
+        "confirm_ok": null,
+        "notes": "Aligned with AGO_SS trays"
+      }
+    ]
+  },
+
+  "C_section_hydraulics_rating": {
+    "_what": "Rating tab — enable Rating Calculations if plant wants flood/weep truth",
+    "_known_from_reference": "All sections currently sieve, D=4.921 ft, space=1.64 ft, rating_calculations=false (placeholder)",
+    "sections": [
+      {
+        "section_name": "Main TS",
+        "internal_type": "Sieve",
+        "diameter_ft": 4.921,
+        "tray_spacing_ft": 1.64,
+        "uniform_section": true,
+        "rating_calculations_on": false,
+        "plant_real_diameter_ft": null,
+        "plant_real_spacing_ft": null,
+        "plant_internal_type": null,
+        "design_flood_pct_max": null,
+        "design_weep_margin": null,
+        "max_downcomer_velocity": null,
+        "notes": "Fill plant geometry if model D is fake"
+      },
+      {
+        "section_name": "Kero_SS",
+        "internal_type": "Sieve",
+        "diameter_ft": 4.921,
+        "tray_spacing_ft": 1.64,
+        "rating_calculations_on": false,
+        "plant_real_diameter_ft": null,
+        "plant_real_spacing_ft": null,
+        "plant_internal_type": null,
+        "design_flood_pct_max": null
+      },
+      {
+        "section_name": "Diesel_SS",
+        "internal_type": "Sieve",
+        "diameter_ft": 4.921,
+        "tray_spacing_ft": 1.64,
+        "rating_calculations_on": false,
+        "plant_real_diameter_ft": null,
+        "plant_real_spacing_ft": null,
+        "plant_internal_type": null,
+        "design_flood_pct_max": null
+      },
+      {
+        "section_name": "AGO_SS",
+        "internal_type": "Sieve",
+        "diameter_ft": 4.921,
+        "tray_spacing_ft": 1.64,
+        "rating_calculations_on": false,
+        "plant_real_diameter_ft": null,
+        "plant_real_spacing_ft": null,
+        "plant_internal_type": null,
+        "design_flood_pct_max": null
+      }
+    ]
+  },
+
+  "D_tray_internals_detail": {
+    "_what": "Inside the tray — needed for real hydraulic optimize (often missing on T-100)",
+    "per_section_or_global": "global_until_varied",
+    "hole_area_fraction": null,
+    "hole_diameter_in": null,
+    "weir_height_in": null,
+    "weir_length_ft": null,
+    "downcomer_area_fraction": null,
+    "downcomer_clearance_in": null,
+    "tray_thickness_in": null,
+    "pass_count": null,
+    "active_area_ft2": null,
+    "outlet_weir_style": null,
+    "notes": "From vessel/internals drawings or HYSYS Rating detail if available"
+  },
+
+  "E_pressure_hydraulics": {
+    "_what": "P profile / dP — drives vapor traffic",
+    "condenser_P_psia": null,
+    "bottom_P_psia": null,
+    "section_dP_basis": null,
+    "use_rating_dP": false,
+    "plant_top_P_psia": null,
+    "plant_bottom_P_psia": null,
+    "notes": "Confirm vs Connections; live case had ~198 / ~225 psia earlier"
+  },
+
+  "F_energy_optimize_targets": {
+    "_what": "Q optimize — condenser + strip heat (no main atm reboiler on T-100)",
+    "condenser": {
+      "stream_or_energy": "Atmos Cond",
+      "duty_Btu_hr_baseline": null,
+      "minimize": true,
+      "max_allowed_Btu_hr": null,
+      "notes": "Fill baseline from live case after inspect"
+    },
+    "pumparounds": [
+      {
+        "name": "PA_1_Duty(Pa)",
+        "duty_Btu_hr_baseline": -55000000,
+        "minimize_abs_duty": true,
+        "order": 1
+      },
+      {
+        "name": "PA_2_Duty(Pa)",
+        "duty_Btu_hr_baseline": -35000000,
+        "minimize_abs_duty": true,
+        "order": 2
+      },
+      {
+        "name": "PA_3_Duty(Pa)",
+        "duty_Btu_hr_baseline": -35000000,
+        "minimize_abs_duty": true,
+        "order": 3
+      }
+    ],
+    "side_strip_heat": [
+      {
+        "name": "Kero Reb Duty",
+        "duty_Btu_hr_baseline": 7500000,
+        "minimize": true,
+        "floor_Btu_hr": null,
+        "notes": "Keep kero flash on-spec"
+      },
+      {
+        "name": "Diesel Steam",
+        "flow_baseline": null,
+        "unit": null,
+        "minimize": true,
+        "floor": null
+      },
+      {
+        "name": "AGO Steam",
+        "flow_baseline": null,
+        "unit": null,
+        "minimize": true,
+        "floor": null
+      },
+      {
+        "name": "Main Steam",
+        "flow_baseline": null,
+        "unit": null,
+        "minimize": false,
+        "notes": "Often hold; overflash / bottoms stripping"
+      }
+    ]
+  },
+
+  "G_keep_set_while_optimizing": {
+    "_what": "Must not break these during tray or Q trials",
+    "naphtha_rate_USGPM": 670.83,
+    "kero_rate_USGPM": 271.25,
+    "naphtha_d86_95_F_max": 356,
+    "kero_flash_F_min": 100,
+    "kero_d86_95_F_max": 518,
+    "diesel_d86_95_F_max": 680,
+    "kero_diesel_gap_F_min_soft": 27,
+    "overflash_min": null,
+    "overflash_max": null,
+    "min_reflux_ratio": null,
+    "notes": "Rates + hard quality already locked in practice; fill overflash band if plant has one"
+  },
+
+  "H_operability_limits": {
+    "max_flood_pct": null,
+    "min_weep_factor": null,
+    "max_condenser_duty_Btu_hr": null,
+    "max_pa_return_deltaT_F": null,
+    "min_pa_flow_USGPM": null,
+    "dry_tray_forbidden": true,
+    "notes": null
+  },
+
+  "I_optimization_permissions": {
+    "may_nudge_pa_duty": true,
+    "may_nudge_strip_steam_or_kero_reb": true,
+    "may_nudge_draws_except_naphtha_kero": true,
+    "may_change_main_tray_count": false,
+    "may_change_stripper_tray_count": false,
+    "may_move_feed_stage": false,
+    "may_move_draw_or_pa_stage": false,
+    "may_change_pressure": false,
+    "interactive_only": true,
+    "notes": "Flip structural flags only when you authorize State F / revamp work"
+  },
+
+  "J_pe_fill_priority": [
+    "1. G keep-set overflash + confirm quality limits",
+    "2. F condenser baseline + steam baselines",
+    "3. C plant diameters / turn Rating Calculations ON if using flood",
+    "4. D tray internals if hydraulic optimize is real plant",
+    "5. A/B structural bounds + confirm stage map",
+    "6. I permissions for tray moves"
+  ]
+}

@@ -24,14 +24,14 @@
 
 ## Default AI role (always on)
 
-Cursor Agent in this repo defaults to a **senior Aspen HYSYS CDU process engineer** (peer level with the user). You do **not** need to restate that each chat.
+Cursor Agent in this repo defaults to an **expert Aspen HYSYS CDU process engineer** and **Oil Manager assay-characterization specialist**. The **user is also an expert CDU / Aspen HYSYS process engineer** — collaborate expert-to-expert. You do **not** need to restate that each chat.
 
 | Mechanism | Path |
 |-----------|------|
 | Cursor rule (`alwaysApply`) | [`.cursor/rules/cdu-hysys-senior-pe.mdc`](../.cursor/rules/cdu-hysys-senior-pe.mdc) |
 | Strategy / identity note | This section |
 
-Binding PE habits in that rule: diagnose before knobs, one MV family, FINAL_TARGET lock, draw/PA/steam before RR, no auto-save / no silent structural writes. Assay conversion stays a separate program unless explicitly in scope.
+Binding PE habits in that rule: diagnose before knobs, one MV family, FINAL_TARGET lock, draw/PA/steam before RR, no auto-save / no silent structural writes. Oil Manager / assay characterization is part of the AI role when feed/assay is in scope; CDU Assist product logic still gates tower work with “feed OK?”. **Units:** use HYSYS display units as shown — no Assist-side conversion (`hysys_units.py`, `config/README.md`).
 
 ## Locked direction (confirm-direction)
 

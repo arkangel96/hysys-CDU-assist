@@ -1,12 +1,22 @@
-"""Product quality state for CDU — independent of HYSYS solver residuals (Phase 2)."""
+"""Product quality state for CDU — independent of HYSYS solver residuals (Phase 2).
+
+Units policy: report and compare in the open HYSYS case display units
+(what the worksheet shows). No Assist-side metric/imperial conversion —
+HYSYS ``GetValue`` / ``FromCalculationUnit`` only. See ``hysys_units.py``.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 from cdu_case_config import CduCaseConfig, QualityTarget
 from column_api import ColumnController, is_sentinel
 from column_models import ColumnState
+from hysys_units import (
+    current_display_unit,
+    temperature_to_display,
+)
 
 
 class QualityStatus(str, Enum):
@@ -62,15 +72,94 @@ class ProductQualityState:
         return self.symptoms[0] if self.symptoms else None
 
 
+def _material_stream(columns: ColumnController, stream: str) -> Any | None:
+    try:
+        return columns.hysys.case.Flowsheet.MaterialStreams.Item(stream)
+    except Exception:
+        return None
+
+
+def _d86_at_percent(columns: ColumnController, stream: str, pct: float) -> float | None:
+    """ASTM D86 at pct in HYSYS **display** temperature unit."""
+    s = _material_stream(columns, stream)
+    if s is None:
+        return None
+    try:
+        bpt = s.BoilingPointTable
+        cuts = list(bpt.CutPointCurveValue)
+        d86 = list(bpt.D86CurveValue)
+        if pct in cuts:
+            i = cuts.index(pct)
+        else:
+            i = min(range(len(cuts)), key=lambda j: abs(float(cuts[j]) - pct))
+        calc = float(d86[i])
+    except Exception:
+        return None
+    if is_sentinel(calc):
+        return None
+    app = columns.hysys.app
+    disp = temperature_to_display(app, calc)
+    return disp if disp is not None else calc
+
+
+def _flash_point_display(columns: ColumnController, stream: str) -> float | None:
+    """Cold-prop flash in HYSYS display temperature unit (GetValue)."""
+    s = _material_stream(columns, stream)
+    if s is None:
+        return None
+    try:
+        fp = s.ColdProperty.FlashPoint
+    except Exception:
+        return None
+    unit = None
+    try:
+        unit = columns.hysys.display_units.temperature
+    except Exception:
+        unit = None
+    if not unit:
+        unit = current_display_unit(columns.hysys.app) or "F"
+    try:
+        val = float(fp.GetValue(unit))
+    except Exception:
+        try:
+            val = float(s.ColdProperty.FlashPointValue)
+            converted = temperature_to_display(columns.hysys.app, val)
+            val = converted if converted is not None else val
+        except Exception:
+            return None
+    if is_sentinel(val) or val < -1000:
+        return None
+    return val
+
+
+def _kero_diesel_gap_display(columns: ColumnController) -> float | None:
+    """Diesel D86 5% − Kero D86 95% in display delta-temperature units."""
+    diesel5 = _d86_at_percent(columns, "Diesel", 5.0)
+    kero95 = _d86_at_percent(columns, "Kerosene", 95.0)
+    if diesel5 is None or kero95 is None:
+        return None
+    # Both already in display absolute T; gap is a delta — convert calc delta via HYSYS
+    # Equivalent: display_diesel5 - display_kero95 (same scale as Delta Temp F)
+    return float(diesel5) - float(kero95)
+
+
 def _read_property(
     columns: ColumnController | None,
     stream: str,
     prop: str,
 ) -> tuple[float | None, str]:
-    """Best-effort COM read — D86/flash often need case-specific setup."""
+    """Best-effort COM read in HYSYS worksheet / display units."""
     prop_l = prop.lower()
-    petroleum = prop_l in {"d86_95", "d86", "flash_point", "rvp", "tbp_95"}
-    if columns is None or not stream or stream == "TBD":
+    petroleum = prop_l in {
+        "d86_95",
+        "d86",
+        "d86_5",
+        "flash_point",
+        "rvp",
+        "tbp_95",
+        "gap_kero_diesel",
+    } or "gap" in prop_l
+    if columns is None or not stream:
         if petroleum:
             return None, "not_configured_com_path"
         return None, "unavailable"
@@ -86,8 +175,35 @@ def _read_property(
             val = columns._stream_temperature(stream)  # noqa: SLF001
             if val is not None and not is_sentinel(val):
                 return float(val), "com_stream_temperature"
-        # Petroleum properties (D86, flash) — scaffold until assay/COM path confirmed
-        if petroleum:
+
+        if "gap" in prop_l:
+            gap = _kero_diesel_gap_display(columns)
+            if gap is not None:
+                return gap, "com_bpt_gap_display"
+            return None, "unavailable"
+
+        if stream in {"spec", "TBD"}:
+            return None, "unavailable"
+
+        if prop_l in {"d86_95", "d86"}:
+            val = _d86_at_percent(columns, stream, 95.0)
+            if val is not None:
+                return val, "com_bpt_d86_display"
+            return None, "unavailable"
+        if prop_l == "d86_5":
+            val = _d86_at_percent(columns, stream, 5.0)
+            if val is not None:
+                return val, "com_bpt_d86_display"
+            return None, "unavailable"
+        if prop_l == "tbp_95":
+            # Same BoilingPointTable path if needed later
+            return None, "not_configured_com_path"
+        if prop_l == "flash_point":
+            val = _flash_point_display(columns, stream)
+            if val is not None:
+                return val, "com_coldprop_flash_display"
+            return None, "unavailable"
+        if prop_l == "rvp":
             return None, "not_configured_com_path"
     except Exception:
         return None, "read_error"
@@ -356,6 +472,7 @@ def format_quality_board(pqs: ProductQualityState) -> str:
         )
     else:
         lines.append(
-            "  → Quality targets configured; D86/flash COM still PARTIAL until assay path live"
+            "  → Quality targets in HYSYS display units (no Assist unit conversion); "
+            "D86/flash via stream Boiling Point / Cold Props"
         )
     return "\n".join(lines)

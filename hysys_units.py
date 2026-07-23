@@ -1,6 +1,13 @@
 """
 Copy display units from the open HYSYS case (no Assist-side unit conversion).
 
+Policy (binding):
+- Use whatever unit set HYSYS shows for the open case (Field, SI, …).
+- Do **not** hard-code metric↔imperial factors in Assist.
+- When COM returns calculation-unit values, ask HYSYS
+  ``UnitConversionSet.FromCalculationUnit`` / ``RealVariable.GetValue(display)``
+  so the number matches the worksheet.
+
 Reads preferred unit labels from stream RealVariables, then uses
 GetValue(unit) / SetValue(value, unit) so HYSYS performs any conversion.
 """
@@ -8,6 +15,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+
+# UnitConversionSetManager name → index (Aspen HYSYS steady-state)
+_UCS_TEMPERATURE = 1
+_UCS_DELTA_TEMP = 24
 
 
 # Fallbacks only if HYSYS does not expose a unit label on the property.
@@ -164,7 +175,9 @@ def discover_display_units(flowsheet: Any) -> HysysDisplayUnits:
 def scale_si_to_display(prop: Any, si_value: float | None, display_unit: str) -> float | None:
     """
     Map a COM SI-ish raw value to worksheet display using HYSYS GetValue ratio.
-    Avoids hard-coded metric/imperial conversion factors.
+
+    Prefer ``from_calculation_to_display`` for absolute temperatures — ratio
+    scaling is wrong across C/F offset. Kept for flow/energy RealVariables.
     """
     if si_value is None:
         return None
@@ -183,3 +196,65 @@ def scale_si_to_display(prop: Any, si_value: float | None, display_unit: str) ->
         # Cannot form ratio — if |si| looks like already-display, return as-is
         return si_value
     return si_value * (display / raw)
+
+
+def _unit_conversion_set(app: Any, set_index: int) -> Any | None:
+    try:
+        return app.UnitConversionSetManager.GetUnitConversionSet(int(set_index))
+    except Exception:
+        return None
+
+
+def current_display_unit(app: Any, set_index: int = _UCS_TEMPERATURE) -> str | None:
+    """HYSYS CurrentDisplayUnit for a unit set (e.g. Temperature → ``F``)."""
+    ucs = _unit_conversion_set(app, set_index)
+    if ucs is None:
+        return None
+    try:
+        return str(ucs.CurrentDisplayUnit)
+    except Exception:
+        return None
+
+
+def from_calculation_to_display(
+    app: Any,
+    value: float | None,
+    *,
+    set_index: int = _UCS_TEMPERATURE,
+    display_unit: str | None = None,
+) -> float | None:
+    """
+    Convert a HYSYS **calculation-unit** number to the case **display** unit.
+
+    Uses HYSYS ``Unit.FromCalculationUnit`` — no Assist °C/°F algebra.
+    """
+    if value is None or app is None:
+        return None
+    try:
+        value = float(value)
+    except Exception:
+        return None
+    ucs = _unit_conversion_set(app, set_index)
+    if ucs is None:
+        return None
+    unit_name = display_unit or current_display_unit(app, set_index)
+    if not unit_name:
+        return None
+    try:
+        for i in range(int(ucs.Count)):
+            u = ucs.Item(i)
+            if str(getattr(u, "Name", "")).lower() == str(unit_name).lower():
+                return float(u.FromCalculationUnit(value))
+    except Exception:
+        return None
+    return None
+
+
+def temperature_to_display(app: Any, calc_value: float | None) -> float | None:
+    """Absolute temperature: calculation unit → CurrentDisplayUnit (Temperature set)."""
+    return from_calculation_to_display(app, calc_value, set_index=_UCS_TEMPERATURE)
+
+
+def delta_temperature_to_display(app: Any, calc_delta: float | None) -> float | None:
+    """Temperature difference (gaps): calculation → display via Delta Temp. set."""
+    return from_calculation_to_display(app, calc_delta, set_index=_UCS_DELTA_TEMP)

@@ -103,7 +103,8 @@ def test_case_buildup_direction_locked() -> None:
     assert case.mv_preference["diesel_too_heavy"][0] == "side_draw_rate_nudge"
     assert case.configured_targets()
     diesel = next(t for t in case.configured_targets() if "DIESEL" in t.target_id)
-    assert diesel.target_value == 360.0
+    assert diesel.target_value == 680.0
+    assert diesel.unit == "F"
 
 
 def test_final_targets_loaded_and_unavailable_not_hard_miss() -> None:

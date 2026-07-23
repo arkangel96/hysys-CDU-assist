@@ -123,10 +123,10 @@ def default_t100_config() -> CduCaseConfig:
                 stream="Diesel",
                 property="D86_95",
                 target_value=None,
-                unit="degC",
+                unit="F",
                 constraint="maximum",
                 hard=True,
-                notes="Set target_value in config/cdu_t100_case.json",
+                notes="Set target_value in HYSYS display units (see config/README.md — no Assist conversion)",
             ),
         ],
         spec_roles=[

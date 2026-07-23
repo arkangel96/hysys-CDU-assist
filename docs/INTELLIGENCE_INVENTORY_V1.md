@@ -166,11 +166,12 @@ Keep in markdown until a thin layer is justified:
 | ID | Rule | Status |
 |----|------|--------|
 | `CDU-BUILDUP-DIR` | Clone PE judgment + interactive-first | **DOCS** strategy locked |
-| `CDU-AI-PE-ROLE` | Cursor default = senior HYSYS CDU PE (alwaysApply) | **DOCS** `.cursor/rules/cdu-hysys-senior-pe.mdc` |
+| `CDU-AI-PE-ROLE` | Cursor default = expert HYSYS CDU PE + Oil Manager assay specialist; user = expert CDU/HYSYS PE (alwaysApply) | **DOCS** `.cursor/rules/cdu-hysys-senior-pe.mdc` |
 | `CDU-SYM-DIESEL-HEAVY` | Diesel too heavy → draw down first | **CODED** |
 | `CDU-FT-MULTI` | Multi-product FINAL_TARGET numbers on T-100 | **CODED** (config); measure **PARTIAL** |
 | `CDU-KEEP-QUALITY` | Keep/reverse quality before residual score | **CODED** |
 | `CDU-INTERACTIVE-1` | Assist Loop max 1 trial when interactive_only | **CODED** |
+| `CDU-DECIDE-T100` | T-100 energy/tray decision authority (hierarchy, keep/reverse, MV order, stop, permissions) | **DOCS** `new_intelligence/CDU_T100_Decision_Intelligence_v1.md` — not coded yet |
 
 ---
 

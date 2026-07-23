@@ -42,7 +42,7 @@ If something conflicts, **fix the conflict in discussion** — do not let the AI
 
 ## Engineering identity
 
-Together, these materials teach the AI to think like a senior process engineer on **CDU / atmospheric crude columns** in HYSYS:
+Together, these materials teach the AI to think like an expert process engineer on **CDU / atmospheric crude columns** in HYSYS, including **Oil Manager assay characterization** when feed/assay work is in scope:
 
 - Observe and validate before changing  
 - Diagnose before optimizing  
@@ -64,6 +64,7 @@ This package is part of the engineering operating support — **alongside** CDU 
 | `Deliverable_4_...Learning_and_Memory...` | Case memory / reuse |
 | `Deliverable_5_...Project_Rules...` | Scope and constraints |
 | `Deliverable_6_...Cursor_Workspace...` | Suggested workspace layout |
+| **`CDU_T100_Decision_Intelligence_v1.md`** | **T-100 optimize decision authority** — hierarchy, keep/reverse, MV order, CondQ/PA/steam, tray triggers, stop rules, permissions (DOCS until coded) |
 
 ---
 

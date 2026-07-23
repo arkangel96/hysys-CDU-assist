@@ -1,7 +1,7 @@
 {
   "case_id": "t100_baseline",
   "column_name": "T-100",
-  "objective": "Primary: hold naphtha + kerosene product flows; secondary: minimize PA heat (PA_1 first). Diesel/AGO follow. Interactive tower-only.",
+  "objective": "Primary: hold naphtha + kerosene product flows AND hard quality (D86/flash); secondary: diesel quality then minimize PA heat (PA_1 first). AGO/residue follow. Interactive tower-only.",
   "interactive_only": true,
   "primary_symptom_tree": "diesel_too_heavy",
   "primary_product_flows": [
@@ -16,43 +16,69 @@
   ],
   "quality_targets": [
     {
-      "target_id": "DIESEL_D86_95",
-      "product": "Diesel",
-      "stream": "Diesel",
+      "target_id": "NAPHTHA_D86_95",
+      "product": "Naphtha",
+      "stream": "Naphtha",
       "property": "D86_95",
-      "target_value": 360.0,
-      "unit": "degC",
+      "target_value": 356.0,
+      "unit": "F",
       "constraint": "maximum",
       "hard": true,
-      "tolerance": 1.0,
+      "tolerance": 2.0,
       "enabled": true,
-      "notes": "Trial baseline — replace with plant diesel D86 95% max when known"
+      "notes": "Practice plant-like Field units — locked hard; = 180 C; FINAL_TARGET NAPHTHA_ASTM95"
     },
     {
       "target_id": "KERO_FLASH",
       "product": "Kerosene",
       "stream": "Kerosene",
       "property": "flash_point",
-      "target_value": 38.0,
-      "unit": "degC",
+      "target_value": 100.0,
+      "unit": "F",
       "constraint": "minimum",
       "hard": true,
-      "tolerance": 1.0,
+      "tolerance": 2.0,
       "enabled": true,
-      "notes": "Trial baseline flash min — replace with plant kerosene flash when known"
+      "notes": "Practice Jet A-style flash min 100 F — locked hard; = 38 C"
     },
     {
-      "target_id": "NAPHTHA_D86_95",
-      "product": "Naphtha",
-      "stream": "Naphtha",
+      "target_id": "KERO_D86_95",
+      "product": "Kerosene",
+      "stream": "Kerosene",
       "property": "D86_95",
-      "target_value": 180.0,
-      "unit": "degC",
+      "target_value": 518.0,
+      "unit": "F",
       "constraint": "maximum",
       "hard": true,
-      "tolerance": 1.0,
+      "tolerance": 2.0,
       "enabled": true,
-      "notes": "Aligned with FINAL_TARGET NAPHTHA_ASTM95"
+      "notes": "Practice plant-like Field — locked hard; = 270 C; FINAL_TARGET KERO_ASTM95"
+    },
+    {
+      "target_id": "DIESEL_D86_95",
+      "product": "Diesel",
+      "stream": "Diesel",
+      "property": "D86_95",
+      "target_value": 680.0,
+      "unit": "F",
+      "constraint": "maximum",
+      "hard": true,
+      "tolerance": 2.0,
+      "enabled": true,
+      "notes": "Follower hard quality Field — = 360 C; diesel_too_heavy tree"
+    },
+    {
+      "target_id": "KERO_DIESEL_GAP",
+      "product": "spec",
+      "stream": "spec",
+      "property": "gap_kero_diesel",
+      "target_value": 27.0,
+      "unit": "F",
+      "constraint": "minimum",
+      "hard": false,
+      "tolerance": 4.0,
+      "enabled": true,
+      "notes": "Soft: Diesel D86 5% − Kero D86 95% ≥ 27 F (= 15 C)"
     },
     {
       "target_id": "RESIDUE_FLOW",
