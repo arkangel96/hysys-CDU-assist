@@ -1,0 +1,100 @@
+{
+  "study": "T-100 Campaign A energy \u2014 PA_1",
+  "when_utc": "20260723_144800",
+  "holds": [
+    "Naphtha Prod Rate",
+    "Kero_SS Prod Flow"
+  ],
+  "mv": "PA_1_Duty",
+  "step_frac": 0.97,
+  "max_steps": 2,
+  "iterations": [
+    {
+      "phase": "BASELINE",
+      "metrics": {
+        "label": "BASELINE",
+        "pa1_goal": -16118.912606198282,
+        "pa1_disp": -55000000.0,
+        "cond_q": 31927.201125763026,
+        "naphtha_err": -5.978835820695275e-07,
+        "kero_err": -2.999716741107476e-06,
+        "naphtha_d86_95": 328.2691863145625,
+        "kero_d86_95": 468.6431892253412,
+        "kero_flash": 144.63118135275556,
+        "gap": 10.007608880930889,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "\u2014",
+      "reason": "freeze"
+    },
+    {
+      "phase": "STEP_1",
+      "metrics": {
+        "label": "STEP_1",
+        "pa1_goal": -15635.345228012333,
+        "pa1_disp": -53349999.99999999,
+        "cond_q": 32410.802503688956,
+        "naphtha_err": -8.320650966517969e-07,
+        "kero_err": 2.116330495028811e-06,
+        "naphtha_d86_95": 328.26906054227373,
+        "kero_d86_95": 468.6432042426254,
+        "kero_flash": 144.63110160404403,
+        "gap": 10.008219145050305,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "KEEP",
+      "reason": "net |PA1|+|Cond| down (-1.65e+06); dPA=-1650000.0000000075; dCond=483.60137792593014",
+      "goal_written": -15635.345228012333
+    },
+    {
+      "phase": "STEP_2",
+      "metrics": {
+        "label": "STEP_2",
+        "pa1_goal": -15166.284871171962,
+        "pa1_disp": -51749499.99999999,
+        "cond_q": 32879.8011821388,
+        "naphtha_err": -6.934318360271015e-07,
+        "kero_err": 1.5331593605485825e-06,
+        "naphtha_d86_95": 328.26922738759004,
+        "kero_d86_95": 468.6431978698946,
+        "kero_flash": 144.6310109042908,
+        "gap": 10.008210745696829,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "KEEP",
+      "reason": "net |PA1|+|Cond| down (-1.6e+06); dPA=-1600500.0; dCond=468.9986784498433",
+      "goal_written": -15166.284871171962
+    },
+    {
+      "phase": "RESTORED",
+      "metrics": {
+        "label": "RESTORED_BASELINE",
+        "pa1_goal": -16118.912606198282,
+        "pa1_disp": -55000000.0,
+        "cond_q": 31925.546173785122,
+        "naphtha_err": 1.405254847444585e-06,
+        "kero_err": -3.2487531160733415e-06,
+        "naphtha_d86_95": 328.2698312503284,
+        "kero_d86_95": 468.6433546028276,
+        "kero_flash": 144.63153032464322,
+        "gap": 10.007903368560847,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "\u2014",
+      "reason": "study restore"
+    }
+  ],
+  "note": "Case restored to pre-study snapshot; not auto-saved. Heat-shift KEEP \u2260 net utility win."
+}

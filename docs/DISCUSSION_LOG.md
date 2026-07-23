@@ -7,6 +7,15 @@
 
 ---
 
+## 2026-07-23 (late) — Campaign A PA_1 energy study run
+
+- Ran 2× PA_1 |duty| −3% with N+K holds; rates + hard Q OK; CondQ rose both steps (heat shift).
+- Case restored to PA1 −55e6. Docs: `docs/studies/energy_pa1_run_20260723_144800.md`.
+- Do not treat runner “net KEEP” as utility win until CondQ is same-unit as PA.
+- **Lesson:** weaker top PA cooling → CondQ up (yin–yang); NHT naphtha/kero rate holds survive these steps; heat **shift ≠** utility save.
+
+---
+
 ## 2026-07-23 (night) — architecture clean + live HYSYS + lessons
 
 **Transcript id:** `19ca8612-b052-475a-a0c4-bc7e06fe7b9f`  
