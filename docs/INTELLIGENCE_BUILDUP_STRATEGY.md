@@ -17,8 +17,9 @@
 
 ## Tower energy focus (locked 2026-07-23)
 
-**Scope:** atmospheric tower only (not PreFlash / furnace).  
-**First MV:** **PA_1_Duty** — largest |PA duty| on T-100 (~55e6 Btu/hr).  
+**Scope (tower Category-1):** atmospheric tower draws / PA / steam (not PreFlash / furnace auto-MV).  
+**PreFlash + Crude Heater:** complementary PFH v0.1 — propose-only PE board (`CDU-PFH-T100`); see `new_intelligence/CDU_PreFlash_Crude_Heater_Intelligence_v0.1.md`.  
+**First MV (tower PA energy):** **PA_1_Duty** — largest |PA duty| on T-100 (~55e6 Btu/hr).  
 **Order:** PA_1 → PA_2 → PA_3 (`energy_optimize_order` in `config/cdu_t100_case.json`).  
 **Trial style:** one bounded duty nudge; leave other PAs and draws alone; keep/reverse on converge + operability.
 

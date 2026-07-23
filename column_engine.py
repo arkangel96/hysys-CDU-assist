@@ -962,7 +962,11 @@ def format_connections_block(state: ColumnState) -> str:
     return "\n".join(lines)
 
 
-def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
+def format_pe_board(
+    state: ColumnState,
+    diagnosis: Diagnosis,
+    columns: object | None = None,
+) -> str:
     lines = [
         f"PE BOARD | State {diagnosis.engineering_state.value} | potential={diagnosis.potential}",
         f"  {diagnosis.pe_read}",
@@ -991,6 +995,13 @@ def format_pe_board(state: ColumnState, diagnosis: Diagnosis) -> str:
         )
     except Exception:
         pass
+    # PreFlash + Crude Heater PFH v0.1 (propose-only)
+    try:
+        from cdu_preflash_heater import format_pfh_board_section
+
+        lines.append(format_pfh_board_section(columns=columns, state=state))
+    except Exception as exc:
+        lines.append(f"PREFLASH + CRUDE HEATER [PFH]: (board error: {exc})")
     lines.extend(
         [
         f"  DOF={state.degrees_of_freedom} physical={state.physical_solution} "
@@ -1574,7 +1585,7 @@ class ConvergenceAssistant:
 
     def pe_board(self, column_name: str) -> str:
         state, diagnosis = self.diagnose_column(column_name)
-        return format_pe_board(state, diagnosis)
+        return format_pe_board(state, diagnosis, columns=self.columns)
 
     def run_one_trial(self, column_name: str, dry_run: bool = False) -> TrialResult:
         before = self.inspect(column_name)
@@ -1593,7 +1604,7 @@ class ConvergenceAssistant:
             skipped_families=self._skipped_families,
         )
         before_score = score_state(before)
-        board = format_pe_board(before, diagnosis)
+        board = format_pe_board(before, diagnosis, columns=self.columns)
 
         if action is None:
             result = TrialResult(
@@ -1701,6 +1712,7 @@ class ConvergenceAssistant:
                             infeasible_evidence=self._infeasible_evidence(),
                             exhausted_families=self._skipped_families,
                         ),
+                        columns=self.columns,
                     ),
                 )
 
@@ -1790,6 +1802,7 @@ class ConvergenceAssistant:
                     infeasible_evidence=self._infeasible_evidence(),
                     exhausted_families=self._skipped_families,
                 ),
+                columns=self.columns,
             )
             result = TrialResult(
                 action=action,
@@ -1846,10 +1859,10 @@ class ConvergenceAssistant:
                         before_score=score_state(state),
                         after_score=score_state(state),
                         kept=True,
-                        message=format_pe_board(state, diagnosis),
+                        message=format_pe_board(state, diagnosis, columns=self.columns),
                         after_state=state,
                         response_class=ResponseClass.TARGET_MET,
-                        pe_board=format_pe_board(state, diagnosis),
+                        pe_board=format_pe_board(state, diagnosis, columns=self.columns),
                     )
                 )
                 break
@@ -1866,10 +1879,10 @@ class ConvergenceAssistant:
                         before_score=score_state(state),
                         after_score=score_state(state),
                         kept=False,
-                        message=format_pe_board(state, diagnosis),
+                        message=format_pe_board(state, diagnosis, columns=self.columns),
                         after_state=state,
                         response_class=ResponseClass.STOP_INFEASIBLE,
-                        pe_board=format_pe_board(state, diagnosis),
+                        pe_board=format_pe_board(state, diagnosis, columns=self.columns),
                     )
                 )
                 break

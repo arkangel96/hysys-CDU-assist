@@ -1270,7 +1270,7 @@ class CduAssist(QMainWindow):
                 "Applied recommended Specs Summary clicks:\n  "
                 + "\n  ".join(notes)
                 + "\n"
-                + format_pe_board(state2, diagnosis2)
+                + format_pe_board(state2, diagnosis2, columns=self.assistant.columns)
             )
             self.column_pages.setCurrentIndex(2)
 
@@ -1306,7 +1306,7 @@ class CduAssist(QMainWindow):
         def work() -> None:
             state, diagnosis = self.assistant.diagnose_column(self._selected_column())
             self._show_column_state(state, diagnosis)
-            self._column_assist_log(format_pe_board(state, diagnosis))
+            self._column_assist_log(format_pe_board(state, diagnosis, columns=self.assistant.columns))
             self.column_pages.setCurrentIndex(2)
 
         self._run_column_job("Diagnose", work)

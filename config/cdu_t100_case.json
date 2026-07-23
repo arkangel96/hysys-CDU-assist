@@ -134,6 +134,17 @@
   "upstream_objects": {
     "preflash": "PreFlash",
     "crude_heater": "Crude Heater",
-    "notes": "Gates not enforced until Phase 4 — names for future COM reads"
+    "crude_duty_energy": "Crude Duty",
+    "overflash": {
+      "definition": "liquid_below_flash_pct_of_fresh_crude_feed",
+      "band_min": null,
+      "band_max": null,
+      "liquid_flow_stream": null,
+      "feed_flow_stream": null,
+      "notes": "Internal liquid below flash zone as % of fresh crude feed; band unset until project configures"
+    },
+    "primary_mv": "heater_duty",
+    "secondary_mv": "cot",
+    "notes": "v0.1 propose-only PE board; no auto heater writes"
   }
 }

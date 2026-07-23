@@ -66,6 +66,7 @@ This package is part of the engineering operating support — **alongside** CDU 
 | `Deliverable_5_...Project_Rules...` | Scope and constraints |
 | `Deliverable_6_...Cursor_Workspace...` | Suggested workspace layout |
 | **`CDU_T100_Decision_Intelligence_v1.md`** | **T-100 optimize decision authority** — hierarchy, keep/reverse, MV order, CondQ/PA/steam, tray triggers, stop rules, permissions (DOCS until coded) |
+| **`CDU_PreFlash_Crude_Heater_Intelligence_v0.1.md`** | **PreFlash + Crude Heater** — overflash definition, heater-duty MV, PFH-001…004; v0.1 propose-only PE board (not auto-MV) |
 
 ---
 

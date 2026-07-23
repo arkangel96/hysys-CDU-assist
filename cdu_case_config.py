@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_CASE_PATH = ROOT / "config" / "cdu_t100_case.json"
@@ -36,6 +37,31 @@ class SpecRoleEntry:
 
 
 @dataclass(slots=True)
+class OverflashConfig:
+    """Project-configurable overflash definition and band (no hard-coded plant numbers)."""
+
+    definition: str = "liquid_below_flash_pct_of_fresh_crude_feed"
+    band_min: float | None = None
+    band_max: float | None = None
+    liquid_flow_stream: str | None = None
+    feed_flow_stream: str | None = None
+    notes: str = ""
+
+
+@dataclass(slots=True)
+class UpstreamObjectsConfig:
+    """PreFlash / Crude Heater names + overflash knobs for PFH intelligence."""
+
+    preflash: str = "PreFlash"
+    crude_heater: str = "Crude Heater"
+    crude_duty_energy: str = "Crude Duty"
+    overflash: OverflashConfig = field(default_factory=OverflashConfig)
+    primary_mv: str = "heater_duty"
+    secondary_mv: str = "cot"
+    notes: str = ""
+
+
+@dataclass(slots=True)
 class CduCaseConfig:
     case_id: str = "default"
     column_name: str = "T-100"
@@ -45,7 +71,7 @@ class CduCaseConfig:
     quality_targets: list[QualityTarget] = field(default_factory=list)
     spec_roles: list[SpecRoleEntry] = field(default_factory=list)
     mv_preference: dict[str, list[str]] = field(default_factory=dict)
-    upstream_objects: dict[str, str] = field(default_factory=dict)
+    upstream_objects: UpstreamObjectsConfig = field(default_factory=UpstreamObjectsConfig)
 
     def spec_role_for(self, spec_name: str) -> SpecRoleEntry | None:
         for entry in self.spec_roles:
@@ -76,6 +102,40 @@ def _parse_quality_target(raw: dict) -> QualityTarget:
     )
 
 
+def _parse_upstream_objects(raw: dict[str, Any] | None) -> UpstreamObjectsConfig:
+    if not raw:
+        return UpstreamObjectsConfig()
+    of_raw = raw.get("overflash")
+    if isinstance(of_raw, dict):
+        overflash = OverflashConfig(
+            definition=str(
+                of_raw.get("definition", "liquid_below_flash_pct_of_fresh_crude_feed")
+            ),
+            band_min=of_raw.get("band_min"),
+            band_max=of_raw.get("band_max"),
+            liquid_flow_stream=(
+                str(of_raw["liquid_flow_stream"])
+                if of_raw.get("liquid_flow_stream")
+                else None
+            ),
+            feed_flow_stream=(
+                str(of_raw["feed_flow_stream"]) if of_raw.get("feed_flow_stream") else None
+            ),
+            notes=str(of_raw.get("notes", "")),
+        )
+    else:
+        overflash = OverflashConfig()
+    return UpstreamObjectsConfig(
+        preflash=str(raw.get("preflash", "PreFlash")),
+        crude_heater=str(raw.get("crude_heater", "Crude Heater")),
+        crude_duty_energy=str(raw.get("crude_duty_energy", "Crude Duty")),
+        overflash=overflash,
+        primary_mv=str(raw.get("primary_mv", "heater_duty")),
+        secondary_mv=str(raw.get("secondary_mv", "cot")),
+        notes=str(raw.get("notes", "")),
+    )
+
+
 def load_case_config(path: Path | str | None = None) -> CduCaseConfig:
     path = Path(path) if path else DEFAULT_CASE_PATH
     if not path.is_file():
@@ -102,9 +162,7 @@ def load_case_config(path: Path | str | None = None) -> CduCaseConfig:
             str(k): [str(v) for v in vals]
             for k, vals in data.get("mv_preference", {}).items()
         },
-        upstream_objects={
-            str(k): str(v) for k, v in data.get("upstream_objects", {}).items()
-        },
+        upstream_objects=_parse_upstream_objects(data.get("upstream_objects")),
     )
 
 
@@ -141,4 +199,5 @@ def default_t100_config() -> CduCaseConfig:
                 "side_strip_steam_nudge",
             ],
         },
+        upstream_objects=UpstreamObjectsConfig(),
     )

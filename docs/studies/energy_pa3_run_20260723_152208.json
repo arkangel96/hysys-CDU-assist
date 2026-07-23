@@ -1,0 +1,108 @@
+{
+  "study": "T-100 Campaign A energy \u2014 PA_3",
+  "when_utc": "20260723_152208",
+  "holds": [
+    "Naphtha Prod Rate",
+    "Kero_SS Prod Flow"
+  ],
+  "mv": "PA_3_Duty",
+  "step_frac": 0.97,
+  "max_steps": 2,
+  "iterations": [
+    {
+      "phase": "BASELINE",
+      "metrics": {
+        "label": "BASELINE",
+        "pa_goal": -10257.489840307999,
+        "pa_disp": -35000000.0,
+        "cond_q_com": 31926.390210407517,
+        "cond_q_disp": 108937339.91070768,
+        "energy_unit": "Btu/hr",
+        "naphtha_err": 9.073349724140141e-08,
+        "kero_err": -3.956136652724777e-06,
+        "naphtha_d86_95": 328.26948881370856,
+        "kero_d86_95": 468.6432056893066,
+        "kero_flash": 144.63123614533947,
+        "gap": 10.007848891670506,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "\u2014",
+      "reason": "freeze"
+    },
+    {
+      "phase": "STEP_1",
+      "metrics": {
+        "label": "STEP_1",
+        "pa_goal": -9949.765145098758,
+        "pa_disp": -33950000.0,
+        "cond_q_com": 32208.439868557685,
+        "cond_q_disp": 109899733.0681899,
+        "energy_unit": "Btu/hr",
+        "naphtha_err": -8.502689832470923e-08,
+        "kero_err": 5.291182316067733e-07,
+        "naphtha_d86_95": 328.18228540117957,
+        "kero_d86_95": 468.5599260351916,
+        "kero_flash": 144.6219869903428,
+        "gap": 10.259811943581155,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "KEEP_SHIFT",
+      "reason": "heat shift (display: dPA=-1.05e+06, dCond=9.624e+05, dnet=-8.761e+04) \u2014 not utility win",
+      "goal_written": -9949.765145098758
+    },
+    {
+      "phase": "STEP_2",
+      "metrics": {
+        "label": "STEP_2",
+        "pa_goal": -9651.272190745794,
+        "pa_disp": -32931499.999999996,
+        "cond_q_com": 32481.25874355388,
+        "cond_q_disp": 110830629.49348728,
+        "energy_unit": "Btu/hr",
+        "naphtha_err": -7.693354062406405e-08,
+        "kero_err": 5.656398919938321e-07,
+        "naphtha_d86_95": 328.0994487461137,
+        "kero_d86_95": 468.4812319116636,
+        "kero_flash": 144.61304855050884,
+        "gap": 10.498044721146698,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "KEEP_SHIFT",
+      "reason": "heat shift (display: dPA=-1.019e+06, dCond=9.309e+05, dnet=-8.76e+04) \u2014 not utility win",
+      "goal_written": -9651.272190745794
+    },
+    {
+      "phase": "RESTORED",
+      "metrics": {
+        "label": "RESTORED_BASELINE",
+        "pa_goal": -10257.489840307999,
+        "pa_disp": -35000000.0,
+        "cond_q_com": 31927.382623174137,
+        "cond_q_disp": 108940726.1628388,
+        "energy_unit": "Btu/hr",
+        "naphtha_err": 1.6853606289811336e-07,
+        "kero_err": -9.161158118685073e-07,
+        "naphtha_d86_95": 328.2693304532414,
+        "kero_d86_95": 468.64325434006247,
+        "kero_flash": 144.6313517028575,
+        "gap": 10.00806234084547,
+        "dof": 0,
+        "physical": true,
+        "converged": true,
+        "state": "E_acceptable"
+      },
+      "verdict": "\u2014",
+      "reason": "study restore"
+    }
+  ],
+  "note": "Case restored to pre-study snapshot; not auto-saved. Net energy uses same-unit pair (display PA+Cond if available, else COM). KEEP_SHIFT = yin-yang heat move, not utility win."
+}

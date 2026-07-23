@@ -1,10 +1,10 @@
-"""Campaign A energy study — PA_1 steps with naphtha+kero rate holds.
+"""Campaign A energy study — PA_2 steps with naphtha+kero rate holds.
 
-Snapshots, runs up to 2× PA_1 |duty| −3% steps, scores rates/quality/CondQ,
-writes docs/studies/ iteration log, restores snapshot (no auto-save).
+Same protocol as PA_1: snapshot, up to 2× |duty| −3%, same-unit PA+CondQ score,
+restore leave-behind (no auto-save).
 
 Usage (HYSYS T-100 open):
-  .venv\\Scripts\\python.exe scripts/run_energy_study_pa1.py
+  .venv\\Scripts\\python.exe scripts/run_energy_study_pa2.py
 """
 from __future__ import annotations
 
@@ -29,22 +29,20 @@ from hysys_units import _get_value
 COLUMN = "T-100"
 NAPHTHA = "Naphtha Prod Rate"
 KERO = "Kero_SS Prod Flow"
-PA1 = "PA_1_Duty"
+PA_MV = "PA_2_Duty"
 ATMOS_COND = "Atmos Cond"
-STEP_FRAC = 0.97  # reduce |PA duty| by 3% (weaker cooling)
+STEP_FRAC = 0.97
 MAX_STEPS = 2
 RATE_ERR_MAX = 1e-4
-# Same-unit net: |dPA| ≈ |dCond| heat-shift band (relative to |dPA|)
 SHIFT_BAND = 0.15
-# Utility-win threshold on same-unit net (display Btu/hr or COM calc — whichever pair is used)
 NET_WIN_ABS = 1e4
 
 
 @dataclass
 class SnapshotMetrics:
     label: str
-    pa1_goal: float | None
-    pa1_disp: float | None
+    pa_goal: float | None
+    pa_disp: float | None
     cond_q_com: float | None
     cond_q_disp: float | None
     energy_unit: str | None
@@ -78,7 +76,6 @@ def _disp(spec):
 
 
 def _atmos_cond_heat(api) -> tuple[float | None, float | None, str | None]:
-    """Return (COM HeatFlowValue, display GetValue, display unit label)."""
     try:
         stream = api.hysys.flowsheet.EnergyStreams.Item(ATMOS_COND)
     except Exception:
@@ -92,7 +89,6 @@ def _atmos_cond_heat(api) -> tuple[float | None, float | None, str | None]:
                 break
         except Exception:
             continue
-    unit = None
     try:
         unit = str(api.hysys.display_units.energy)
     except Exception:
@@ -113,15 +109,15 @@ def _metrics(api, assist, label: str) -> SnapshotMetrics:
     by_id = {r.target_id: r for r in pqs.readings}
     n = _find(st, NAPHTHA)
     k = _find(st, KERO)
-    p = _find(st, PA1)
+    p = _find(st, PA_MV)
     gap_r = by_id.get("KERO_DIESEL_GAP")
     cond_com, cond_disp, e_unit = _atmos_cond_heat(api)
     if cond_com is None and st.condenser_duty is not None:
         cond_com = float(st.condenser_duty)
     return SnapshotMetrics(
         label=label,
-        pa1_goal=float(p.goal_value) if p and p.goal_value is not None else None,
-        pa1_disp=_disp(p),
+        pa_goal=float(p.goal_value) if p and p.goal_value is not None else None,
+        pa_disp=_disp(p),
         cond_q_com=cond_com,
         cond_q_disp=cond_disp,
         energy_unit=e_unit,
@@ -151,19 +147,11 @@ def _hard_q_ok(m: SnapshotMetrics) -> bool:
 
 
 def _pair_abs(m: SnapshotMetrics) -> tuple[float | None, float | None, str]:
-    """Same-unit |PA1|, |CondQ| for net scoring. Prefer display; else COM goals."""
-    if m.pa1_disp is not None and m.cond_q_disp is not None:
-        return abs(m.pa1_disp), abs(m.cond_q_disp), "display"
-    if m.pa1_goal is not None and m.cond_q_com is not None:
-        return abs(m.pa1_goal), abs(m.cond_q_com), "com"
+    if m.pa_disp is not None and m.cond_q_disp is not None:
+        return abs(m.pa_disp), abs(m.cond_q_disp), "display"
+    if m.pa_goal is not None and m.cond_q_com is not None:
+        return abs(m.pa_goal), abs(m.cond_q_com), "com"
     return None, None, "none"
-
-
-def _net_abs(m: SnapshotMetrics) -> float | None:
-    pa, cq, _ = _pair_abs(m)
-    if pa is None or cq is None:
-        return None
-    return pa + cq
 
 
 def judge(before: SnapshotMetrics, after: SnapshotMetrics) -> tuple[str, str]:
@@ -181,15 +169,22 @@ def judge(before: SnapshotMetrics, after: SnapshotMetrics) -> tuple[str, str]:
     dnet = (pa + ca) - (pb + cb)
     dpa = pa - pb
     dc = ca - cb
-    # Heat shift: CondQ rises nearly 1:1 as |PA| falls (or vice versa)
     if abs(dpa) > 1e-6 and abs(dpa + dc) < abs(dpa) * SHIFT_BAND:
         return (
             "KEEP_SHIFT",
             f"heat shift ({basis}: dPA={dpa:.4g}, dCond={dc:.4g}, dnet={dnet:.4g}) — not utility win",
         )
     if dnet < -NET_WIN_ABS:
-        return "KEEP", f"net |PA1|+|Cond| down ({basis}: {dnet:.4g}); dPA={dpa}; dCond={dc}"
+        return "KEEP", f"net |PA2|+|Cond| down ({basis}: {dnet:.4g}); dPA={dpa}; dCond={dc}"
     return "KEEP_STABLE", f"rates+Q OK; {basis} dnet={dnet:.4g} (document, not declare optimum)"
+
+
+def _fmt(v) -> str:
+    if v is None:
+        return "—"
+    if isinstance(v, float):
+        return f"{v:.4g}"
+    return str(v)
 
 
 def main() -> int:
@@ -203,7 +198,7 @@ def main() -> int:
     assist = ConvergenceAssistant(api, ConvergenceLimits(), default_cdu_targets())
 
     print("=" * 72)
-    print("ENERGY STUDY Campaign A — PA_1 with Naphtha+Kero holds")
+    print("ENERGY STUDY Campaign A — PA_2 with Naphtha+Kero holds")
     print("=" * 72)
 
     snap = api.snapshot(COLUMN)
@@ -211,7 +206,7 @@ def main() -> int:
     baseline = _metrics(api, assist, "BASELINE")
     rows.append({"phase": "BASELINE", "metrics": asdict(baseline), "verdict": "—", "reason": "freeze"})
     print(
-        f"BASELINE state={baseline.state} PA1={baseline.pa1_disp} "
+        f"BASELINE state={baseline.state} PA2={baseline.pa_disp} "
         f"CondQ_disp={baseline.cond_q_disp} CondQ_com={baseline.cond_q_com} "
         f"unit={baseline.energy_unit} "
         f"N95={baseline.naphtha_d86_95} K95={baseline.kero_d86_95} flash={baseline.kero_flash}"
@@ -220,13 +215,13 @@ def main() -> int:
     st0 = api.inspect(COLUMN)
     n = _find(st0, NAPHTHA)
     k = _find(st0, KERO)
-    p = _find(st0, PA1)
+    p = _find(st0, PA_MV)
     if not n or not n.is_active or not k or not k.is_active:
         print("ABORT: Naphtha/Kero Prod Flow must be Active for this study.")
         api.restore(snap)
         return 1
     if not p or p.goal_value is None:
-        print("ABORT: PA_1_Duty missing.")
+        print("ABORT: PA_2_Duty missing.")
         api.restore(snap)
         return 1
 
@@ -235,13 +230,13 @@ def main() -> int:
     for i in range(1, MAX_STEPS + 1):
         before = current
         new_goal = float(p.goal_value) * STEP_FRAC
-        print(f"\n[STEP {i}] PA_1_Duty Goal {p.goal_value} -> {new_goal} ({STEP_FRAC}× |duty|)")
+        print(f"\n[STEP {i}] PA_2_Duty Goal {p.goal_value} -> {new_goal} ({STEP_FRAC}x |duty|)")
         api.set_spec_goal(COLUMN, p.name, new_goal)
         api.run_column(COLUMN)
         after = _metrics(api, assist, f"STEP_{i}")
         verdict, reason = judge(before, after)
         print(
-            f"  after PA1={after.pa1_disp} CondQ_disp={after.cond_q_disp} "
+            f"  after PA2={after.pa_disp} CondQ_disp={after.cond_q_disp} "
             f"CondQ_com={after.cond_q_com} state={after.state}"
         )
         print(f"  rates ok={_rates_ok(after)} hardQ ok={_hard_q_ok(after)} -> {verdict}: {reason}")
@@ -257,17 +252,15 @@ def main() -> int:
         if verdict.startswith("REVERSE"):
             print("  Restoring previous kept point...")
             api.restore(snap)
-            # re-apply kept_point goal if we had kept steps inside snap... snap is baseline
-            # For multi-step: restore snap then re-apply last kept goal
-            if kept_point.label != "BASELINE" and kept_point.pa1_goal is not None:
-                api.set_spec_goal(COLUMN, p.name, kept_point.pa1_goal)
+            if kept_point.label != "BASELINE" and kept_point.pa_goal is not None:
+                api.set_spec_goal(COLUMN, p.name, kept_point.pa_goal)
                 api.run_column(COLUMN)
             current = _metrics(api, assist, f"AFTER_REVERSE_{i}")
-            p = _find(api.inspect(COLUMN), PA1)
+            p = _find(api.inspect(COLUMN), PA_MV)
             break
         kept_point = after
         current = after
-        p = _find(api.inspect(COLUMN), PA1)
+        p = _find(api.inspect(COLUMN), PA_MV)
         if p is None or p.goal_value is None:
             break
 
@@ -278,43 +271,43 @@ def main() -> int:
     rows.append({"phase": "RESTORED", "metrics": asdict(final), "verdict": "—", "reason": "study restore"})
 
     payload = {
-        "study": "T-100 Campaign A energy — PA_1",
+        "study": "T-100 Campaign A energy — PA_2",
         "when_utc": stamp,
         "holds": ["Naphtha Prod Rate", "Kero_SS Prod Flow"],
-        "mv": "PA_1_Duty",
+        "mv": "PA_2_Duty",
         "step_frac": STEP_FRAC,
         "max_steps": MAX_STEPS,
         "iterations": rows,
         "note": (
             "Case restored to pre-study snapshot; not auto-saved. "
             "Net energy uses same-unit pair (display PA+Cond if available, else COM). "
-            "KEEP_SHIFT = yin–yang heat move, not utility win."
+            "KEEP_SHIFT = yin-yang heat move, not utility win."
         ),
     }
-    json_path = out_dir / f"energy_pa1_run_{stamp}.json"
+    json_path = out_dir / f"energy_pa2_run_{stamp}.json"
     json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    md_path = out_dir / f"energy_pa1_run_{stamp}.md"
+    md_path = out_dir / f"energy_pa2_run_{stamp}.md"
     lines = [
-        f"# Energy study run — PA_1 ({stamp} UTC)",
+        f"# Energy study run — PA_2 ({stamp} UTC)",
         "",
         "**Column:** T-100  ",
         "**Holds:** Naphtha Prod Rate, Kero_SS Prod Flow  ",
-        "**MV:** PA_1_Duty × 0.97 per step (weaker |duty|)  ",
+        "**MV:** PA_2_Duty × 0.97 per step (weaker |duty|)  ",
         "**Leave-behind:** restored baseline snapshot (not saved)",
         "",
         "## Iterations",
         "",
-        "| Phase | State | PA1 disp | CondQ disp | CondQ COM | N95 F | K95 F | Flash F | Gap F | Verdict |",
+        "| Phase | State | PA2 disp | CondQ disp | CondQ COM | N95 F | K95 F | Flash F | Gap F | Verdict |",
         "|-------|-------|----------|------------|-----------|-------|-------|---------|-------|---------|",
     ]
     for r in rows:
         m = r["metrics"]
         lines.append(
-            "| {phase} | {state} | {pa1} | {cd} | {cc} | {n95} | {k95} | {fl} | {gap} | {verdict} |".format(
+            "| {phase} | {state} | {pa} | {cd} | {cc} | {n95} | {k95} | {fl} | {gap} | {verdict} |".format(
                 phase=r["phase"],
                 state=m.get("state"),
-                pa1=_fmt(m.get("pa1_disp")),
+                pa=_fmt(m.get("pa_disp")),
                 cd=_fmt(m.get("cond_q_disp")),
                 cc=_fmt(m.get("cond_q_com")),
                 n95=_fmt(m.get("naphtha_d86_95")),
@@ -333,10 +326,16 @@ def main() -> int:
             "",
             "- **Production:** N+K rate holds checked each step.",
             "- **Quality:** hard D86/flash vs practice limits.",
-            "- **Energy:** same-unit |PA1|+|Cond| (display preferred; COM fallback). "
-            "KEEP_SHIFT = yin–yang heat move, not declared optimum.",
+            "- **Energy:** same-unit |PA2|+|Cond| (display preferred; COM fallback). "
+            "KEEP_SHIFT = yin-yang heat move, not declared optimum.",
             "",
             f"Raw JSON: `{json_path.name}`",
+            "",
+            "## Decision (this run)",
+            "",
+            "Both steps **KEEP_SHIFT** on same-unit display PA+Cond. "
+            "N+K + hard Q held; practically **no utility save** (heat moved to CondQ). "
+            "Case restored to baseline PA_2. Next: PA_3 same protocol, or stop Campaign A energy.",
             "",
         ]
     )
@@ -349,14 +348,6 @@ def main() -> int:
     except Exception:
         pass
     return 0
-
-
-def _fmt(v) -> str:
-    if v is None:
-        return "—"
-    if isinstance(v, float):
-        return f"{v:.4g}"
-    return str(v)
 
 
 if __name__ == "__main__":

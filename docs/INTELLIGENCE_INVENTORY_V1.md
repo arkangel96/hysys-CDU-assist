@@ -169,6 +169,7 @@ Keep in markdown until a thin layer is justified:
 | `CDU-KEEP-QUALITY` | Keep/reverse quality before residual score | **CODED** |
 | `CDU-INTERACTIVE-1` | Assist Loop max 1 trial when interactive_only | **CODED** |
 | `CDU-DECIDE-T100` | T-100 optimize playbook (hierarchy, keep/reverse, MV order, stop, permissions) | **DOCS complementary** — not coded; does **not** supersede Inventory / `propose_action` |
+| `CDU-PFH-T100` | PreFlash + Crude Heater (overflash def, heater-duty MV, PFH-001…004); v0.1 PE board propose-only | **DOCS + PARTIAL** — `cdu_preflash_heater.py` observe/board; **not** coded auto-MV / study runner (v0.2 later) |
 
 ---
 

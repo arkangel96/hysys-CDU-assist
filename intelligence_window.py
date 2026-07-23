@@ -223,7 +223,7 @@ class IntelligenceWindow(QMainWindow):
                 )
                 return
             state, diagnosis = self.assistant.diagnose_column(name)
-            text = format_pe_board(state, diagnosis)
+            text = format_pe_board(state, diagnosis, columns=self.assistant.columns)
             text += "\n\n--- FINAL_TARGET detail ---\n"
             for tid, info in diagnosis.final_target_status.items():
                 text += (

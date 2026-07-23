@@ -57,7 +57,7 @@ def main() -> int:
         print(f"    severity={diagnosis.severity}")
         print(f"    engineering_state={diagnosis.engineering_state}")
         print()
-        print(format_pe_board(state, diagnosis))
+        print(format_pe_board(state, diagnosis, columns=column_api))
 
         print("\n[5] FINAL_TARGET snapshot")
         targets = default_cdu_targets()
